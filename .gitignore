@@ -1,0 +1,56 @@
+# Python environments and caches
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+
+# Local source PDFs and archives
+math_question_bank/raw_pdfs/
+*.pdf
+*.zip
+
+# Generated extraction output
+math_question_bank/extracted/
+math_question_bank/validated/
+math_question_bank/question_images/
+
+# Temporary diagnostics and benchmark output
+temporary/
+tmp/
+diagnostic/
+benchmark/
+*_benchmark*
+*_diagnostic*
+*.ocr.json
+*.ocr.txt
+*.model.json
+
+# OCR/model caches and downloaded weights
+.paddlex/
+.cache/
+model_cache/
+models/
+*.pdparams
+*.pdmodel
+*.onnx
+*.bin
+
+# Secrets and credentials
+.env
+*.env
+.env.*
+credentials*
+*credential*
+*secret*
+*token*
+*apikey*
+*.pem
+*.key
+
+# IDE and local tooling
+.vscode/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
