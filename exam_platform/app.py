@@ -10,7 +10,7 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from exam_platform.models import (
-    Attempt, Response, AnswerImage, AttemptStatus, AnswerStatus,
+    Attempt, Response, AnswerImage, Student, AttemptStatus, AnswerStatus,
 )
 from exam_platform.storage import storage
 from exam_platform.mock_data import load_mock_data
@@ -35,6 +35,17 @@ def get_or_create_student_id():
         student_id = f"STU{uuid.uuid4().hex[:8].upper()}"
         session['student_id'] = student_id
     return student_id
+
+
+def ensure_student_record(student_id):
+    """Ensure the prototype session student exists before creating FK-linked records."""
+    if not storage.get_student(student_id):
+        storage.create_student(Student(
+            student_id=student_id,
+            name="Guest Student",
+            email="",
+            registration_source="prototype",
+        ))
 
 
 def attempt_is_expired(attempt):
@@ -112,6 +123,8 @@ def start_test(test_id):
         return jsonify({"error": "Test not found"}), 404
 
     student_id = get_or_create_student_id()
+    ensure_student_record(student_id)
+
     existing = storage.get_student_test_attempt(student_id, test_id)
     if existing:
         if existing.status == AttemptStatus.SUBMITTED.value:
