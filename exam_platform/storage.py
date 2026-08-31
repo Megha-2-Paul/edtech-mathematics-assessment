@@ -27,9 +27,8 @@ class SQLiteStorage:
             for row in db.execute("SELECT * FROM tests"):
                 self.tests[row["test_id"]] = Test(
                     row["test_id"], row["title"], row["subject"], row["class_level"],
-                    row["duration_minutes"], row["total_marks"],
-                    json.loads(row["questions_json"]), row["status"],
-                    row["board"], row["test_date"], row["test_type"]
+                    row["duration_minutes"], row["total_marks"], json.loads(row["questions_json"]),
+                    row["status"], row["board"], row["test_date"], row["test_type"]
                 )
             for row in db.execute("SELECT * FROM questions"):
                 blocks = [ContentBlock(**item) for item in json.loads(row["question_content_json"])]
@@ -204,6 +203,116 @@ class SQLiteStorage:
         with get_connection() as db:
             db.execute("DELETE FROM answer_images WHERE image_id=?", (image_id,))
         self.images.pop(image_id, None)
+
+    # Registration/profile data -------------------------------------------------
+    def record_academic_profile(
+        self, student_id: str, study_hours_per_week: Optional[str], preparation_level: Optional[str],
+        study_methods: list, completed_chapters: list, current_chapter: Optional[str],
+        most_difficult_chapter: Optional[str], improvement_areas: list,
+    ) -> None:
+        with get_connection() as db:
+            db.execute(
+                """INSERT INTO student_academic_profiles
+                (student_id,study_hours_per_week,preparation_level,current_study_methods_json,
+                 completed_chapters_json,current_chapter,most_difficult_chapter,improvement_areas_json)
+                VALUES (?,?,?,?,?,?,?,?)""",
+                (student_id, study_hours_per_week, preparation_level, json.dumps(study_methods, ensure_ascii=False),
+                 json.dumps(completed_chapters, ensure_ascii=False), current_chapter, most_difficult_chapter,
+                 json.dumps(improvement_areas, ensure_ascii=False)),
+            )
+
+    def record_chapter_status(self, student_id: str, chapter: str, status: str,
+                              board: Optional[str] = None, class_level: Optional[int] = None) -> None:
+        with get_connection() as db:
+            db.execute(
+                """INSERT OR REPLACE INTO student_chapter_status
+                (student_id,chapter,status,board,class_level,recorded_at)
+                VALUES (?,?,?,?,?,CURRENT_TIMESTAMP)""",
+                (student_id, chapter, status, board, class_level),
+            )
+
+    def record_improvement_area(self, student_id: str, area: str, priority: int = 1) -> None:
+        with get_connection() as db:
+            db.execute(
+                """INSERT OR REPLACE INTO student_improvement_areas
+                (student_id,area,priority,recorded_at) VALUES (?,?,?,CURRENT_TIMESTAMP)""",
+                (student_id, area, priority),
+            )
+
+    # Subscription/payment data -------------------------------------------------
+    def create_plan(self, plan_id: str, name: str, description: str, amount_paise: int,
+                    billing_interval: str = "monthly") -> None:
+        with get_connection() as db:
+            db.execute(
+                """INSERT OR REPLACE INTO plans
+                (plan_id,name,description,amount_paise,billing_interval,active)
+                VALUES (?,?,?,?,?,1)""",
+                (plan_id, name, description, amount_paise, billing_interval),
+            )
+
+    def create_subscription(self, subscription_id: str, student_id: str, plan_id: str,
+                            start_date: str, end_date: Optional[str], status: str) -> None:
+        with get_connection() as db:
+            db.execute(
+                """INSERT INTO subscriptions
+                (subscription_id,student_id,plan_id,start_date,end_date,status)
+                VALUES (?,?,?,?,?,?)""",
+                (subscription_id, student_id, plan_id, start_date, end_date, status),
+            )
+
+    def record_payment(self, payment_id: str, student_id: str, amount_paise: int,
+                       billing_period: Optional[str], status: str, subscription_id: Optional[str] = None,
+                       payment_date: Optional[str] = None, payment_method: Optional[str] = None,
+                       transaction_reference: Optional[str] = None) -> None:
+        with get_connection() as db:
+            db.execute(
+                """INSERT INTO payments
+                (payment_id,student_id,subscription_id,billing_period,amount_paise,currency,payment_date,
+                 payment_method,transaction_reference,status)
+                VALUES (?,?,?,?,?,'INR',?,?,?,?,?)""",
+                (payment_id, student_id, subscription_id, billing_period, amount_paise, payment_date,
+                 payment_method, transaction_reference, status),
+            )
+
+    def get_payment_for_period(self, student_id: str, billing_period: str):
+        with get_connection() as db:
+            return db.execute(
+                """SELECT * FROM payments WHERE student_id=? AND billing_period=?
+                ORDER BY created_at DESC LIMIT 1""", (student_id, billing_period)
+            ).fetchone()
+
+    # Question history ----------------------------------------------------------
+    def record_question_history(self, student_id: str, question_id: str, correct: bool,
+                                marks_awarded: Optional[float], attempted_at: str,
+                                error_summary: Optional[str] = None) -> None:
+        with get_connection() as db:
+            db.execute(
+                """INSERT INTO question_history
+                (student_id,question_id,attempt_count,correct_count,last_attempted_at,last_correct_at,
+                 last_marks_awarded,last_error_summary)
+                VALUES (?,?,1,?,?,?,?,?)
+                ON CONFLICT(student_id,question_id) DO UPDATE SET
+                    attempt_count=attempt_count+1,
+                    correct_count=correct_count+excluded.correct_count,
+                    last_attempted_at=excluded.last_attempted_at,
+                    last_correct_at=CASE WHEN excluded.last_correct_at IS NOT NULL THEN excluded.last_correct_at ELSE question_history.last_correct_at END,
+                    last_marks_awarded=excluded.last_marks_awarded,
+                    last_error_summary=excluded.last_error_summary""",
+                (student_id, question_id, 1 if correct else 0, attempted_at if correct else None,
+                 attempted_at, marks_awarded, error_summary),
+            )
+
+    def get_question_history(self, student_id: str, question_id: Optional[str] = None):
+        with get_connection() as db:
+            if question_id:
+                return db.execute(
+                    "SELECT * FROM question_history WHERE student_id=? AND question_id=?",
+                    (student_id, question_id),
+                ).fetchone()
+            return db.execute(
+                "SELECT * FROM question_history WHERE student_id=? ORDER BY last_attempted_at DESC",
+                (student_id,),
+            ).fetchall()
 
 
 storage = SQLiteStorage()
