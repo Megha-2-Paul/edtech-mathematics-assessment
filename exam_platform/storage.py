@@ -1,16 +1,10 @@
-import json
-from pathlib import Path
 from typing import Dict, List, Optional
-from datetime import datetime
-from .models import (
-    Test, Question, Student, Attempt, Response, AnswerImage,
-    ContentBlock
-)
+from .models import Test, Question, Student, Attempt, Response, AnswerImage
 
 
 class InMemoryStorage:
-    """Simple in-memory storage for MVP"""
-    
+    """Simple in-memory storage for the prototype MVP."""
+
     def __init__(self):
         self.tests: Dict[str, Test] = {}
         self.questions: Dict[str, Question] = {}
@@ -46,6 +40,13 @@ class InMemoryStorage:
     def get_attempt(self, attempt_id: str) -> Optional[Attempt]:
         return self.attempts.get(attempt_id)
 
+    def get_student_test_attempt(self, student_id: str, test_id: str) -> Optional[Attempt]:
+        attempts = [
+            a for a in self.attempts.values()
+            if a.student_id == student_id and a.test_id == test_id
+        ]
+        return max(attempts, key=lambda a: a.started_at) if attempts else None
+
     def update_attempt(self, attempt: Attempt) -> None:
         self.attempts[attempt.attempt_id] = attempt
 
@@ -69,11 +70,12 @@ class InMemoryStorage:
 
     def get_attempt_images(self, attempt_id: str, question_id: str) -> List[AnswerImage]:
         return sorted(
-            [img for img in self.images.values() 
-             if img.attempt_id == attempt_id and img.question_id == question_id],
-            key=lambda x: x.page_number
+            [
+                img for img in self.images.values()
+                if img.attempt_id == attempt_id and img.question_id == question_id
+            ],
+            key=lambda x: x.page_number,
         )
 
 
-# Global storage instance
 storage = InMemoryStorage()
