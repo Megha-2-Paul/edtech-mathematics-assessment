@@ -1,9 +1,12 @@
+import os
 from .models import Test, Question, ContentBlock, Student
 from .storage import storage
 
 
 def load_mock_data() -> None:
-    """Load realistic Class 10 Mathematics demo data for UI testing."""
+    """Load demo data only when explicitly enabled for development."""
+    if os.getenv("LOAD_DEMO_DATA", "0") != "1":
+        return
     questions = [
         Question("Q001", "mcq", "option_selection", [ContentBlock("text", "If the zeroes of the quadratic polynomial x² − 7x + 12 are α and β, then α + β is:")], ["A) 5", "B) 7", "C) 12", "D) −7"], "B", 1),
         Question("Q002", "mcq", "option_selection", [ContentBlock("text", "The value of tan 45° / (1 + tan² 45°) is:")], ["A) 1/2", "B) 1", "C) 2", "D) 0"], "A", 1),
