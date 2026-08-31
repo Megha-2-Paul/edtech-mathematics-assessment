@@ -1,318 +1,125 @@
+"""Application persistence backed by MySQL via SQLAlchemy."""
 import json
 from datetime import datetime
 from typing import List, Optional
-
-from database import get_connection
+from sqlalchemy import text
+from database import engine, initialize_database
 from .models import Test, Question, Student, Attempt, Response, AnswerImage, ContentBlock
 
+initialize_database()
 
-class SQLiteStorage:
-    """Persistent SQLite storage for the assessment platform MVP."""
-
+class MySQLStorage:
     def __init__(self):
-        self.tests = {}
-        self.questions = {}
-        self.students = {}
-        self.attempts = {}
-        self.responses = {}
-        self.images = {}
+        self.tests, self.questions, self.students = {}, {}, {}
+        self.attempts, self.responses, self.images = {}, {}, {}
         self._load_cache()
 
     @staticmethod
     def _dt(value):
-        return datetime.fromisoformat(value) if value else None
+        if not value: return None
+        return value if isinstance(value, datetime) else datetime.fromisoformat(str(value))
 
     def _load_cache(self):
-        with get_connection() as db:
-            for row in db.execute("SELECT * FROM tests"):
-                self.tests[row["test_id"]] = Test(
-                    row["test_id"], row["title"], row["subject"], row["class_level"],
-                    row["duration_minutes"], row["total_marks"], json.loads(row["questions_json"]),
-                    row["status"], row["board"], row["test_date"], row["test_type"]
-                )
-            for row in db.execute("SELECT * FROM questions"):
-                blocks = [ContentBlock(**item) for item in json.loads(row["question_content_json"])]
-                self.questions[row["question_id"]] = Question(
-                    row["question_id"], row["question_type"], row["answer_mode"], blocks,
-                    json.loads(row["answer_choices_json"]), row["correct_answer"], row["marks"],
-                    row["handwritten_upload_mode"], row["subject"], row["board"], row["class_level"],
-                    row["chapter"], row["topic"], row["subtopic"], row["difficulty"],
-                    row["competency"], row["source"], row["source_year"]
-                )
-            for row in db.execute("SELECT * FROM students"):
-                self.students[row["student_id"]] = Student(
-                    row["student_id"], row["name"], row["email"], row["phone"], row["city"],
-                    row["role"], row["class_level"], row["board"], row["school"],
-                    row["registration_date"], row["registration_source"], row["status"]
-                )
-            for row in db.execute("SELECT * FROM attempts"):
-                self.attempts[row["attempt_id"]] = Attempt(
-                    row["attempt_id"], row["student_id"], row["test_id"], self._dt(row["started_at"]),
-                    self._dt(row["submitted_at"]), row["status"], row["score"], row["percentage"],
-                    row["attempt_rate"], row["accuracy"], row["time_taken_seconds"]
-                )
-            for row in db.execute("SELECT * FROM responses"):
-                self.responses[row["response_id"]] = Response(
-                    row["response_id"], row["attempt_id"], row["question_id"], row["selected_answer"],
-                    row["answer_status"], row["marks_awarded"],
-                    bool(row["is_correct"]) if row["is_correct"] is not None else None,
-                    self._dt(row["answered_at"])
-                )
-            for row in db.execute("SELECT * FROM answer_images"):
-                self.images[row["image_id"]] = AnswerImage(
-                    row["image_id"], row["attempt_id"], row["question_id"], row["page_number"],
-                    row["original_filename"], row["file_path"], self._dt(row["uploaded_at"])
-                )
+        with engine.connect() as db:
+            for r in db.execute(text("SELECT * FROM tests")).mappings():
+                self.tests[r['test_id']] = Test(r['test_id'],r['title'],r['subject'],r['class_level'],r['duration_minutes'],r['total_marks'],json.loads(r['questions_json']),r['status'],r['board'],str(r['test_date']) if r['test_date'] else None,r['test_type'])
+            for r in db.execute(text("SELECT * FROM questions")).mappings():
+                blocks=[ContentBlock(**x) for x in json.loads(r['question_content_json'])]
+                self.questions[r['question_id']] = Question(r['question_id'],r['question_type'],r['answer_mode'],blocks,json.loads(r['answer_choices_json']),r['correct_answer'],r['marks'],r['handwritten_upload_mode'],r['subject'],r['board'],r['class_level'],r['chapter'],r['topic'],r['subtopic'],r['difficulty'],r['competency'],r['source'],r['source_year'])
+            for r in db.execute(text("SELECT * FROM students")).mappings():
+                self.students[r['student_id']] = Student(r['student_id'],r['name'],r['email'],r['phone'],r['city'],r['role'],r['class_level'],r['board'],r['school'],str(r['registration_date']) if r['registration_date'] else None,r['registration_source'],r['status'])
+            for r in db.execute(text("SELECT * FROM attempts")).mappings():
+                self.attempts[r['attempt_id']] = Attempt(r['attempt_id'],r['student_id'],r['test_id'],self._dt(r['started_at']),self._dt(r['submitted_at']),r['status'],r['score'],r['percentage'],r['attempt_rate'],r['accuracy'],r['time_taken_seconds'])
+            for r in db.execute(text("SELECT * FROM responses")).mappings():
+                self.responses[r['response_id']] = Response(r['response_id'],r['attempt_id'],r['question_id'],r['selected_answer'],r['answer_status'],r['marks_awarded'],bool(r['is_correct']) if r['is_correct'] is not None else None,self._dt(r['answered_at']))
+            for r in db.execute(text("SELECT * FROM answer_images")).mappings():
+                self.images[r['image_id']] = AnswerImage(r['image_id'],r['attempt_id'],r['question_id'],r['page_number'],r['original_filename'],r['file_path'],self._dt(r['uploaded_at']))
 
-    def create_test(self, test: Test) -> None:
-        with get_connection() as db:
-            db.execute(
-                """INSERT OR IGNORE INTO tests
-                (test_id,title,subject,class_level,board,test_date,duration_minutes,total_marks,test_type,status,questions_json)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                (test.test_id, test.title, test.subject, test.class_level, test.board, test.test_date,
-                 test.duration_minutes, test.total_marks, test.test_type, test.status, json.dumps(test.questions)),
-            )
-            db.executemany(
-                "INSERT OR IGNORE INTO test_questions (test_id,question_id,sequence_number,marks) VALUES (?,?,?,?)",
-                [(test.test_id, qid, i, self.questions[qid].marks)
-                 for i, qid in enumerate(test.questions, 1) if qid in self.questions],
-            )
-        self.tests[test.test_id] = test
+    def create_test(self,test: Test):
+        with engine.begin() as db:
+            db.execute(text("""INSERT INTO tests(test_id,title,subject,class_level,board,test_date,duration_minutes,total_marks,test_type,status,questions_json) VALUES(:id,:title,:subject,:class,:board,:date,:duration,:marks,:type,:status,:questions) ON DUPLICATE KEY UPDATE title=VALUES(title),status=VALUES(status),questions_json=VALUES(questions_json)"""),{'id':test.test_id,'title':test.title,'subject':test.subject,'class':test.class_level,'board':test.board,'date':test.test_date,'duration':test.duration_minutes,'marks':test.total_marks,'type':test.test_type,'status':test.status,'questions':json.dumps(test.questions)})
+            db.execute(text("DELETE FROM test_questions WHERE test_id=:id"),{'id':test.test_id})
+            for i,qid in enumerate(test.questions,1):
+                q=self.questions.get(qid)
+                if q: db.execute(text("INSERT INTO test_questions(test_id,question_id,sequence_number,marks) VALUES(:t,:q,:s,:m)"),{'t':test.test_id,'q':qid,'s':i,'m':q.marks})
+        self.tests[test.test_id]=test
 
-    def get_test(self, test_id: str) -> Optional[Test]:
-        return self.tests.get(test_id)
+    def get_test(self,test_id): return self.tests.get(test_id)
 
-    def create_question(self, question: Question) -> None:
-        content = [{"type": c.type, "value": c.value, "asset_id": c.asset_id, "metadata": c.metadata}
-                   for c in question.question_content]
-        with get_connection() as db:
-            db.execute(
-                """INSERT OR IGNORE INTO questions
-                (question_id,subject,board,class_level,chapter,topic,subtopic,question_type,answer_mode,
-                 difficulty,competency,question_content_json,answer_choices_json,correct_answer,marks,
-                 handwritten_upload_mode,source,source_year)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (question.question_id, question.subject, question.board, question.class_level, question.chapter,
-                 question.topic, question.subtopic, question.question_type, question.answer_mode,
-                 question.difficulty, question.competency, json.dumps(content, ensure_ascii=False),
-                 json.dumps(question.answer_choices, ensure_ascii=False), question.correct_answer, question.marks,
-                 question.handwritten_upload_mode, question.source, question.source_year),
-            )
-        self.questions[question.question_id] = question
+    def create_question(self,q: Question):
+        content=json.dumps([{'type':c.type,'value':c.value,'asset_id':c.asset_id,'metadata':c.metadata} for c in q.question_content],ensure_ascii=False)
+        p={'id':q.question_id,'subject':q.subject,'board':q.board,'class':q.class_level,'chapter':q.chapter,'topic':q.topic,'subtopic':q.subtopic,'type':q.question_type,'mode':q.answer_mode,'difficulty':q.difficulty,'competency':q.competency,'content':content,'choices':json.dumps(q.answer_choices,ensure_ascii=False),'correct':q.correct_answer,'marks':q.marks,'upload':q.handwritten_upload_mode,'source':q.source,'year':q.source_year}
+        with engine.begin() as db:
+            db.execute(text("""INSERT INTO questions(question_id,subject,board,class_level,chapter,topic,subtopic,question_type,answer_mode,difficulty,competency,question_content_json,answer_choices_json,correct_answer,marks,handwritten_upload_mode,source,source_year) VALUES(:id,:subject,:board,:class,:chapter,:topic,:subtopic,:type,:mode,:difficulty,:competency,:content,:choices,:correct,:marks,:upload,:source,:year) ON DUPLICATE KEY UPDATE question_content_json=VALUES(question_content_json),answer_choices_json=VALUES(answer_choices_json),correct_answer=VALUES(correct_answer),marks=VALUES(marks),handwritten_upload_mode=VALUES(handwritten_upload_mode),chapter=VALUES(chapter),topic=VALUES(topic),subtopic=VALUES(subtopic),difficulty=VALUES(difficulty),competency=VALUES(competency)"""),p)
+        self.questions[q.question_id]=q
 
-    def get_question(self, question_id: str) -> Optional[Question]:
-        return self.questions.get(question_id)
+    def get_question(self,qid): return self.questions.get(qid)
+    def get_questions(self,qids: List[str]): return [self.questions[x] for x in qids if x in self.questions]
 
-    def get_questions(self, question_ids: List[str]) -> List[Question]:
-        return [self.questions[qid] for qid in question_ids if qid in self.questions]
+    def create_student(self,s: Student):
+        with engine.begin() as db:
+            db.execute(text("""INSERT INTO students(student_id,name,email,phone,city,role,class_level,board,school,registration_date,registration_source,status) VALUES(:id,:name,:email,:phone,:city,:role,:class,:board,:school,:reg,:source,:status) ON DUPLICATE KEY UPDATE name=VALUES(name),phone=VALUES(phone),city=VALUES(city),role=VALUES(role),class_level=VALUES(class_level),board=VALUES(board),school=VALUES(school),registration_source=VALUES(registration_source),status=VALUES(status)"""),{'id':s.student_id,'name':s.name,'email':s.email,'phone':s.phone,'city':s.city,'role':s.role,'class':s.class_level,'board':s.board,'school':s.school,'reg':s.registration_date,'source':s.registration_source,'status':s.status})
+        self.students[s.student_id]=s
 
-    def create_student(self, student: Student) -> None:
-        with get_connection() as db:
-            db.execute(
-                """INSERT OR IGNORE INTO students
-                (student_id,name,email,phone,city,role,class_level,board,school,registration_date,registration_source,status)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (student.student_id, student.name, student.email, student.phone, student.city, student.role,
-                 student.class_level, student.board, student.school, student.registration_date,
-                 student.registration_source, student.status),
-            )
-        self.students[student.student_id] = student
+    def get_student(self,sid): return self.students.get(sid)
 
-    def get_student(self, student_id: str) -> Optional[Student]:
-        return self.students.get(student_id)
+    def create_attempt(self,a: Attempt):
+        with engine.begin() as db: db.execute(text("INSERT INTO attempts(attempt_id,student_id,test_id,started_at,submitted_at,status,score,percentage,attempt_rate,accuracy,time_taken_seconds) VALUES(:id,:student,:test,:started,:submitted,:status,:score,:percentage,:rate,:accuracy,:time)"),{'id':a.attempt_id,'student':a.student_id,'test':a.test_id,'started':a.started_at,'submitted':a.submitted_at,'status':a.status,'score':a.score,'percentage':a.percentage,'rate':a.attempt_rate,'accuracy':a.accuracy,'time':a.time_taken_seconds})
+        self.attempts[a.attempt_id]=a
 
-    def create_attempt(self, attempt: Attempt) -> None:
-        with get_connection() as db:
-            db.execute(
-                """INSERT INTO attempts
-                (attempt_id,student_id,test_id,started_at,submitted_at,status,score,percentage,attempt_rate,accuracy,time_taken_seconds)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                (attempt.attempt_id, attempt.student_id, attempt.test_id, attempt.started_at.isoformat(),
-                 attempt.submitted_at.isoformat() if attempt.submitted_at else None, attempt.status,
-                 attempt.score, attempt.percentage, attempt.attempt_rate, attempt.accuracy,
-                 attempt.time_taken_seconds),
-            )
-        self.attempts[attempt.attempt_id] = attempt
+    def get_attempt(self,aid): return self.attempts.get(aid)
+    def get_student_test_attempt(self,sid,tid):
+        rows=[a for a in self.attempts.values() if a.student_id==sid and a.test_id==tid]
+        return max(rows,key=lambda x:x.started_at) if rows else None
 
-    def get_attempt(self, attempt_id: str) -> Optional[Attempt]:
-        return self.attempts.get(attempt_id)
+    def update_attempt(self,a: Attempt):
+        with engine.begin() as db: db.execute(text("UPDATE attempts SET submitted_at=:submitted,status=:status,score=:score,percentage=:percentage,attempt_rate=:rate,accuracy=:accuracy,time_taken_seconds=:time WHERE attempt_id=:id"),{'submitted':a.submitted_at,'status':a.status,'score':a.score,'percentage':a.percentage,'rate':a.attempt_rate,'accuracy':a.accuracy,'time':a.time_taken_seconds,'id':a.attempt_id})
+        self.attempts[a.attempt_id]=a
 
-    def get_student_test_attempt(self, student_id: str, test_id: str) -> Optional[Attempt]:
-        attempts = [a for a in self.attempts.values() if a.student_id == student_id and a.test_id == test_id]
-        return max(attempts, key=lambda a: a.started_at) if attempts else None
+    def create_response(self,r: Response):
+        with engine.begin() as db: db.execute(text("INSERT INTO responses(response_id,attempt_id,question_id,selected_answer,answer_status,marks_awarded,is_correct,answered_at) VALUES(:id,:attempt,:question,:answer,:status,:marks,:correct,:at) ON DUPLICATE KEY UPDATE selected_answer=VALUES(selected_answer),answer_status=VALUES(answer_status),marks_awarded=VALUES(marks_awarded),is_correct=VALUES(is_correct),answered_at=VALUES(answered_at)"),{'id':r.response_id,'attempt':r.attempt_id,'question':r.question_id,'answer':r.selected_answer,'status':r.answer_status,'marks':r.marks_awarded,'correct':r.is_correct,'at':r.answered_at})
+        self.responses[r.response_id]=r
 
-    def update_attempt(self, attempt: Attempt) -> None:
-        with get_connection() as db:
-            db.execute(
-                """UPDATE attempts SET submitted_at=?, status=?, score=?, percentage=?, attempt_rate=?,
-                accuracy=?, time_taken_seconds=? WHERE attempt_id=?""",
-                (attempt.submitted_at.isoformat() if attempt.submitted_at else None, attempt.status,
-                 attempt.score, attempt.percentage, attempt.attempt_rate, attempt.accuracy,
-                 attempt.time_taken_seconds, attempt.attempt_id),
-            )
-        self.attempts[attempt.attempt_id] = attempt
+    def get_response(self,aid,qid): return next((r for r in self.responses.values() if r.attempt_id==aid and r.question_id==qid),None)
+    def get_attempt_responses(self,aid): return [r for r in self.responses.values() if r.attempt_id==aid]
+    def update_response(self,r): self.create_response(r)
 
-    def create_response(self, response: Response) -> None:
-        with get_connection() as db:
-            db.execute(
-                """INSERT INTO responses
-                (response_id,attempt_id,question_id,selected_answer,answer_status,marks_awarded,is_correct,answered_at)
-                VALUES (?,?,?,?,?,?,?,?)""",
-                (response.response_id, response.attempt_id, response.question_id, response.selected_answer,
-                 response.answer_status, response.marks_awarded,
-                 int(response.is_correct) if response.is_correct is not None else None,
-                 response.answered_at.isoformat() if response.answered_at else None),
-            )
-        self.responses[response.response_id] = response
+    def create_image(self,i: AnswerImage):
+        with engine.begin() as db: db.execute(text("INSERT INTO answer_images(image_id,attempt_id,question_id,page_number,original_filename,file_path,uploaded_at) VALUES(:id,:attempt,:question,:page,:name,:path,:uploaded)"),{'id':i.image_id,'attempt':i.attempt_id,'question':i.question_id,'page':i.page_number,'name':i.original_filename,'path':i.file_path,'uploaded':i.uploaded_at})
+        self.images[i.image_id]=i
 
-    def get_response(self, attempt_id: str, question_id: str) -> Optional[Response]:
-        return next((r for r in self.responses.values()
-                     if r.attempt_id == attempt_id and r.question_id == question_id), None)
+    def get_attempt_images(self,aid,qid): return sorted([i for i in self.images.values() if i.attempt_id==aid and i.question_id==qid],key=lambda x:x.page_number)
+    def delete_image(self,iid):
+        with engine.begin() as db: db.execute(text("DELETE FROM answer_images WHERE image_id=:id"),{'id':iid})
+        self.images.pop(iid,None)
 
-    def get_attempt_responses(self, attempt_id: str) -> List[Response]:
-        return [r for r in self.responses.values() if r.attempt_id == attempt_id]
+    def record_academic_profile(self,student_id,study_hours_per_week,preparation_level,study_methods,completed_chapters,current_chapter,most_difficult_chapter,improvement_areas):
+        with engine.begin() as db: db.execute(text("INSERT INTO student_academic_profiles(student_id,study_hours_per_week,preparation_level,current_study_methods_json,completed_chapters_json,current_chapter,most_difficult_chapter,improvement_areas_json) VALUES(:id,:hours,:level,:methods,:completed,:current,:difficult,:areas)"),{'id':student_id,'hours':study_hours_per_week,'level':preparation_level,'methods':json.dumps(study_methods,ensure_ascii=False),'completed':json.dumps(completed_chapters,ensure_ascii=False),'current':current_chapter,'difficult':most_difficult_chapter,'areas':json.dumps(improvement_areas,ensure_ascii=False)})
 
-    def update_response(self, response: Response) -> None:
-        with get_connection() as db:
-            db.execute(
-                "UPDATE responses SET selected_answer=?, answer_status=?, marks_awarded=?, is_correct=?, answered_at=? WHERE response_id=?",
-                (response.selected_answer, response.answer_status, response.marks_awarded,
-                 int(response.is_correct) if response.is_correct is not None else None,
-                 response.answered_at.isoformat() if response.answered_at else None, response.response_id),
-            )
-        self.responses[response.response_id] = response
+    def record_chapter_status(self,student_id,chapter,status,board=None,class_level=None):
+        with engine.begin() as db: db.execute(text("INSERT INTO student_chapter_status(student_id,chapter,status,board,class_level) VALUES(:id,:chapter,:status,:board,:class)"),{'id':student_id,'chapter':chapter,'status':status,'board':board,'class':class_level})
 
-    def create_image(self, image: AnswerImage) -> None:
-        with get_connection() as db:
-            db.execute(
-                """INSERT INTO answer_images
-                (image_id,attempt_id,question_id,page_number,original_filename,file_path,uploaded_at)
-                VALUES (?,?,?,?,?,?,?)""",
-                (image.image_id, image.attempt_id, image.question_id, image.page_number,
-                 image.original_filename, image.file_path, image.uploaded_at.isoformat()),
-            )
-        self.images[image.image_id] = image
+    def record_improvement_area(self,student_id,area,priority=1):
+        with engine.begin() as db: db.execute(text("INSERT INTO student_improvement_areas(student_id,area,priority) VALUES(:id,:area,:priority)"),{'id':student_id,'area':area,'priority':priority})
 
-    def get_attempt_images(self, attempt_id: str, question_id: str) -> List[AnswerImage]:
-        return sorted([i for i in self.images.values()
-                       if i.attempt_id == attempt_id and i.question_id == question_id],
-                      key=lambda x: x.page_number)
+    def create_plan(self,plan_id,name,description,amount_paise,billing_interval='monthly'):
+        with engine.begin() as db: db.execute(text("INSERT INTO plans(plan_id,name,description,amount_paise,billing_interval,active) VALUES(:id,:name,:description,:amount,:interval,1) ON DUPLICATE KEY UPDATE name=VALUES(name),description=VALUES(description),amount_paise=VALUES(amount),billing_interval=VALUES(billing_interval),active=1"),{'id':plan_id,'name':name,'description':description,'amount':amount_paise,'interval':billing_interval})
 
-    def delete_image(self, image_id: str) -> None:
-        with get_connection() as db:
-            db.execute("DELETE FROM answer_images WHERE image_id=?", (image_id,))
-        self.images.pop(image_id, None)
+    def create_subscription(self,subscription_id,student_id,plan_id,start_date,end_date,status):
+        with engine.begin() as db: db.execute(text("INSERT INTO subscriptions(subscription_id,student_id,plan_id,start_date,end_date,status) VALUES(:id,:student,:plan,:start,:end,:status)"),{'id':subscription_id,'student':student_id,'plan':plan_id,'start':start_date,'end':end_date,'status':status})
 
-    # Registration/profile data -------------------------------------------------
-    def record_academic_profile(
-        self, student_id: str, study_hours_per_week: Optional[str], preparation_level: Optional[str],
-        study_methods: list, completed_chapters: list, current_chapter: Optional[str],
-        most_difficult_chapter: Optional[str], improvement_areas: list,
-    ) -> None:
-        with get_connection() as db:
-            db.execute(
-                """INSERT INTO student_academic_profiles
-                (student_id,study_hours_per_week,preparation_level,current_study_methods_json,
-                 completed_chapters_json,current_chapter,most_difficult_chapter,improvement_areas_json)
-                VALUES (?,?,?,?,?,?,?,?)""",
-                (student_id, study_hours_per_week, preparation_level, json.dumps(study_methods, ensure_ascii=False),
-                 json.dumps(completed_chapters, ensure_ascii=False), current_chapter, most_difficult_chapter,
-                 json.dumps(improvement_areas, ensure_ascii=False)),
-            )
+    def record_payment(self,payment_id,student_id,amount_paise,billing_period,status,subscription_id=None,payment_date=None,payment_method=None,transaction_reference=None):
+        with engine.begin() as db: db.execute(text("INSERT INTO payments(payment_id,student_id,subscription_id,billing_period,amount_paise,currency,payment_date,payment_method,transaction_reference,status) VALUES(:id,:student,:subscription,:period,:amount,'INR',:date,:method,:reference,:status)"),{'id':payment_id,'student':student_id,'subscription':subscription_id,'period':billing_period,'amount':amount_paise,'date':payment_date,'method':payment_method,'reference':transaction_reference,'status':status})
 
-    def record_chapter_status(self, student_id: str, chapter: str, status: str,
-                              board: Optional[str] = None, class_level: Optional[int] = None) -> None:
-        with get_connection() as db:
-            db.execute(
-                """INSERT OR REPLACE INTO student_chapter_status
-                (student_id,chapter,status,board,class_level,recorded_at)
-                VALUES (?,?,?,?,?,CURRENT_TIMESTAMP)""",
-                (student_id, chapter, status, board, class_level),
-            )
+    def get_payment_for_period(self,student_id,billing_period):
+        with engine.connect() as db: return db.execute(text("SELECT * FROM payments WHERE student_id=:student AND billing_period=:period ORDER BY created_at DESC LIMIT 1"),{'student':student_id,'period':billing_period}).mappings().first()
 
-    def record_improvement_area(self, student_id: str, area: str, priority: int = 1) -> None:
-        with get_connection() as db:
-            db.execute(
-                """INSERT OR REPLACE INTO student_improvement_areas
-                (student_id,area,priority,recorded_at) VALUES (?,?,?,CURRENT_TIMESTAMP)""",
-                (student_id, area, priority),
-            )
+    def record_question_history(self,student_id,question_id,correct,marks_awarded,attempted_at,error_summary=None):
+        with engine.begin() as db: db.execute(text("""INSERT INTO question_history(student_id,question_id,attempt_count,correct_count,last_attempted_at,last_correct_at,last_marks_awarded,last_error_summary) VALUES(:student,:question,1,:correct_count,:attempted,:correct_at,:marks,:errors) ON DUPLICATE KEY UPDATE attempt_count=attempt_count+1,correct_count=correct_count+VALUES(correct_count),last_attempted_at=VALUES(last_attempted_at),last_correct_at=IF(VALUES(last_correct_at) IS NOT NULL,VALUES(last_correct_at),last_correct_at),last_marks_awarded=VALUES(last_marks_awarded),last_error_summary=VALUES(last_error_summary)"""),{'student':student_id,'question':question_id,'correct_count':1 if correct else 0,'attempted':attempted_at,'correct_at':attempted_at if correct else None,'marks':marks_awarded,'errors':error_summary})
 
-    # Subscription/payment data -------------------------------------------------
-    def create_plan(self, plan_id: str, name: str, description: str, amount_paise: int,
-                    billing_interval: str = "monthly") -> None:
-        with get_connection() as db:
-            db.execute(
-                """INSERT OR REPLACE INTO plans
-                (plan_id,name,description,amount_paise,billing_interval,active)
-                VALUES (?,?,?,?,?,1)""",
-                (plan_id, name, description, amount_paise, billing_interval),
-            )
+    def get_question_history(self,student_id,question_id=None):
+        with engine.connect() as db:
+            if question_id: return db.execute(text("SELECT * FROM question_history WHERE student_id=:student AND question_id=:question"),{'student':student_id,'question':question_id}).mappings().first()
+            return db.execute(text("SELECT * FROM question_history WHERE student_id=:student ORDER BY last_attempted_at DESC"),{'student':student_id}).mappings().all()
 
-    def create_subscription(self, subscription_id: str, student_id: str, plan_id: str,
-                            start_date: str, end_date: Optional[str], status: str) -> None:
-        with get_connection() as db:
-            db.execute(
-                """INSERT INTO subscriptions
-                (subscription_id,student_id,plan_id,start_date,end_date,status)
-                VALUES (?,?,?,?,?,?)""",
-                (subscription_id, student_id, plan_id, start_date, end_date, status),
-            )
-
-    def record_payment(self, payment_id: str, student_id: str, amount_paise: int,
-                       billing_period: Optional[str], status: str, subscription_id: Optional[str] = None,
-                       payment_date: Optional[str] = None, payment_method: Optional[str] = None,
-                       transaction_reference: Optional[str] = None) -> None:
-        with get_connection() as db:
-            db.execute(
-                """INSERT INTO payments
-                (payment_id,student_id,subscription_id,billing_period,amount_paise,currency,payment_date,
-                 payment_method,transaction_reference,status)
-                VALUES (?,?,?,?,?,'INR',?,?,?,?,?)""",
-                (payment_id, student_id, subscription_id, billing_period, amount_paise, payment_date,
-                 payment_method, transaction_reference, status),
-            )
-
-    def get_payment_for_period(self, student_id: str, billing_period: str):
-        with get_connection() as db:
-            return db.execute(
-                """SELECT * FROM payments WHERE student_id=? AND billing_period=?
-                ORDER BY created_at DESC LIMIT 1""", (student_id, billing_period)
-            ).fetchone()
-
-    # Question history ----------------------------------------------------------
-    def record_question_history(self, student_id: str, question_id: str, correct: bool,
-                                marks_awarded: Optional[float], attempted_at: str,
-                                error_summary: Optional[str] = None) -> None:
-        with get_connection() as db:
-            db.execute(
-                """INSERT INTO question_history
-                (student_id,question_id,attempt_count,correct_count,last_attempted_at,last_correct_at,
-                 last_marks_awarded,last_error_summary)
-                VALUES (?,?,1,?,?,?,?,?)
-                ON CONFLICT(student_id,question_id) DO UPDATE SET
-                    attempt_count=attempt_count+1,
-                    correct_count=correct_count+excluded.correct_count,
-                    last_attempted_at=excluded.last_attempted_at,
-                    last_correct_at=CASE WHEN excluded.last_correct_at IS NOT NULL THEN excluded.last_correct_at ELSE question_history.last_correct_at END,
-                    last_marks_awarded=excluded.last_marks_awarded,
-                    last_error_summary=excluded.last_error_summary""",
-                (student_id, question_id, 1 if correct else 0, attempted_at if correct else None,
-                 attempted_at, marks_awarded, error_summary),
-            )
-
-    def get_question_history(self, student_id: str, question_id: Optional[str] = None):
-        with get_connection() as db:
-            if question_id:
-                return db.execute(
-                    "SELECT * FROM question_history WHERE student_id=? AND question_id=?",
-                    (student_id, question_id),
-                ).fetchone()
-            return db.execute(
-                "SELECT * FROM question_history WHERE student_id=? ORDER BY last_attempted_at DESC",
-                (student_id,),
-            ).fetchall()
-
-
-storage = SQLiteStorage()
+storage=MySQLStorage()
