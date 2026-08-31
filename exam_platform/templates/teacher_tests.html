@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Tests{% endblock %}
+{% block custom_styles %}<style>.test-row{padding:15px 0;border-bottom:1px solid #eee}.muted{color:#666}</style>{% endblock %}
+{% block content %}
+<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><h2>Tests</h2><p class="muted">Tests saved in MySQL.</p></div><a class="btn" href="{{url_for('admin.add_test')}}">+ Create Test</a></div></div>
+<div class="card">{% for t in tests %}<div class="test-row"><strong>{{t.test_id}} — {{t.title}}</strong><div class="muted">{{t.subject}} · Class {{t.class_level}} · {{t.questions|length}} questions · {{t.total_marks}} marks · {{t.duration_minutes}} min · {{t.status}}</div></div>{% else %}<p>No tests found.</p>{% endfor %}</div><a href="{{url_for('admin.dashboard')}}">← Teacher dashboard</a>
+{% endblock %}
