@@ -293,7 +293,7 @@ def delete_image(attempt_id, image_id):
         return jsonify({"error": "Image not found"}), 404
     if os.path.exists(image.file_path):
         os.remove(image.file_path)
-    del storage.images[image_id]
+    storage.delete_image(image_id)
     return jsonify({"status": "deleted"})
 
 
