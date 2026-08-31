@@ -1,283 +1,38 @@
-"""SQLite database setup for the assessment platform MVP."""
-
-import sqlite3
+"""MySQL database configuration and schema bootstrap for the assessment platform."""
+import os
 from pathlib import Path
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, text
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-DATA_DIR = PROJECT_ROOT / "data"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-DATABASE_PATH = DATA_DIR / "exam_platform.sqlite3"
+load_dotenv(PROJECT_ROOT / ".env")
+DB_HOST = os.getenv("DB_HOST", "127.0.0.1")
+DB_PORT = os.getenv("DB_PORT", "3306")
+DB_NAME = os.getenv("DB_NAME", "edtech_assessment")
+DB_USER = os.getenv("DB_USER", "root")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+DATABASE_URL = os.getenv("DATABASE_URL") or f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
 
-SCHEMA = """
-PRAGMA foreign_keys = ON;
+SCHEMA = [
+"""CREATE TABLE IF NOT EXISTS students (student_id VARCHAR(32) PRIMARY KEY,name VARCHAR(150) NOT NULL,email VARCHAR(255) NOT NULL,phone VARCHAR(30),city VARCHAR(100),role VARCHAR(30) NOT NULL DEFAULT 'student',class_level INT,board VARCHAR(30),school VARCHAR(255),registration_date DATE,registration_source VARCHAR(100),status VARCHAR(30) NOT NULL DEFAULT 'active',created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,UNIQUE KEY uq_students_email(email)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS student_academic_profiles (profile_id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(32) NOT NULL,study_hours_per_week DECIMAL(5,2),preparation_level VARCHAR(100),current_study_methods_json TEXT,completed_chapters_json TEXT,current_chapter VARCHAR(150),most_difficult_chapter VARCHAR(150),improvement_areas_json TEXT,recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,INDEX idx_profile_student(student_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS student_chapter_status (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(32) NOT NULL,chapter VARCHAR(150) NOT NULL,status VARCHAR(30) NOT NULL,board VARCHAR(30),class_level INT,recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,INDEX idx_chapter_student(student_id,chapter)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS student_improvement_areas (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(32) NOT NULL,area VARCHAR(150) NOT NULL,priority INT NOT NULL DEFAULT 1,recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,INDEX idx_area_student(student_id,area)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS plans (plan_id VARCHAR(32) PRIMARY KEY,name VARCHAR(100) NOT NULL,description TEXT,amount_paise INT NOT NULL DEFAULT 0,billing_interval VARCHAR(30) NOT NULL DEFAULT 'one_time',active BOOLEAN NOT NULL DEFAULT TRUE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS subscriptions (subscription_id VARCHAR(40) PRIMARY KEY,student_id VARCHAR(32) NOT NULL,plan_id VARCHAR(32) NOT NULL,start_date DATE NOT NULL,end_date DATE,status VARCHAR(30) NOT NULL,FOREIGN KEY(student_id) REFERENCES students(student_id),FOREIGN KEY(plan_id) REFERENCES plans(plan_id),INDEX idx_subscription_student(student_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS payments (payment_id VARCHAR(40) PRIMARY KEY,student_id VARCHAR(32) NOT NULL,subscription_id VARCHAR(40),billing_period VARCHAR(20),amount_paise INT NOT NULL,currency VARCHAR(10) NOT NULL DEFAULT 'INR',payment_date DATETIME,payment_method VARCHAR(40),transaction_reference VARCHAR(150),status VARCHAR(30) NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(student_id) REFERENCES students(student_id),FOREIGN KEY(subscription_id) REFERENCES subscriptions(subscription_id),INDEX idx_payment_student_period(student_id,billing_period)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS tests (test_id VARCHAR(40) PRIMARY KEY,title VARCHAR(255) NOT NULL,subject VARCHAR(100) NOT NULL,class_level INT NOT NULL,board VARCHAR(30),test_date DATE,duration_minutes INT NOT NULL,total_marks DECIMAL(10,2) NOT NULL,test_type VARCHAR(50) NOT NULL DEFAULT 'weekly',status VARCHAR(30) NOT NULL,questions_json LONGTEXT NOT NULL DEFAULT '[]',created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS questions (question_id VARCHAR(40) PRIMARY KEY,subject VARCHAR(100) NOT NULL DEFAULT 'Mathematics',board VARCHAR(30),class_level INT,chapter VARCHAR(150),topic VARCHAR(150),subtopic VARCHAR(150),question_type VARCHAR(40) NOT NULL,answer_mode VARCHAR(80) NOT NULL,difficulty VARCHAR(50),competency VARCHAR(100),question_content_json LONGTEXT NOT NULL,answer_choices_json LONGTEXT NOT NULL DEFAULT '[]',correct_answer VARCHAR(255),marks DECIMAL(10,2) NOT NULL,handwritten_upload_mode VARCHAR(20) NOT NULL DEFAULT 'none',source VARCHAR(255),source_year INT,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS test_questions (test_id VARCHAR(40) NOT NULL,question_id VARCHAR(40) NOT NULL,sequence_number INT NOT NULL,marks DECIMAL(10,2) NOT NULL,PRIMARY KEY(test_id,question_id),UNIQUE KEY uq_test_sequence(test_id,sequence_number),FOREIGN KEY(test_id) REFERENCES tests(test_id) ON DELETE CASCADE,FOREIGN KEY(question_id) REFERENCES questions(question_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS attempts (attempt_id VARCHAR(50) PRIMARY KEY,student_id VARCHAR(32) NOT NULL,test_id VARCHAR(40) NOT NULL,started_at DATETIME NOT NULL,submitted_at DATETIME,status VARCHAR(30) NOT NULL,score DECIMAL(10,2),percentage DECIMAL(7,3),attempt_rate DECIMAL(7,3),accuracy DECIMAL(7,3),time_taken_seconds INT,FOREIGN KEY(student_id) REFERENCES students(student_id),FOREIGN KEY(test_id) REFERENCES tests(test_id),INDEX idx_attempt_student_test(student_id,test_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS responses (response_id VARCHAR(50) PRIMARY KEY,attempt_id VARCHAR(50) NOT NULL,question_id VARCHAR(40) NOT NULL,selected_answer VARCHAR(255),answer_status VARCHAR(30) NOT NULL,marks_awarded DECIMAL(10,2),is_correct BOOLEAN,answered_at DATETIME,UNIQUE KEY uq_attempt_question(attempt_id,question_id),FOREIGN KEY(attempt_id) REFERENCES attempts(attempt_id) ON DELETE CASCADE,FOREIGN KEY(question_id) REFERENCES questions(question_id),INDEX idx_response_attempt(attempt_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS answer_images (image_id VARCHAR(50) PRIMARY KEY,attempt_id VARCHAR(50) NOT NULL,question_id VARCHAR(40) NOT NULL,page_number INT NOT NULL,original_filename VARCHAR(255) NOT NULL,file_path TEXT NOT NULL,uploaded_at DATETIME NOT NULL,FOREIGN KEY(attempt_id) REFERENCES attempts(attempt_id) ON DELETE CASCADE,FOREIGN KEY(question_id) REFERENCES questions(question_id),INDEX idx_image_attempt_question(attempt_id,question_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS evaluation_errors (evaluation_error_id BIGINT AUTO_INCREMENT PRIMARY KEY,response_id VARCHAR(50) NOT NULL,error_code VARCHAR(10) NOT NULL,comment TEXT,marks_lost DECIMAL(10,2),created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(response_id) REFERENCES responses(response_id) ON DELETE CASCADE,INDEX idx_error_response(response_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS question_history (student_id VARCHAR(32) NOT NULL,question_id VARCHAR(40) NOT NULL,attempt_count INT NOT NULL DEFAULT 0,correct_count INT NOT NULL DEFAULT 0,last_attempted_at DATETIME,last_correct_at DATETIME,last_marks_awarded DECIMAL(10,2),last_error_summary TEXT,PRIMARY KEY(student_id,question_id),FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,FOREIGN KEY(question_id) REFERENCES questions(question_id),INDEX idx_history_student(student_id,last_attempted_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+]
 
-CREATE TABLE IF NOT EXISTS students (
-    student_id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL,
-    phone TEXT,
-    city TEXT,
-    role TEXT NOT NULL DEFAULT 'student',
-    class_level INTEGER,
-    board TEXT,
-    school TEXT,
-    registration_date TEXT,
-    registration_source TEXT,
-    status TEXT NOT NULL DEFAULT 'active',
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS student_academic_profiles (
-    profile_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    student_id TEXT NOT NULL,
-    study_hours_per_week TEXT,
-    preparation_level TEXT,
-    current_study_methods_json TEXT NOT NULL DEFAULT '[]',
-    completed_chapters_json TEXT NOT NULL DEFAULT '[]',
-    current_chapter TEXT,
-    most_difficult_chapter TEXT,
-    improvement_areas_json TEXT NOT NULL DEFAULT '[]',
-    recorded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS student_chapter_status (
-    student_id TEXT NOT NULL,
-    chapter TEXT NOT NULL,
-    status TEXT NOT NULL,
-    board TEXT,
-    class_level INTEGER,
-    recorded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (student_id, chapter, status),
-    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS student_improvement_areas (
-    student_id TEXT NOT NULL,
-    area TEXT NOT NULL,
-    priority INTEGER NOT NULL DEFAULT 1,
-    recorded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (student_id, area),
-    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS plans (
-    plan_id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
-    amount_paise INTEGER NOT NULL DEFAULT 0,
-    billing_interval TEXT NOT NULL DEFAULT 'one_time',
-    active INTEGER NOT NULL DEFAULT 1
-);
-
-CREATE TABLE IF NOT EXISTS subscriptions (
-    subscription_id TEXT PRIMARY KEY,
-    student_id TEXT NOT NULL,
-    plan_id TEXT NOT NULL,
-    start_date TEXT NOT NULL,
-    end_date TEXT,
-    status TEXT NOT NULL,
-    FOREIGN KEY (student_id) REFERENCES students(student_id),
-    FOREIGN KEY (plan_id) REFERENCES plans(plan_id)
-);
-
-CREATE TABLE IF NOT EXISTS payments (
-    payment_id TEXT PRIMARY KEY,
-    student_id TEXT NOT NULL,
-    subscription_id TEXT,
-    billing_period TEXT,
-    amount_paise INTEGER NOT NULL,
-    currency TEXT NOT NULL DEFAULT 'INR',
-    payment_date TEXT,
-    payment_method TEXT,
-    transaction_reference TEXT,
-    status TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (student_id) REFERENCES students(student_id),
-    FOREIGN KEY (subscription_id) REFERENCES subscriptions(subscription_id)
-);
-
-CREATE TABLE IF NOT EXISTS tests (
-    test_id TEXT PRIMARY KEY,
-    title TEXT NOT NULL,
-    subject TEXT NOT NULL,
-    class_level INTEGER NOT NULL,
-    board TEXT,
-    test_date TEXT,
-    duration_minutes INTEGER NOT NULL,
-    total_marks INTEGER NOT NULL,
-    test_type TEXT NOT NULL DEFAULT 'weekly',
-    status TEXT NOT NULL,
-    questions_json TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS questions (
-    question_id TEXT PRIMARY KEY,
-    subject TEXT NOT NULL DEFAULT 'Mathematics',
-    board TEXT,
-    class_level INTEGER,
-    chapter TEXT,
-    topic TEXT,
-    subtopic TEXT,
-    question_type TEXT NOT NULL,
-    answer_mode TEXT NOT NULL,
-    difficulty TEXT,
-    competency TEXT,
-    question_content_json TEXT NOT NULL,
-    answer_choices_json TEXT NOT NULL DEFAULT '[]',
-    correct_answer TEXT,
-    marks INTEGER NOT NULL,
-    handwritten_upload_mode TEXT NOT NULL DEFAULT 'none',
-    source TEXT,
-    source_year INTEGER,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS test_questions (
-    test_id TEXT NOT NULL,
-    question_id TEXT NOT NULL,
-    sequence_number INTEGER NOT NULL,
-    marks INTEGER NOT NULL,
-    PRIMARY KEY (test_id, question_id),
-    UNIQUE (test_id, sequence_number),
-    FOREIGN KEY (test_id) REFERENCES tests(test_id) ON DELETE CASCADE,
-    FOREIGN KEY (question_id) REFERENCES questions(question_id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS attempts (
-    attempt_id TEXT PRIMARY KEY,
-    student_id TEXT NOT NULL,
-    test_id TEXT NOT NULL,
-    started_at TEXT NOT NULL,
-    submitted_at TEXT,
-    status TEXT NOT NULL,
-    score REAL,
-    percentage REAL,
-    attempt_rate REAL,
-    accuracy REAL,
-    time_taken_seconds INTEGER,
-    FOREIGN KEY (student_id) REFERENCES students(student_id),
-    FOREIGN KEY (test_id) REFERENCES tests(test_id)
-);
-
-CREATE TABLE IF NOT EXISTS responses (
-    response_id TEXT PRIMARY KEY,
-    attempt_id TEXT NOT NULL,
-    question_id TEXT NOT NULL,
-    selected_answer TEXT,
-    answer_status TEXT NOT NULL,
-    marks_awarded REAL,
-    is_correct INTEGER,
-    answered_at TEXT,
-    UNIQUE (attempt_id, question_id),
-    FOREIGN KEY (attempt_id) REFERENCES attempts(attempt_id) ON DELETE CASCADE,
-    FOREIGN KEY (question_id) REFERENCES questions(question_id)
-);
-
-CREATE TABLE IF NOT EXISTS answer_images (
-    image_id TEXT PRIMARY KEY,
-    attempt_id TEXT NOT NULL,
-    question_id TEXT NOT NULL,
-    page_number INTEGER NOT NULL,
-    original_filename TEXT NOT NULL,
-    file_path TEXT NOT NULL,
-    uploaded_at TEXT NOT NULL,
-    FOREIGN KEY (attempt_id) REFERENCES attempts(attempt_id) ON DELETE CASCADE,
-    FOREIGN KEY (question_id) REFERENCES questions(question_id)
-);
-
-CREATE TABLE IF NOT EXISTS evaluation_errors (
-    evaluation_error_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    response_id TEXT NOT NULL,
-    error_code TEXT NOT NULL,
-    comment TEXT,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (response_id) REFERENCES responses(response_id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS question_history (
-    student_id TEXT NOT NULL,
-    question_id TEXT NOT NULL,
-    attempt_count INTEGER NOT NULL DEFAULT 0,
-    correct_count INTEGER NOT NULL DEFAULT 0,
-    last_attempted_at TEXT,
-    last_correct_at TEXT,
-    last_marks_awarded REAL,
-    last_error_summary TEXT,
-    PRIMARY KEY (student_id, question_id),
-    FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
-    FOREIGN KEY (question_id) REFERENCES questions(question_id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_profiles_student ON student_academic_profiles(student_id);
-CREATE INDEX IF NOT EXISTS idx_chapter_status_student ON student_chapter_status(student_id);
-CREATE INDEX IF NOT EXISTS idx_improvement_student ON student_improvement_areas(student_id);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_student ON subscriptions(student_id);
-CREATE INDEX IF NOT EXISTS idx_payments_student_period ON payments(student_id, billing_period);
-CREATE INDEX IF NOT EXISTS idx_tests_date ON tests(test_date);
-CREATE INDEX IF NOT EXISTS idx_test_questions_test ON test_questions(test_id, sequence_number);
-CREATE INDEX IF NOT EXISTS idx_attempts_student ON attempts(student_id, started_at);
-CREATE INDEX IF NOT EXISTS idx_attempts_student_test ON attempts(student_id, test_id);
-CREATE INDEX IF NOT EXISTS idx_responses_attempt ON responses(attempt_id);
-CREATE INDEX IF NOT EXISTS idx_responses_question ON responses(question_id);
-CREATE INDEX IF NOT EXISTS idx_images_attempt_question ON answer_images(attempt_id, question_id);
-CREATE INDEX IF NOT EXISTS idx_errors_response ON evaluation_errors(response_id);
-CREATE INDEX IF NOT EXISTS idx_history_student ON question_history(student_id, last_attempted_at);
-"""
-
-# Existing local MVP databases may have the original smaller tables.
-# Add new columns without destroying existing data.
-MIGRATIONS = {
-    "students": {
-        "city": "TEXT", "role": "TEXT NOT NULL DEFAULT 'student'", "class_level": "INTEGER",
-        "board": "TEXT", "school": "TEXT", "registration_date": "TEXT",
-        "registration_source": "TEXT", "status": "TEXT NOT NULL DEFAULT 'active'",
-        "created_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
-        "updated_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
-    },
-    "tests": {
-        "board": "TEXT", "test_date": "TEXT", "test_type": "TEXT NOT NULL DEFAULT 'weekly'",
-        "created_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
-    },
-    "questions": {
-        "subject": "TEXT NOT NULL DEFAULT 'Mathematics'", "board": "TEXT", "class_level": "INTEGER",
-        "chapter": "TEXT", "topic": "TEXT", "subtopic": "TEXT", "difficulty": "TEXT",
-        "competency": "TEXT", "source": "TEXT", "source_year": "INTEGER",
-        "created_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
-        "updated_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
-    },
-    "attempts": {
-        "score": "REAL", "percentage": "REAL", "attempt_rate": "REAL", "accuracy": "REAL",
-        "time_taken_seconds": "INTEGER",
-    },
-    "responses": {
-        "marks_awarded": "REAL", "is_correct": "INTEGER", "answered_at": "TEXT",
-    },
-}
-
-
-def get_connection() -> sqlite3.Connection:
-    connection = sqlite3.connect(DATABASE_PATH)
-    connection.row_factory = sqlite3.Row
-    connection.execute("PRAGMA foreign_keys = ON")
-    return connection
-
-
-def _migrate_existing_tables(connection: sqlite3.Connection) -> None:
-    for table, columns in MIGRATIONS.items():
-        existing = {row[1] for row in connection.execute(f"PRAGMA table_info({table})")}
-        for column, definition in columns.items():
-            if column not in existing:
-                connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
-
-
-def initialize_database() -> None:
-    with get_connection() as connection:
-        connection.executescript(SCHEMA)
-        _migrate_existing_tables(connection)
-
-
-initialize_database()
+def initialize_database():
+    with engine.begin() as connection:
+        for statement in SCHEMA:
+            connection.execute(text(statement))
