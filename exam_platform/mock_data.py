@@ -1,142 +1,163 @@
-from pathlib import Path
 from .models import Test, Question, ContentBlock, Student
 from .storage import storage
-from datetime import datetime
-import uuid
 
 
 def load_mock_data() -> None:
-    """Load mock questions and test data"""
-    
-    # Create mock questions
+    """Load realistic Class 10 Mathematics demo data for UI testing."""
+
+    # These are demonstration questions only. They are intentionally kept
+    # separate from the question-bank/extraction pipeline, which is on hold.
     questions = [
-        # MCQ 1
         Question(
             question_id="Q001",
             question_type="mcq",
             answer_mode="option_selection",
             question_content=[
-                ContentBlock("text", "What is 2 + 2?")
+                ContentBlock("text", "If the zeroes of the quadratic polynomial x² − 7x + 12 are α and β, then α + β is:")
             ],
-            answer_choices=["A) 3", "B) 4", "C) 5", "D) 6"],
+            answer_choices=["A) 5", "B) 7", "C) 12", "D) −7"],
             correct_answer="B",
             marks=1,
-            requires_handwritten_upload=False,
         ),
-        # MCQ 2
         Question(
             question_id="Q002",
             question_type="mcq",
             answer_mode="option_selection",
             question_content=[
-                ContentBlock("text", "What is the square root of 16?")
+                ContentBlock("text", "The value of tan 45° / (1 + tan² 45°) is:")
             ],
-            answer_choices=["A) 2", "B) 3", "C) 4", "D) 8"],
-            correct_answer="C",
+            answer_choices=["A) 1/2", "B) 1", "C) 2", "D) 0"],
+            correct_answer="A",
             marks=1,
-            requires_handwritten_upload=False,
         ),
-        # MCQ 3
         Question(
             question_id="Q003",
             question_type="mcq",
             answer_mode="option_selection",
             question_content=[
-                ContentBlock("text", "What is the value of π (pi) approximately?")
+                ContentBlock("text", "Find the distance between the points A(2, 3) and B(−1, −1).")
             ],
-            answer_choices=["A) 2.14", "B) 3.14", "C) 4.14", "D) 5.14"],
+            answer_choices=["A) 4", "B) 5", "C) √13", "D) 6"],
             correct_answer="B",
             marks=1,
-            requires_handwritten_upload=False,
         ),
-        # MCQ 4
         Question(
             question_id="Q004",
             question_type="mcq",
             answer_mode="option_selection",
             question_content=[
-                ContentBlock("text", "Solve: 3x = 12")
+                ContentBlock("text", "Two fair dice are thrown simultaneously. What is the probability of obtaining a sum of 8?")
             ],
-            answer_choices=["A) x = 2", "B) x = 3", "C) x = 4", "D) x = 6"],
-            correct_answer="C",
+            answer_choices=["A) 1/6", "B) 5/36", "C) 1/9", "D) 7/36"],
+            correct_answer="B",
             marks=1,
-            requires_handwritten_upload=False,
         ),
-        # Subjective 1
         Question(
             question_id="Q005",
             question_type="subjective",
             answer_mode="final_answer_selection_and_handwritten_upload",
             question_content=[
-                ContentBlock("text", "Solve the quadratic equation: x² - 5x + 6 = 0")
+                ContentBlock("text", "Solve the quadratic equation x² − 5x + 6 = 0. Show all necessary steps in your handwritten solution and then select the final answer below.")
             ],
-            answer_choices=["A) x = 2, 3", "B) x = 1, 6", "C) x = 2, 4", "D) x = 3, 4"],
-            correct_answer="A",
+            answer_choices=[
+                "A) x = 1, 6",
+                "B) x = 2, 3",
+                "C) x = −2, −3",
+                "D) x = 3, 5",
+            ],
+            correct_answer="B",
             marks=4,
             requires_handwritten_upload=True,
         ),
-        # Subjective 2
         Question(
             question_id="Q006",
             question_type="subjective",
             answer_mode="final_answer_selection_and_handwritten_upload",
             question_content=[
-                ContentBlock("text", "Find the derivative of f(x) = x³ + 2x²")
+                ContentBlock("text", "The first term of an arithmetic progression is 3 and its common difference is 4. Find the 20th term. Show your working and select the final answer.")
             ],
-            answer_choices=["A) 3x² + 4x", "B) 3x + 4", "C) 2x² + 2x", "D) x² + x"],
-            correct_answer="A",
+            answer_choices=[
+                "A) 75",
+                "B) 79",
+                "C) 80",
+                "D) 83",
+            ],
+            correct_answer="B",
             marks=3,
             requires_handwritten_upload=True,
         ),
-        # Subjective 3
         Question(
             question_id="Q007",
             question_type="subjective",
             answer_mode="final_answer_selection_and_handwritten_upload",
             question_content=[
-                ContentBlock("text", "Prove that the sum of angles in a triangle is 180°")
+                ContentBlock("text", "From an external point P, two tangents PA and PB are drawn to a circle with centre O. If PA = 8 cm, find PB. Show the relevant theorem/reasoning in your handwritten solution.")
             ],
-            answer_choices=["A) Proven using parallel lines", "B) Proven using properties", "C) Cannot be proven", "D) Depends on triangle type"],
-            correct_answer="A",
-            marks=5,
+            answer_choices=[
+                "A) 4 cm",
+                "B) 8 cm",
+                "C) 16 cm",
+                "D) Cannot be determined",
+            ],
+            correct_answer="B",
+            marks=3,
             requires_handwritten_upload=True,
         ),
-        # Subjective 4 (requires multiple pages)
         Question(
             question_id="Q008",
             question_type="subjective",
             answer_mode="final_answer_selection_and_handwritten_upload",
             question_content=[
-                ContentBlock("text", "Solve the system of equations using any method:\n2x + 3y = 8\n3x + 2y = 7")
+                ContentBlock("text", "If sin A = 3/5 and A is an acute angle, find cos A + tan A. Show the calculation in your handwritten solution.")
             ],
-            answer_choices=["A) x = 2, y = 1", "B) x = 1, y = 2", "C) x = 3, y = 1/3", "D) x = 2/3, y = 2"],
-            correct_answer="A",
+            answer_choices=[
+                "A) 7/20",
+                "B) 31/20",
+                "C) 17/20",
+                "D) 5/4",
+            ],
+            correct_answer="B",
             marks=4,
             requires_handwritten_upload=True,
         ),
+        Question(
+            question_id="Q009",
+            question_type="subjective",
+            answer_mode="final_answer_selection_and_handwritten_upload",
+            question_content=[
+                ContentBlock("text", "Solve the pair of linear equations: 2x + 3y = 13 and 3x − 2y = 4. Use any suitable method. This question is intended to test a longer handwritten solution, so upload all pages of your working before selecting the final answer.")
+            ],
+            answer_choices=[
+                "A) x = 2, y = 3",
+                "B) x = 3, y = 2",
+                "C) x = 1, y = 4",
+                "D) x = 4, y = 1",
+            ],
+            correct_answer="A",
+            marks=5,
+            requires_handwritten_upload=True,
+        ),
     ]
-    
-    for q in questions:
-        storage.create_question(q)
-    
-    # Create mock test
+
+    for question in questions:
+        storage.create_question(question)
+
     test = Test(
         test_id="TEST001",
-        title="Mock Mathematics Assessment",
+        title="Class 10 Mathematics — Interface Demo",
         subject="Mathematics",
         class_level=10,
-        duration_minutes=120,
-        total_marks=19,
-        questions=["Q001", "Q002", "Q003", "Q004", "Q005", "Q006", "Q007", "Q008"],
-        status="active"
+        duration_minutes=45,
+        total_marks=sum(q.marks for q in questions),
+        questions=[q.question_id for q in questions],
+        status="active",
     )
     storage.create_test(test)
-    
-    # Create a sample student
+
     student = Student(
         student_id="STU001",
-        name="Student Name",
+        name="Demo Student",
         email="student@example.com",
-        phone="9876543210"
+        phone="9876543210",
     )
     storage.create_student(student)
