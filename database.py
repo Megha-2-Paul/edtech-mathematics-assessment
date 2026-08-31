@@ -14,7 +14,7 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS students (
     student_id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL,
     phone TEXT,
     city TEXT,
     role TEXT NOT NULL DEFAULT 'student',
@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS tests (
     total_marks INTEGER NOT NULL,
     test_type TEXT NOT NULL DEFAULT 'weekly',
     status TEXT NOT NULL,
+    questions_json TEXT NOT NULL DEFAULT '[]',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -171,9 +172,9 @@ CREATE TABLE IF NOT EXISTS responses (
     marks_awarded REAL,
     is_correct INTEGER,
     answered_at TEXT,
+    UNIQUE (attempt_id, question_id),
     FOREIGN KEY (attempt_id) REFERENCES attempts(attempt_id) ON DELETE CASCADE,
-    FOREIGN KEY (question_id) REFERENCES questions(question_id),
-    UNIQUE (attempt_id, question_id)
+    FOREIGN KEY (question_id) REFERENCES questions(question_id)
 );
 
 CREATE TABLE IF NOT EXISTS answer_images (
@@ -227,6 +228,36 @@ CREATE INDEX IF NOT EXISTS idx_errors_response ON evaluation_errors(response_id)
 CREATE INDEX IF NOT EXISTS idx_history_student ON question_history(student_id, last_attempted_at);
 """
 
+# Existing local MVP databases may have the original smaller tables.
+# Add new columns without destroying existing data.
+MIGRATIONS = {
+    "students": {
+        "city": "TEXT", "role": "TEXT NOT NULL DEFAULT 'student'", "class_level": "INTEGER",
+        "board": "TEXT", "school": "TEXT", "registration_date": "TEXT",
+        "registration_source": "TEXT", "status": "TEXT NOT NULL DEFAULT 'active'",
+        "created_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        "updated_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+    },
+    "tests": {
+        "board": "TEXT", "test_date": "TEXT", "test_type": "TEXT NOT NULL DEFAULT 'weekly'",
+        "created_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+    },
+    "questions": {
+        "subject": "TEXT NOT NULL DEFAULT 'Mathematics'", "board": "TEXT", "class_level": "INTEGER",
+        "chapter": "TEXT", "topic": "TEXT", "subtopic": "TEXT", "difficulty": "TEXT",
+        "competency": "TEXT", "source": "TEXT", "source_year": "INTEGER",
+        "created_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+        "updated_at": "TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP",
+    },
+    "attempts": {
+        "score": "REAL", "percentage": "REAL", "attempt_rate": "REAL", "accuracy": "REAL",
+        "time_taken_seconds": "INTEGER",
+    },
+    "responses": {
+        "marks_awarded": "REAL", "is_correct": "INTEGER", "answered_at": "TEXT",
+    },
+}
+
 
 def get_connection() -> sqlite3.Connection:
     connection = sqlite3.connect(DATABASE_PATH)
@@ -235,9 +266,18 @@ def get_connection() -> sqlite3.Connection:
     return connection
 
 
+def _migrate_existing_tables(connection: sqlite3.Connection) -> None:
+    for table, columns in MIGRATIONS.items():
+        existing = {row[1] for row in connection.execute(f"PRAGMA table_info({table})")}
+        for column, definition in columns.items():
+            if column not in existing:
+                connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+
 def initialize_database() -> None:
     with get_connection() as connection:
         connection.executescript(SCHEMA)
+        _migrate_existing_tables(connection)
 
 
 initialize_database()
