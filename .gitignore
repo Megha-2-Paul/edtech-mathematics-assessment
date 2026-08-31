@@ -5,6 +5,11 @@ env/
 __pycache__/
 *.py[cod]
 
+# Local application data
+/data/
+*.sqlite3
+/uploads/
+
 # Local source PDFs and archives
 math_question_bank/raw_pdfs/
 *.pdf
