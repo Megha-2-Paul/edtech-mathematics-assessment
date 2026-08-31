@@ -25,7 +25,7 @@ class MySQLStorage:
                 self.tests[r['test_id']] = Test(r['test_id'],r['title'],r['subject'],r['class_level'],r['duration_minutes'],r['total_marks'],json.loads(r['questions_json']),r['status'],r['board'],str(r['test_date']) if r['test_date'] else None,r['test_type'])
             for r in db.execute(text("SELECT * FROM questions")).mappings():
                 blocks=[ContentBlock(**x) for x in json.loads(r['question_content_json'])]
-                self.questions[r['question_id']] = Question(r['question_id'],r['question_type'],r['answer_mode'],blocks,json.loads(r['answer_choices_json']),r['correct_answer'],r['marks'],r['handwritten_upload_mode'],r['subject'],r['board'],r['class_level'],r['chapter'],r['topic'],r['subtopic'],r['difficulty'],r['competency'],r['source'],r['source_year'])
+                self.questions[r['question_id']] = Question(r['question_id'],r['question_type'],r['answer_mode'],blocks,json.loads(r['answer_choices_json']),r['correct_answer'],r['marks'],r['handwritten_upload_mode'],r['subject'],r['board'],r['class_level'],r['chapter'],r['topic'],r['subtopic'],r['difficulty'],r['competency'],r['source'],r['source_year'],r.get('status','active'))
             for r in db.execute(text("SELECT * FROM students")).mappings():
                 self.students[r['student_id']] = Student(r['student_id'],r['name'],r['email'],r['phone'],r['city'],r['role'],r['class_level'],r['board'],r['school'],str(r['registration_date']) if r['registration_date'] else None,r['registration_source'],r['status'])
             for r in db.execute(text("SELECT * FROM attempts")).mappings():
@@ -37,7 +37,7 @@ class MySQLStorage:
 
     def create_test(self,test: Test):
         with engine.begin() as db:
-            db.execute(text("""INSERT INTO tests(test_id,title,subject,class_level,board,test_date,duration_minutes,total_marks,test_type,status,questions_json) VALUES(:id,:title,:subject,:class,:board,:date,:duration,:marks,:type,:status,:questions) ON DUPLICATE KEY UPDATE title=VALUES(title),status=VALUES(status),questions_json=VALUES(questions_json)"""),{'id':test.test_id,'title':test.title,'subject':test.subject,'class':test.class_level,'board':test.board,'date':test.test_date,'duration':test.duration_minutes,'marks':test.total_marks,'type':test.test_type,'status':test.status,'questions':json.dumps(test.questions)})
+            db.execute(text("""INSERT INTO tests(test_id,title,subject,class_level,board,test_date,duration_minutes,total_marks,test_type,status,questions_json) VALUES(:id,:title,:subject,:class,:board,:date,:duration,:marks,:type,:status,:questions) ON DUPLICATE KEY UPDATE title=VALUES(title),status=VALUES(status),questions_json=VALUES(questions_json),subject=VALUES(subject),class_level=VALUES(class_level),board=VALUES(board),test_date=VALUES(test_date),duration_minutes=VALUES(duration_minutes),total_marks=VALUES(total_marks),test_type=VALUES(test_type)"""),{'id':test.test_id,'title':test.title,'subject':test.subject,'class':test.class_level,'board':test.board,'date':test.test_date,'duration':test.duration_minutes,'marks':test.total_marks,'type':test.test_type,'status':test.status,'questions':json.dumps(test.questions)})
             db.execute(text("DELETE FROM test_questions WHERE test_id=:id"),{'id':test.test_id})
             for i,qid in enumerate(test.questions,1):
                 q=self.questions.get(qid)
@@ -48,13 +48,25 @@ class MySQLStorage:
 
     def create_question(self,q: Question):
         content=json.dumps([{'type':c.type,'value':c.value,'asset_id':c.asset_id,'metadata':c.metadata} for c in q.question_content],ensure_ascii=False)
-        p={'id':q.question_id,'subject':q.subject,'board':q.board,'class':q.class_level,'chapter':q.chapter,'topic':q.topic,'subtopic':q.subtopic,'type':q.question_type,'mode':q.answer_mode,'difficulty':q.difficulty,'competency':q.competency,'content':content,'choices':json.dumps(q.answer_choices,ensure_ascii=False),'correct':q.correct_answer,'marks':q.marks,'upload':q.handwritten_upload_mode,'source':q.source,'year':q.source_year}
+        p={'id':q.question_id,'subject':q.subject,'board':q.board,'class':q.class_level,'chapter':q.chapter,'topic':q.topic,'subtopic':q.subtopic,'type':q.question_type,'mode':q.answer_mode,'difficulty':q.difficulty,'competency':q.competency,'content':content,'choices':json.dumps(q.answer_choices,ensure_ascii=False),'correct':q.correct_answer,'marks':q.marks,'upload':q.handwritten_upload_mode,'source':q.source,'year':q.source_year,'status':q.status}
         with engine.begin() as db:
-            db.execute(text("""INSERT INTO questions(question_id,subject,board,class_level,chapter,topic,subtopic,question_type,answer_mode,difficulty,competency,question_content_json,answer_choices_json,correct_answer,marks,handwritten_upload_mode,source,source_year) VALUES(:id,:subject,:board,:class,:chapter,:topic,:subtopic,:type,:mode,:difficulty,:competency,:content,:choices,:correct,:marks,:upload,:source,:year) ON DUPLICATE KEY UPDATE question_content_json=VALUES(question_content_json),answer_choices_json=VALUES(answer_choices_json),correct_answer=VALUES(correct_answer),marks=VALUES(marks),handwritten_upload_mode=VALUES(handwritten_upload_mode),chapter=VALUES(chapter),topic=VALUES(topic),subtopic=VALUES(subtopic),difficulty=VALUES(difficulty),competency=VALUES(competency)"""),p)
+            db.execute(text("""INSERT INTO questions(question_id,subject,board,class_level,chapter,topic,subtopic,question_type,answer_mode,difficulty,competency,question_content_json,answer_choices_json,correct_answer,marks,handwritten_upload_mode,source,source_year,status) VALUES(:id,:subject,:board,:class,:chapter,:topic,:subtopic,:type,:mode,:difficulty,:competency,:content,:choices,:correct,:marks,:upload,:source,:year,:status) ON DUPLICATE KEY UPDATE question_content_json=VALUES(question_content_json),answer_choices_json=VALUES(answer_choices_json),correct_answer=VALUES(correct_answer),marks=VALUES(marks),handwritten_upload_mode=VALUES(handwritten_upload_mode),chapter=VALUES(chapter),topic=VALUES(topic),subtopic=VALUES(subtopic),difficulty=VALUES(difficulty),competency=VALUES(competency),subject=VALUES(subject),board=VALUES(board),class_level=VALUES(class_level),answer_mode=VALUES(answer_mode),question_type=VALUES(question_type),source=VALUES(source),source_year=VALUES(source_year),status=VALUES(status)"""),p)
         self.questions[q.question_id]=q
 
     def get_question(self,qid): return self.questions.get(qid)
     def get_questions(self,qids: List[str]): return [self.questions[x] for x in qids if x in self.questions]
+
+    def delete_question(self,qid):
+        with engine.begin() as db:
+            db.execute(text("UPDATE questions SET status='inactive' WHERE question_id=:id"), {'id': qid})
+        if qid in self.questions:
+            self.questions[qid].status = 'inactive'
+
+    def activate_question(self,qid):
+        with engine.begin() as db:
+            db.execute(text("UPDATE questions SET status='active' WHERE question_id=:id"), {'id': qid})
+        if qid in self.questions:
+            self.questions[qid].status = 'active'
 
     def create_student(self,s: Student):
         with engine.begin() as db:
