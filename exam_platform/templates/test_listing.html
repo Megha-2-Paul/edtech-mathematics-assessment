@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Available Tests{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Available Tests</h2>
+    <p style="color: #666; margin-top: 10px;">Select a test to begin.</p>
+</div>
+
+<div style="display: grid; gap: 20px;">
+    {% for test in tests %}
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+            <div style="flex: 1;">
+                <h3 style="margin-bottom: 8px;">{{ test.title }}</h3>
+                <div style="color: #666; font-size: 14px;">
+                    <p><strong>Subject:</strong> {{ test.subject }} | <strong>Class:</strong> {{ test.class_level }}</p>
+                    <p><strong>Duration:</strong> {{ test.duration_minutes }} minutes | <strong>Total Marks:</strong> {{ test.total_marks }}</p>
+                    <p><strong>Questions:</strong> {{ test.questions|length }}</p>
+                </div>
+            </div>
+            <div>
+                <a href="{{ url_for('test_instructions', test_id=test.test_id) }}" class="btn">Start Test</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

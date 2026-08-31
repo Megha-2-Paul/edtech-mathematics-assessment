@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Submission Confirmation{% endblock %}
+
+{% block content %}
+<div class="card" style="text-align: center; padding: 40px;">
+    <div style="font-size: 48px; margin-bottom: 20px;">✓</div>
+    <h2>Test Submitted Successfully</h2>
+    
+    <div style="margin: 30px 0; padding: 20px; background: #f0fdf4; border-radius: 4px; border-left: 4px solid #10b981;">
+        <p><strong>{{ test.title }}</strong></p>
+        <p style="color: #666; margin-top: 8px;">Submitted at: {{ attempt.submitted_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+    </div>
+    
+    <div style="margin: 30px 0; color: #666;">
+        <p>Your test has been successfully submitted.</p>
+        <p>Detailed performance analysis and feedback will be available soon.</p>
+    </div>
+    
+    <div style="margin-top: 30px;">
+        <a href="{{ url_for('test_listing') }}" class="btn">Back to Tests</a>
+    </div>
+</div>
+{% endblock %}

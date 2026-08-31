@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Test Instructions{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>{{ test.title }}</h2>
+    <div style="margin-top: 16px; color: #666;">
+        <p><strong>Subject:</strong> {{ test.subject }}</p>
+        <p><strong>Class:</strong> {{ test.class_level }}</p>
+        <p><strong>Duration:</strong> {{ test.duration_minutes }} minutes</p>
+        <p><strong>Total Marks:</strong> {{ test.total_marks }}</p>
+        <p><strong>Number of Questions:</strong> {{ total_questions }}</p>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Instructions</h3>
+    <div style="margin-top: 16px; line-height: 1.8;">
+        <p>Please read the following instructions carefully before starting the test:</p>
+        
+        <ol style="margin-left: 20px; margin-top: 16px;">
+            <li>This is an exam-style test. Answer all questions to the best of your ability.</li>
+            <li>For multiple choice questions, select exactly one correct option.</li>
+            <li>For subjective questions requiring handwritten work:</li>
+            <ul style="margin-left: 20px; margin-top: 8px;">
+                <li>Solve the problem on paper</li>
+                <li>Upload clear images of your complete solution</li>
+                <li>Select the final answer you obtained from the given choices</li>
+            </ul>
+            <li>You can navigate between questions using the question navigator on the left.</li>
+            <li>A timer will show your remaining time. The test will automatically submit when time expires.</li>
+            <li>Answers are saved automatically as you navigate.</li>
+            <li>Before submitting, you will see a confirmation showing answered/unanswered questions.</li>
+            <li>Once submitted, your test cannot be modified.</li>
+        </ol>
+        
+        <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin-top: 20px;">
+            <strong>Note:</strong> For questions requiring handwritten uploads, please ensure your solutions are legible and complete.
+        </div>
+    </div>
+</div>
+
+<div style="display: flex; gap: 12px; margin-top: 20px;">
+    <a href="{{ url_for('test_listing') }}" class="btn btn-secondary">Back to Tests</a>
+    <button onclick="startTest('{{ test.test_id }}')" class="btn" style="flex: 1;">Start Test</button>
+</div>
+
+<script>
+function startTest(testId) {
+    const button = event.target;
+    button.disabled = true;
+    button.textContent = 'Starting...';
+    
+    fetch(`/api/test/${testId}/start`, {
+        method: 'POST'
+    })
+    .then(r => r.json())
+    .then(data => {
+        window.location.href = data.redirect_url;
+    })
+    .catch(err => {
+        alert('Error starting test');
+        button.disabled = false;
+        button.textContent = 'Start Test';
+    });
+}
+</script>
+{% endblock %}

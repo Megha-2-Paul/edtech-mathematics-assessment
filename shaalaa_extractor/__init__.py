@@ -1,0 +1,1 @@
+"""Isolated Shaalaa extraction prototype."""
