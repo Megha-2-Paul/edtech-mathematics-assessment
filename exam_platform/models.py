@@ -2,8 +2,6 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from typing import List, Optional, Any, Dict
 from enum import Enum
-import uuid
-import json
 
 
 class AttemptStatus(Enum):
@@ -18,9 +16,14 @@ class AnswerStatus(Enum):
     PARTIAL = "partial"
 
 
+class HandwrittenUploadMode(Enum):
+    NONE = "none"
+    OPTIONAL = "optional"
+    REQUIRED = "required"
+
+
 @dataclass
 class ContentBlock:
-    """Reuse from shaalaa_extractor"""
     type: str
     value: Any = None
     asset_id: Optional[str] = None
@@ -50,16 +53,7 @@ class Test:
     status: str = "active"
 
     def to_dict(self) -> dict:
-        return {
-            "test_id": self.test_id,
-            "title": self.title,
-            "subject": self.subject,
-            "class_level": self.class_level,
-            "duration_minutes": self.duration_minutes,
-            "total_marks": self.total_marks,
-            "questions": self.questions,
-            "status": self.status,
-        }
+        return asdict(self)
 
 
 @dataclass
@@ -71,7 +65,16 @@ class Question:
     answer_choices: List[str]
     correct_answer: Optional[str]
     marks: int
-    requires_handwritten_upload: bool = False
+    handwritten_upload_mode: str = HandwrittenUploadMode.NONE.value
+
+    def __post_init__(self):
+        # Backward-compatible normalization for existing/demo data.
+        if self.handwritten_upload_mode not in {m.value for m in HandwrittenUploadMode}:
+            self.handwritten_upload_mode = HandwrittenUploadMode.NONE.value
+
+    @property
+    def requires_handwritten_upload(self) -> bool:
+        return self.handwritten_upload_mode == HandwrittenUploadMode.REQUIRED.value
 
     def to_dict(self) -> dict:
         return {
@@ -82,6 +85,7 @@ class Question:
             "answer_choices": self.answer_choices,
             "correct_answer": self.correct_answer,
             "marks": self.marks,
+            "handwritten_upload_mode": self.handwritten_upload_mode,
             "requires_handwritten_upload": self.requires_handwritten_upload,
         }
 
@@ -123,13 +127,7 @@ class Response:
     answer_status: str = AnswerStatus.UNANSWERED.value
 
     def to_dict(self) -> dict:
-        return {
-            "response_id": self.response_id,
-            "attempt_id": self.attempt_id,
-            "question_id": self.question_id,
-            "selected_answer": self.selected_answer,
-            "answer_status": self.answer_status,
-        }
+        return asdict(self)
 
 
 @dataclass
