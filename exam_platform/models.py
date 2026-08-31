@@ -87,10 +87,13 @@ class Question:
     competency: Optional[str] = None
     source: Optional[str] = None
     source_year: Optional[int] = None
+    status: str = "active"
 
     def __post_init__(self):
         if self.handwritten_upload_mode not in {m.value for m in HandwrittenUploadMode}:
             self.handwritten_upload_mode = HandwrittenUploadMode.NONE.value
+        if self.status not in {"active", "inactive"}:
+            self.status = "active"
 
     @property
     def requires_handwritten_upload(self) -> bool:
@@ -117,6 +120,7 @@ class Question:
             "competency": self.competency,
             "source": self.source,
             "source_year": self.source_year,
+            "status": self.status,
         }
 
 
