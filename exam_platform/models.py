@@ -36,6 +36,14 @@ class Student:
     name: str
     email: str
     phone: Optional[str] = None
+    city: Optional[str] = None
+    role: str = "student"
+    class_level: Optional[int] = None
+    board: Optional[str] = None
+    school: Optional[str] = None
+    registration_date: Optional[str] = None
+    registration_source: Optional[str] = None
+    status: str = "active"
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -51,6 +59,9 @@ class Test:
     total_marks: int
     questions: List[str] = field(default_factory=list)
     status: str = "active"
+    board: Optional[str] = None
+    test_date: Optional[str] = None
+    test_type: str = "weekly"
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -66,9 +77,18 @@ class Question:
     correct_answer: Optional[str]
     marks: int
     handwritten_upload_mode: str = HandwrittenUploadMode.NONE.value
+    subject: str = "Mathematics"
+    board: Optional[str] = None
+    class_level: Optional[int] = None
+    chapter: Optional[str] = None
+    topic: Optional[str] = None
+    subtopic: Optional[str] = None
+    difficulty: Optional[str] = None
+    competency: Optional[str] = None
+    source: Optional[str] = None
+    source_year: Optional[int] = None
 
     def __post_init__(self):
-        # Backward-compatible normalization for existing/demo data.
         if self.handwritten_upload_mode not in {m.value for m in HandwrittenUploadMode}:
             self.handwritten_upload_mode = HandwrittenUploadMode.NONE.value
 
@@ -87,6 +107,16 @@ class Question:
             "marks": self.marks,
             "handwritten_upload_mode": self.handwritten_upload_mode,
             "requires_handwritten_upload": self.requires_handwritten_upload,
+            "subject": self.subject,
+            "board": self.board,
+            "class_level": self.class_level,
+            "chapter": self.chapter,
+            "topic": self.topic,
+            "subtopic": self.subtopic,
+            "difficulty": self.difficulty,
+            "competency": self.competency,
+            "source": self.source,
+            "source_year": self.source_year,
         }
 
 
@@ -106,6 +136,11 @@ class Attempt:
     started_at: datetime
     submitted_at: Optional[datetime] = None
     status: str = AttemptStatus.IN_PROGRESS.value
+    score: Optional[float] = None
+    percentage: Optional[float] = None
+    attempt_rate: Optional[float] = None
+    accuracy: Optional[float] = None
+    time_taken_seconds: Optional[int] = None
 
     def to_dict(self) -> dict:
         return {
@@ -115,6 +150,11 @@ class Attempt:
             "started_at": self.started_at.isoformat(),
             "submitted_at": self.submitted_at.isoformat() if self.submitted_at else None,
             "status": self.status,
+            "score": self.score,
+            "percentage": self.percentage,
+            "attempt_rate": self.attempt_rate,
+            "accuracy": self.accuracy,
+            "time_taken_seconds": self.time_taken_seconds,
         }
 
 
@@ -125,9 +165,15 @@ class Response:
     question_id: str
     selected_answer: Optional[str]
     answer_status: str = AnswerStatus.UNANSWERED.value
+    marks_awarded: Optional[float] = None
+    is_correct: Optional[bool] = None
+    answered_at: Optional[datetime] = None
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        data = asdict(self)
+        if self.answered_at:
+            data["answered_at"] = self.answered_at.isoformat()
+        return data
 
 
 @dataclass
