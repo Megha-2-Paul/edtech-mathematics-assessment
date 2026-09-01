@@ -1,7 +1,7 @@
 """Application persistence backed by MySQL via SQLAlchemy."""
 import json
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 from sqlalchemy import text
 from database import engine, initialize_database
 from .models import Test, Question, Student, Attempt, Response, AnswerImage, ContentBlock
@@ -35,6 +35,10 @@ class MySQLStorage:
             for r in db.execute(text("SELECT * FROM answer_images")).mappings():
                 self.images[r['image_id']] = AnswerImage(r['image_id'],r['attempt_id'],r['question_id'],r['page_number'],r['original_filename'],r['file_path'],self._dt(r['uploaded_at']))
 
+    def _question_row(self, q):
+        content=json.dumps([{'type':c.type,'value':c.value,'asset_id':c.asset_id,'metadata':c.metadata} for c in q.question_content],ensure_ascii=False)
+        return {'id':q.question_id,'subject':q.subject,'board':q.board,'class':q.class_level,'chapter':q.chapter,'topic':q.topic,'subtopic':q.subtopic,'type':q.question_type,'mode':q.answer_mode,'difficulty':q.difficulty,'competency':q.competency,'content':content,'choices':json.dumps(q.answer_choices,ensure_ascii=False),'correct':q.correct_answer,'marks':q.marks,'upload':q.handwritten_upload_mode,'source':q.source,'year':q.source_year,'status':q.status}
+
     def create_test(self,test: Test):
         with engine.begin() as db:
             db.execute(text("""INSERT INTO tests(test_id,title,subject,class_level,board,test_date,duration_minutes,total_marks,test_type,status,questions_json) VALUES(:id,:title,:subject,:class,:board,:date,:duration,:marks,:type,:status,:questions) ON DUPLICATE KEY UPDATE title=VALUES(title),status=VALUES(status),questions_json=VALUES(questions_json),subject=VALUES(subject),class_level=VALUES(class_level),board=VALUES(board),test_date=VALUES(test_date),duration_minutes=VALUES(duration_minutes),total_marks=VALUES(total_marks),test_type=VALUES(test_type)"""),{'id':test.test_id,'title':test.title,'subject':test.subject,'class':test.class_level,'board':test.board,'date':test.test_date,'duration':test.duration_minutes,'marks':test.total_marks,'type':test.test_type,'status':test.status,'questions':json.dumps(test.questions)})
@@ -47,8 +51,7 @@ class MySQLStorage:
     def get_test(self,test_id): return self.tests.get(test_id)
 
     def create_question(self,q: Question):
-        content=json.dumps([{'type':c.type,'value':c.value,'asset_id':c.asset_id,'metadata':c.metadata} for c in q.question_content],ensure_ascii=False)
-        p={'id':q.question_id,'subject':q.subject,'board':q.board,'class':q.class_level,'chapter':q.chapter,'topic':q.topic,'subtopic':q.subtopic,'type':q.question_type,'mode':q.answer_mode,'difficulty':q.difficulty,'competency':q.competency,'content':content,'choices':json.dumps(q.answer_choices,ensure_ascii=False),'correct':q.correct_answer,'marks':q.marks,'upload':q.handwritten_upload_mode,'source':q.source,'year':q.source_year,'status':q.status}
+        p=self._question_row(q)
         with engine.begin() as db:
             db.execute(text("""INSERT INTO questions(question_id,subject,board,class_level,chapter,topic,subtopic,question_type,answer_mode,difficulty,competency,question_content_json,answer_choices_json,correct_answer,marks,handwritten_upload_mode,source,source_year,status) VALUES(:id,:subject,:board,:class,:chapter,:topic,:subtopic,:type,:mode,:difficulty,:competency,:content,:choices,:correct,:marks,:upload,:source,:year,:status) ON DUPLICATE KEY UPDATE question_content_json=VALUES(question_content_json),answer_choices_json=VALUES(answer_choices_json),correct_answer=VALUES(correct_answer),marks=VALUES(marks),handwritten_upload_mode=VALUES(handwritten_upload_mode),chapter=VALUES(chapter),topic=VALUES(topic),subtopic=VALUES(subtopic),difficulty=VALUES(difficulty),competency=VALUES(competency),subject=VALUES(subject),board=VALUES(board),class_level=VALUES(class_level),answer_mode=VALUES(answer_mode),question_type=VALUES(question_type),source=VALUES(source),source_year=VALUES(source_year),status=VALUES(status)"""),p)
         self.questions[q.question_id]=q
@@ -57,16 +60,34 @@ class MySQLStorage:
     def get_questions(self,qids: List[str]): return [self.questions[x] for x in qids if x in self.questions]
 
     def delete_question(self,qid):
-        with engine.begin() as db:
-            db.execute(text("UPDATE questions SET status='inactive' WHERE question_id=:id"), {'id': qid})
-        if qid in self.questions:
-            self.questions[qid].status = 'inactive'
+        with engine.begin() as db: db.execute(text("UPDATE questions SET status='inactive' WHERE question_id=:id"), {'id': qid})
+        if qid in self.questions: self.questions[qid].status = 'inactive'
 
     def activate_question(self,qid):
+        with engine.begin() as db: db.execute(text("UPDATE questions SET status='active' WHERE question_id=:id"), {'id': qid})
+        if qid in self.questions: self.questions[qid].status = 'active'
+
+    def create_question_asset(self, asset_id, question_id, asset_type, original_filename, file_path):
         with engine.begin() as db:
-            db.execute(text("UPDATE questions SET status='active' WHERE question_id=:id"), {'id': qid})
-        if qid in self.questions:
-            self.questions[qid].status = 'active'
+            db.execute(text("INSERT INTO question_assets(asset_id,question_id,asset_type,original_filename,file_path) VALUES(:id,:question,:type,:name,:path)"), {'id':asset_id,'question':question_id,'type':asset_type,'name':original_filename,'path':file_path})
+
+    def get_question_assets(self, question_id):
+        with engine.connect() as db:
+            return db.execute(text("SELECT * FROM question_assets WHERE question_id=:question ORDER BY created_at,asset_id"), {'question':question_id}).mappings().all()
+
+    def delete_question_assets(self, question_id):
+        with engine.begin() as db: db.execute(text("DELETE FROM question_assets WHERE question_id=:question"), {'question':question_id})
+
+    def get_chapters(self, board, class_level, subject_name):
+        with engine.connect() as db:
+            return db.execute(text("SELECT c.* FROM chapters c JOIN subjects s ON s.subject_id=c.subject_id WHERE c.board=:board AND c.class_level=:class AND s.name=:subject AND c.active=1 ORDER BY c.sort_order,c.chapter_name"), {'board':board,'class':class_level,'subject':subject_name}).mappings().all()
+
+    def get_competencies(self, subject_name):
+        with engine.connect() as db:
+            return db.execute(text("SELECT c.* FROM competencies c JOIN subjects s ON s.subject_id=c.subject_id WHERE s.name=:subject AND c.active=1 ORDER BY c.sort_order,c.name"), {'subject':subject_name}).mappings().all()
+
+    def get_subjects(self):
+        with engine.connect() as db: return db.execute(text("SELECT * FROM subjects WHERE active=1 ORDER BY name")).mappings().all()
 
     def create_student(self,s: Student):
         with engine.begin() as db:
