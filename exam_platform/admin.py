@@ -61,7 +61,8 @@ def _question_from_form(question_id,existing=None,preserve_images=True):
     answer_mode="option_selection" if question_type=="mcq" else "final_answer_selection_and_handwritten_upload"
     choices=[_form_value(f"choice_{letter}") for letter in "ABCD"]; choices=[c for c in choices if c]
     correct=_form_value("correct_answer").upper() or None; content=[ContentBlock("text",_form_value("question_text"))]
-    if preserve_images and existing: content.extend(deepcopy([c for c in existing.question_content if c.type=="image"]))
+    if preserve_images and existing and not any(v=="1" for v in request.form.getlist("remove_existing_image")):
+        content.extend(deepcopy([c for c in existing.question_content if c.type=="image"]))
     source_year=_form_value("source_year")
     return Question(question_id=question_id,question_type=question_type,answer_mode=answer_mode,question_content=content,answer_choices=choices,correct_answer=correct,marks=float(request.form.get("marks","1") or 1),handwritten_upload_mode=_form_value("handwritten_upload_mode","none"),subject=_form_value("subject","Mathematics") or "Mathematics",board=_form_value("board") or None,class_level=int(request.form["class_level"]) if request.form.get("class_level") else None,chapter=_form_value("chapter") or None,topic=_form_value("topic") or None,subtopic=_form_value("subtopic") or None,difficulty=_form_value("difficulty") or None,competency=_form_value("competency") or None,source=_form_value("source") or None,source_year=int(source_year) if source_year.isdigit() else None,status=_form_value("status","active") or "active")
 
