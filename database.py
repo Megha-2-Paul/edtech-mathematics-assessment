@@ -24,21 +24,59 @@ SCHEMA = [
 """CREATE TABLE IF NOT EXISTS payments (payment_id VARCHAR(40) PRIMARY KEY,student_id VARCHAR(32) NOT NULL,subscription_id VARCHAR(40),billing_period VARCHAR(20),amount_paise INT NOT NULL,currency VARCHAR(10) NOT NULL DEFAULT 'INR',payment_date DATETIME,payment_method VARCHAR(40),transaction_reference VARCHAR(150),status VARCHAR(30) NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(student_id) REFERENCES students(student_id),FOREIGN KEY(subscription_id) REFERENCES subscriptions(subscription_id),INDEX idx_payment_student_period(student_id,billing_period)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS tests (test_id VARCHAR(40) PRIMARY KEY,title VARCHAR(255) NOT NULL,subject VARCHAR(100) NOT NULL,class_level INT NOT NULL,board VARCHAR(30),test_date DATE,duration_minutes INT NOT NULL,total_marks DECIMAL(10,2) NOT NULL,test_type VARCHAR(50) NOT NULL DEFAULT 'weekly',status VARCHAR(30) NOT NULL,questions_json LONGTEXT NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS questions (question_id VARCHAR(40) PRIMARY KEY,subject VARCHAR(100) NOT NULL DEFAULT 'Mathematics',board VARCHAR(30),class_level INT,chapter VARCHAR(150),topic VARCHAR(150),subtopic VARCHAR(150),question_type VARCHAR(40) NOT NULL,answer_mode VARCHAR(80) NOT NULL,difficulty VARCHAR(50),competency VARCHAR(100),question_content_json LONGTEXT NOT NULL,answer_choices_json LONGTEXT NOT NULL,correct_answer VARCHAR(255),marks DECIMAL(10,2) NOT NULL,handwritten_upload_mode VARCHAR(20) NOT NULL DEFAULT 'none',source VARCHAR(255),source_year INT,status VARCHAR(20) NOT NULL DEFAULT 'active',created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS question_assets (asset_id VARCHAR(50) PRIMARY KEY,question_id VARCHAR(40) NOT NULL,asset_type VARCHAR(30) NOT NULL,original_filename VARCHAR(255),file_path TEXT NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(question_id) REFERENCES questions(question_id) ON DELETE CASCADE,INDEX idx_question_assets(question_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS subjects (subject_id VARCHAR(40) PRIMARY KEY,name VARCHAR(100) NOT NULL UNIQUE,active BOOLEAN NOT NULL DEFAULT TRUE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS chapters (chapter_id VARCHAR(60) PRIMARY KEY,board VARCHAR(30) NOT NULL,class_level INT NOT NULL,subject_id VARCHAR(40) NOT NULL,chapter_name VARCHAR(150) NOT NULL,sort_order INT NOT NULL DEFAULT 0,active BOOLEAN NOT NULL DEFAULT TRUE,UNIQUE KEY uq_chapter(board,class_level,subject_id,chapter_name),FOREIGN KEY(subject_id) REFERENCES subjects(subject_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS competencies (competency_id VARCHAR(60) PRIMARY KEY,subject_id VARCHAR(40) NOT NULL,name VARCHAR(150) NOT NULL,description VARCHAR(500),sort_order INT NOT NULL DEFAULT 0,active BOOLEAN NOT NULL DEFAULT TRUE,UNIQUE KEY uq_competency(subject_id,name),FOREIGN KEY(subject_id) REFERENCES subjects(subject_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS test_questions (test_id VARCHAR(40) NOT NULL,question_id VARCHAR(40) NOT NULL,sequence_number INT NOT NULL,marks DECIMAL(10,2) NOT NULL,PRIMARY KEY(test_id,question_id),UNIQUE KEY uq_test_sequence(test_id,sequence_number),FOREIGN KEY(test_id) REFERENCES tests(test_id) ON DELETE CASCADE,FOREIGN KEY(question_id) REFERENCES questions(question_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS attempts (attempt_id VARCHAR(50) PRIMARY KEY,student_id VARCHAR(32) NOT NULL,test_id VARCHAR(40) NOT NULL,started_at DATETIME NOT NULL,submitted_at DATETIME,status VARCHAR(30) NOT NULL,score DECIMAL(10,2),percentage DECIMAL(7,3),attempt_rate DECIMAL(7,3),accuracy DECIMAL(7,3),time_taken_seconds INT,FOREIGN KEY(student_id) REFERENCES students(student_id),FOREIGN KEY(test_id) REFERENCES tests(test_id),INDEX idx_attempt_student_test(student_id,test_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS responses (response_id VARCHAR(50) PRIMARY KEY,attempt_id VARCHAR(50) NOT NULL,question_id VARCHAR(40) NOT NULL,selected_answer VARCHAR(255),answer_status VARCHAR(30) NOT NULL,marks_awarded DECIMAL(10,2),is_correct BOOLEAN,answered_at DATETIME,UNIQUE KEY uq_attempt_question(attempt_id,question_id),FOREIGN KEY(attempt_id) REFERENCES attempts(attempt_id) ON DELETE CASCADE,FOREIGN KEY(question_id) REFERENCES questions(question_id),INDEX idx_response_attempt(attempt_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS answer_images (image_id VARCHAR(50) PRIMARY KEY,attempt_id VARCHAR(50) NOT NULL,question_id VARCHAR(40) NOT NULL,page_number INT NOT NULL,original_filename VARCHAR(255) NOT NULL,file_path TEXT NOT NULL,uploaded_at DATETIME NOT NULL,FOREIGN KEY(attempt_id) REFERENCES attempts(attempt_id) ON DELETE CASCADE,FOREIGN KEY(question_id) REFERENCES questions(question_id),INDEX idx_image_attempt_question(attempt_id,question_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS evaluation_errors (evaluation_error_id BIGINT AUTO_INCREMENT PRIMARY KEY,response_id VARCHAR(50) NOT NULL,error_code VARCHAR(10) NOT NULL,comment TEXT,marks_lost DECIMAL(10,2),created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(response_id) REFERENCES responses(response_id) ON DELETE CASCADE,INDEX idx_error_response(response_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
-"""CREATE TABLE IF NOT EXISTS question_history (student_id VARCHAR(32) NOT NULL,question_id VARCHAR(40) NOT NULL,attempt_count INT NOT NULL DEFAULT 0,correct_count INT NOT NULL DEFAULT 0,last_attempted_at DATETIME,last_correct_at DATETIME,last_marks_awarded DECIMAL(10,2),last_error_summary TEXT,PRIMARY KEY(student_id,question_id),FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,FOREIGN KEY(question_id) REFERENCES questions(question_id),INDEX idx_history_student(student_id,last_attempted_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS question_history (student_id VARCHAR(32) NOT NULL,question_id VARCHAR(40) NOT NULL,attempt_count INT NOT NULL DEFAULT 0,correct_count INT NOT NULL DEFAULT 0,last_attempted_at DATETIME,last_correct_at DATETIME,last_marks_awarded DECIMAL(10,2),last_error_summary TEXT,PRIMARY KEY(student_id,question_id),FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,INDEX idx_history_student(student_id,last_attempted_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 ]
+
+SUBJECTS = {
+    "maths": ("Mathematics",),
+    "physics": ("Physics",),
+    "chemistry": ("Chemistry",),
+    "computer": ("Computer",),
+}
+COMPETENCIES = [
+    ("conceptual_understanding", "Conceptual Understanding"),
+    ("procedural_fluency", "Procedural Fluency"),
+    ("application", "Application"),
+    ("problem_solving", "Problem Solving"),
+    ("reasoning", "Reasoning"),
+    ("mathematical_communication", "Mathematical Communication"),
+    ("interpretation", "Interpretation"),
+    ("analysis", "Analysis"),
+    ("case_based_application", "Case-based / Situation-based Application"),
+]
+
+# CBSE Mathematics chapter seeds. These are starter metadata for the teacher dropdown;
+# the tables are editable later as curricula evolve.
+CBSE_MATH_CHAPTERS = {
+    10: ["Real Numbers", "Polynomials", "Pair of Linear Equations in Two Variables", "Quadratic Equations", "Arithmetic Progressions", "Triangles", "Coordinate Geometry", "Introduction to Trigonometry", "Some Applications of Trigonometry", "Circles", "Areas Related to Circles", "Surface Areas and Volumes", "Statistics", "Probability"],
+    11: ["Sets", "Relations and Functions", "Trigonometric Functions", "Principle of Mathematical Induction", "Complex Numbers and Quadratic Equations", "Linear Inequalities", "Permutations and Combinations", "Binomial Theorem", "Sequences and Series", "Straight Lines", "Conic Sections", "Introduction to Three-dimensional Geometry", "Limits and Derivatives", "Statistics", "Probability"],
+    12: ["Relations and Functions", "Inverse Trigonometric Functions", "Matrices", "Determinants", "Continuity and Differentiability", "Applications of Derivatives", "Integrals", "Applications of Integrals", "Differential Equations", "Vector Algebra", "Three-dimensional Geometry", "Linear Programming", "Probability"],
+}
 
 def initialize_database():
     with engine.begin() as connection:
         for statement in SCHEMA:
             connection.execute(text(statement))
-        # Lightweight migration for databases created before question status existed.
         try:
             connection.execute(text("ALTER TABLE questions ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'active'"))
         except Exception as exc:
             if "Duplicate column" not in str(exc) and "1060" not in str(exc):
                 raise
+        for subject_id, (name,) in SUBJECTS.items():
+            connection.execute(text("INSERT INTO subjects(subject_id,name,active) VALUES(:id,:name,1) ON DUPLICATE KEY UPDATE name=VALUES(name),active=1"), {"id": subject_id, "name": name})
+        for board in ("CBSE", "ICSE"):
+            for class_level, chapters in CBSE_MATH_CHAPTERS.items():
+                for order, chapter in enumerate(chapters, 1):
+                    connection.execute(text("INSERT INTO chapters(chapter_id,board,class_level,subject_id,chapter_name,sort_order,active) VALUES(:id,:board,:class,:subject,:name,:order,1) ON DUPLICATE KEY UPDATE chapter_name=VALUES(chapter_name),sort_order=VALUES(sort_order),active=1"), {"id": f"{board.lower()}_maths_{class_level}_{order}", "board": board, "class": class_level, "subject": "maths", "name": chapter, "order": order})
+        for subject_id, name in (("maths", "Mathematics"), ("physics", "Physics"), ("chemistry", "Chemistry"), ("computer", "Computer")):
+            for order, (cid, cname) in enumerate(COMPETENCIES, 1):
+                connection.execute(text("INSERT INTO competencies(competency_id,subject_id,name,description,sort_order,active) VALUES(:id,:subject,:name,:description,:order,1) ON DUPLICATE KEY UPDATE name=VALUES(name),description=VALUES(description),sort_order=VALUES(sort_order),active=1"), {"id": f"{subject_id}_{cid}", "subject": subject_id, "name": cname, "description": "Controlled assessment competency.", "order": order})
