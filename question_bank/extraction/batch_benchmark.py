@@ -10,7 +10,7 @@ skipped rather than split into Hindi/English regions. Pages that appear to be
 continuations without a new top-level marker are also excluded from question
 extraction until cross-page merging is implemented.
 
-The reports identify *suspected* boundary problems; they do not claim
+The reports identify suspected boundary problems; they do not claim
 ground-truth accuracy without human comparison to the source PDFs.
 """
 from __future__ import annotations
@@ -25,10 +25,7 @@ from typing import Any
 import fitz
 
 from question_bank.agents.cbse_board_paper.agent import CBSEBoardPaperAgent
-from question_bank.extraction.layout_diagnostics import (
-    diagnose_page,
-    write_layout_diagnostics,
-)
+from question_bank.extraction.layout_diagnostics import diagnose_page, write_layout_diagnostics
 from question_bank.extraction.question_boundary import detect_question_boundaries
 from question_bank.extraction.question_continuation import review_document_sequences
 from question_bank.extraction.visual_review import (
@@ -37,17 +34,11 @@ from question_bank.extraction.visual_review import (
     write_visual_review_manifests,
 )
 
-
 DEVANAGARI_RE = re.compile(r"[\u0900-\u097F]")
 
 
 def _page_language_status(page: fitz.Page) -> tuple[str, int]:
-    """Classify a page conservatively using native text signals only.
-
-    Any detected Devanagari text causes the page to be skipped. This is a
-    safety filter, not a language-recognition claim: image-only Hindi text
-    cannot be detected here and remains outside this rule's guarantees.
-    """
+    """Classify a page conservatively using native text signals only."""
     words = page.get_text("words") or []
     devanagari_word_count = sum(
         bool(DEVANAGARI_RE.search(str(word[4]))) for word in words
@@ -139,9 +130,6 @@ def benchmark_pdf(
     review_rows = [review.to_dict() for review in reviews]
     suspicious_pages = [row for row in review_rows if row["severity"] != "ok"]
 
-    # A page without a top-level marker is not safe to ingest because it may
-    # be a continuation of the previous question. Keep it out of the English
-    # question set until cross-page question assembly exists.
     continuation_pages = {
         int(review["page"])
         for review in review_rows
@@ -224,31 +212,51 @@ def write_reports(
     json_path = output_dir / "boundary_benchmark.json"
     csv_path = output_dir / "boundary_page_review.csv"
 
-    serializable_reports = []
-    for report in reports:
-        clean = {key: value for key, value in report.items() if key != "_visual_report"}
-        serializable_reports.append(clean)
+    serializable_reports = [
+        {key: value for key, value in report.items() if key != "_visual_report"}
+        for report in reports
+    ]
     json_path.write_text(json.dumps(serializable_reports, indent=2), encoding="utf-8")
 
     rows: list[dict[str, Any]] = []
+    seen_page_rows: set[tuple[str, int]] = set()
     for report in serializable_reports:
-        reviews_by_page = {review["page"]: review for review in report.get("sequence_reviews", [])}
+        reviews_by_page = {
+            review["page"]: review
+            for review in report.get("sequence_reviews", [])
+        }
         for page in report.get("pages", []):
+            key = (report["pdf"], int(page["page"]))
             review = reviews_by_page.get(page["page"], {})
-            rows.append(
-                {
-                    "pdf": report["pdf"],
-                    "page": page["page"],
-                    "question_numbers": ",".join(map(str, page["question_numbers"])),
-                    "question_count": page["question_count"],
-                    "severity": review.get("severity", "unknown"),
-                    "issues": ";".join(review.get("issues", [])),
-                    "previous_last_question": review.get("previous_last_question"),
-                    "page_status": page.get("page_status", ""),
-                    "devanagari_word_count": page.get("devanagari_word_count", 0),
-                }
-            )
+            row = {
+                "pdf": report["pdf"],
+                "page": page["page"],
+                "question_numbers": ",".join(map(str, page["question_numbers"])),
+                "question_count": page["question_count"],
+                "severity": review.get("severity", "unknown"),
+                "issues": ";".join(review.get("issues", [])),
+                "previous_last_question": review.get("previous_last_question"),
+                "page_status": page.get("page_status", ""),
+                "devanagari_word_count": page.get("devanagari_word_count", 0),
+            }
+            if key not in seen_page_rows:
+                rows.append(row)
+                seen_page_rows.add(key)
+
         for skipped in report.get("skipped_pages", []):
+            key = (report["pdf"], int(skipped["page"]))
+            if key in seen_page_rows:
+                for existing in rows:
+                    if (existing["pdf"], int(existing["page"])) == key:
+                        existing["question_numbers"] = ""
+                        existing["question_count"] = 0
+                        existing["severity"] = "review"
+                        existing["issues"] = skipped["reason"]
+                        existing["previous_last_question"] = ""
+                        existing["page_status"] = skipped["page_status"]
+                        existing["devanagari_word_count"] = skipped.get("devanagari_word_count", 0)
+                        break
+                continue
             rows.append(
                 {
                     "pdf": report["pdf"],
@@ -262,24 +270,20 @@ def write_reports(
                     "devanagari_word_count": skipped.get("devanagari_word_count", 0),
                 }
             )
+            seen_page_rows.add(key)
 
     with csv_path.open("w", newline="", encoding="utf-8") as handle:
         fieldnames = [
-            "pdf",
-            "page",
-            "question_numbers",
-            "question_count",
-            "severity",
-            "issues",
-            "previous_last_question",
-            "page_status",
-            "devanagari_word_count",
+            "pdf", "page", "question_numbers", "question_count", "severity",
+            "issues", "previous_last_question", "page_status", "devanagari_word_count",
         ]
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 
-    valid = [r for r in serializable_reports if r.get("status") in {"ok", "review_flags"}]
+    valid = [
+        r for r in serializable_reports if r.get("status") in {"ok", "review_flags"}
+    ]
     summary = {
         "pdf_count": len(serializable_reports),
         "validated_cbse_pdf_count": len(valid),
@@ -307,13 +311,17 @@ def write_reports(
             if r.get("status") == "manual_review_required"
         ],
     }
+
     if visual_reports is not None:
         summary["visual_review"] = {
             "question_crop_count": sum(r["question_crop_count"] for r in visual_reports),
-            "high_priority_page_count": sum(r["high_priority_page_count"] for r in visual_reports),
+            "high_priority_page_count": sum(
+                r["high_priority_page_count"] for r in visual_reports
+            ),
             "output_dir": str(output_dir / "visual_review"),
             "index": str(output_dir / "visual_review" / "visual_review_index.html"),
         }
+
     (output_dir / "boundary_benchmark_summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8"
     )
@@ -323,7 +331,6 @@ def write_reports(
         write_visual_review_manifests(visual_reports, visual_root)
         write_visual_review_index(visual_reports, visual_root)
 
-    # V1.2.1: diagnose only pages already flagged by sequence review.
     layout_diagnostics: list[dict[str, Any]] = []
     for report in serializable_reports:
         pdf_path = output_dir.parent / "source_pdfs" / report["pdf"]
@@ -334,11 +341,7 @@ def write_reports(
                 continue
             diagnostic_dir = output_dir / "layout_diagnostics" / Path(report["pdf"]).stem
             layout_diagnostics.append(
-                diagnose_page(
-                    pdf_path,
-                    int(review["page"]),
-                    diagnostic_dir,
-                )
+                diagnose_page(pdf_path, int(review["page"]), diagnostic_dir)
             )
 
     if layout_diagnostics:
@@ -401,11 +404,13 @@ def main() -> None:
                 f"{report['skipped_page_count']} skipped pages"
             )
         except Exception as exc:
-            reports.append({
-                "pdf": pdf_path.name,
-                "status": "error",
-                "error": f"{type(exc).__name__}: {exc}",
-            })
+            reports.append(
+                {
+                    "pdf": pdf_path.name,
+                    "status": "error",
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+            )
             print(f"{pdf_path.name}: ERROR: {exc}")
 
     write_reports(
