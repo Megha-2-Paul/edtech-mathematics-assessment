@@ -17,9 +17,9 @@ QUESTION_RE = re.compile(r"^(?:Q\.?\s*)?(\d{1,2})[.)]$", re.IGNORECASE)
 QUESTION_INLINE_RE = re.compile(r"^(?:Q\.?\s*)?(\d{1,2})[.)]\s+", re.IGNORECASE)
 
 # In the supported CBSE board-paper layout, top-level question numbers begin
-# at the left text margin. This rejects numeric labels belonging to diagrams,
-# internal choices and other content farther into the page.
-LEFT_MARGIN_RATIO = 0.15
+# at the left text margin. A tighter threshold avoids numeric labels used in
+# diagrams and internal choices while remaining independent of page numbers.
+LEFT_MARGIN_RATIO = 0.10
 
 
 @dataclass(frozen=True)
@@ -52,8 +52,7 @@ def _question_markers(page: fitz.Page) -> list[tuple[str, float]]:
         x0, y0, x1, y1, text = word[:5]
         if not _is_left_margin_marker(page, float(x0)):
             continue
-        cleaned = text.strip()
-        match = QUESTION_RE.match(cleaned)
+        match = QUESTION_RE.match(text.strip())
         if not match:
             continue
         number = match.group(1)
