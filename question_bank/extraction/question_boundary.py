@@ -16,6 +16,11 @@ import fitz
 QUESTION_RE = re.compile(r"^(?:Q\.?\s*)?(\d{1,2})[.)]$", re.IGNORECASE)
 QUESTION_INLINE_RE = re.compile(r"^(?:Q\.?\s*)?(\d{1,2})[.)]\s+", re.IGNORECASE)
 
+# In the supported CBSE board-paper layout, top-level question numbers begin
+# at the left text margin. This rejects numeric labels belonging to diagrams,
+# internal choices and other content farther into the page.
+LEFT_MARGIN_RATIO = 0.15
+
 
 @dataclass(frozen=True)
 class QuestionBoundary:
@@ -34,21 +39,22 @@ def _words(page: fitz.Page) -> list[tuple]:
     return page.get_text("words") or []
 
 
-def _question_markers(page: fitz.Page) -> list[tuple[str, float]]:
-    """Return top-level question numbers and their y positions.
+def _is_left_margin_marker(page: fitz.Page, x0: float) -> bool:
+    return x0 <= page.rect.width * LEFT_MARGIN_RATIO
 
-    Only standalone numeric markers are accepted here. Subparts such as
-    ``(a)``/``(b)`` therefore cannot accidentally become questions.
-    """
+
+def _question_markers(page: fitz.Page) -> list[tuple[str, float]]:
+    """Return likely top-level question numbers and their y positions."""
     markers: list[tuple[str, float]] = []
     seen: set[tuple[str, int]] = set()
 
     for word in _words(page):
         x0, y0, x1, y1, text = word[:5]
+        if not _is_left_margin_marker(page, float(x0)):
+            continue
         cleaned = text.strip()
         match = QUESTION_RE.match(cleaned)
         if not match:
-            # Some PDFs split the number and punctuation into separate words.
             continue
         number = match.group(1)
         key = (number, round(y0))
@@ -56,12 +62,13 @@ def _question_markers(page: fitz.Page) -> list[tuple[str, float]]:
             seen.add(key)
             markers.append((number, float(y0)))
 
-    # A question number can occasionally be embedded in a larger token.
-    # Handle that conservatively only when the token begins with a number and
-    # punctuation, and never treat subparts as top-level questions.
+    # Some PDFs combine a question number and its first word into one token.
+    # Keep this fallback subject to the same left-margin safety rule.
     if not markers:
         for word in _words(page):
             x0, y0, x1, y1, text = word[:5]
+            if not _is_left_margin_marker(page, float(x0)):
+                continue
             match = QUESTION_INLINE_RE.match(text.strip())
             if match:
                 number = match.group(1)
@@ -77,9 +84,9 @@ def _question_markers(page: fitz.Page) -> list[tuple[str, float]]:
 def detect_question_boundaries(page: fitz.Page, page_number: int) -> list[QuestionBoundary]:
     """Detect top-level question regions on ``page``.
 
-    The final question extends to the bottom of the page. The caller can
-    merge adjacent regions across pages in a later version when a question
-    genuinely continues onto the next page.
+    The final question extends to the bottom of the page. Cross-page question
+    merging is intentionally deferred to a later version because it requires
+    document-level context.
     """
     markers = _question_markers(page)
     if not markers:
@@ -93,8 +100,8 @@ def detect_question_boundaries(page: fitz.Page, page_number: int) -> list[Questi
         if end_y <= start_y:
             continue
 
-        # Include the complete horizontal page width. This is intentional in
-        # V1: visual content can sit beside or below the question text.
+        # Use the complete horizontal page width so diagrams/tables beside or
+        # below the question text remain part of the source-of-truth crop.
         bbox = (0.0, start_y, page_rect.width, end_y)
         boundaries.append(
             QuestionBoundary(
