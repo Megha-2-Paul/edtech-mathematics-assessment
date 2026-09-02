@@ -5,6 +5,11 @@ agent, detects top-level questions on English pages, and writes JSON/CSV
 review reports. It can also generate V1.2 visual review artifacts and V1.2.1
 layout diagnostics for suspicious pages.
 
+V1.2.2 is intentionally conservative: pages containing Devanagari text are
+skipped rather than split into Hindi/English regions. Pages that appear to be
+continuations without a new top-level marker are also excluded from question
+extraction until cross-page merging is implemented.
+
 The reports identify *suspected* boundary problems; they do not claim
 ground-truth accuracy without human comparison to the source PDFs.
 """
@@ -13,6 +18,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +38,32 @@ from question_bank.extraction.visual_review import (
 )
 
 
-def _page_row(pdf_path: Path, page_number: int, boundaries: list[Any]) -> dict[str, Any]:
+DEVANAGARI_RE = re.compile(r"[\u0900-\u097F]")
+
+
+def _page_language_status(page: fitz.Page) -> tuple[str, int]:
+    """Classify a page conservatively using native text signals only.
+
+    Any detected Devanagari text causes the page to be skipped. This is a
+    safety filter, not a language-recognition claim: image-only Hindi text
+    cannot be detected here and remains outside this rule's guarantees.
+    """
+    words = page.get_text("words") or []
+    devanagari_word_count = sum(
+        bool(DEVANAGARI_RE.search(str(word[4]))) for word in words
+    )
+    if devanagari_word_count:
+        return "SKIP_MIXED_LANGUAGE", devanagari_word_count
+    return "ENGLISH_CANDIDATE", 0
+
+
+def _page_row(
+    pdf_path: Path,
+    page_number: int,
+    boundaries: list[Any],
+    page_status: str = "ENGLISH_CANDIDATE",
+    devanagari_word_count: int = 0,
+) -> dict[str, Any]:
     numbers = [int(boundary.question_number) for boundary in boundaries]
     return {
         "pdf": pdf_path.name,
@@ -41,6 +72,8 @@ def _page_row(pdf_path: Path, page_number: int, boundaries: list[Any]) -> dict[s
         "question_count": len(numbers),
         "bbox_count": len(boundaries),
         "max_confidence": max((b.confidence for b in boundaries), default=0.0),
+        "page_status": page_status,
+        "devanagari_word_count": devanagari_word_count,
     }
 
 
@@ -68,18 +101,35 @@ def benchmark_pdf(
             "unique_question_numbers": [],
             "duplicate_marker_count": 0,
             "suspicious_page_count": 0,
+            "skipped_page_count": 0,
+            "skipped_mixed_language_page_count": 0,
+            "skipped_continuation_page_count": 0,
             "pages": [],
             "sequence_reviews": [],
         }
 
     page_rows: list[dict[str, Any]] = []
     english_pages: list[tuple[int, list[int]]] = []
+    skipped_pages: list[dict[str, Any]] = []
 
     with fitz.open(str(pdf_path)) as document:
         for decision in result.pages:
             if decision.routing != "extract":
                 continue
             page = document[decision.page - 1]
+            language_status, devanagari_count = _page_language_status(page)
+            if language_status == "SKIP_MIXED_LANGUAGE":
+                skipped_pages.append(
+                    {
+                        "pdf": pdf_path.name,
+                        "page": decision.page,
+                        "page_status": language_status,
+                        "reason": "devanagari_text_detected",
+                        "devanagari_word_count": devanagari_count,
+                    }
+                )
+                continue
+
             boundaries = detect_question_boundaries(page, decision.page)
             row = _page_row(pdf_path, decision.page, boundaries)
             page_rows.append(row)
@@ -88,7 +138,32 @@ def benchmark_pdf(
     reviews = review_document_sequences(english_pages)
     review_rows = [review.to_dict() for review in reviews]
     suspicious_pages = [row for row in review_rows if row["severity"] != "ok"]
-    detected_numbers = [n for _, numbers in english_pages for n in numbers]
+
+    # A page without a top-level marker is not safe to ingest because it may
+    # be a continuation of the previous question. Keep it out of the English
+    # question set until cross-page question assembly exists.
+    continuation_pages = {
+        int(review["page"])
+        for review in review_rows
+        if "no_top_level_question_marker" in review.get("issues", [])
+    }
+    for page_number in sorted(continuation_pages):
+        skipped_pages.append(
+            {
+                "pdf": pdf_path.name,
+                "page": page_number,
+                "page_status": "SKIP_CONTINUATION_OR_UNCERTAIN",
+                "reason": "no_top_level_question_marker",
+                "devanagari_word_count": 0,
+            }
+        )
+
+    detected_numbers = [
+        n
+        for page_number, numbers in english_pages
+        if page_number not in continuation_pages
+        for n in numbers
+    ]
     unique_numbers = sorted(set(detected_numbers))
 
     report: dict[str, Any] = {
@@ -98,12 +173,26 @@ def benchmark_pdf(
         "agent_confidence": result.confidence,
         "layout_validation": layout,
         "english_page_count": len(english_pages),
-        "pages_with_question_markers": sum(bool(numbers) for _, numbers in english_pages),
-        "pages_without_question_markers": sum(not numbers for _, numbers in english_pages),
+        "pages_with_question_markers": sum(
+            bool(numbers) and page not in continuation_pages
+            for page, numbers in english_pages
+        ),
+        "pages_without_question_markers": sum(
+            not numbers for _, numbers in english_pages
+        ),
         "detected_question_marker_count": len(detected_numbers),
         "unique_question_numbers": unique_numbers,
         "duplicate_marker_count": len(detected_numbers) - len(unique_numbers),
         "suspicious_page_count": len(suspicious_pages),
+        "skipped_page_count": len(skipped_pages),
+        "skipped_mixed_language_page_count": sum(
+            p["page_status"] == "SKIP_MIXED_LANGUAGE" for p in skipped_pages
+        ),
+        "skipped_continuation_page_count": sum(
+            p["page_status"] == "SKIP_CONTINUATION_OR_UNCERTAIN"
+            for p in skipped_pages
+        ),
+        "skipped_pages": skipped_pages,
         "pages": page_rows,
         "sequence_reviews": review_rows,
     }
@@ -155,6 +244,22 @@ def write_reports(
                     "severity": review.get("severity", "unknown"),
                     "issues": ";".join(review.get("issues", [])),
                     "previous_last_question": review.get("previous_last_question"),
+                    "page_status": page.get("page_status", ""),
+                    "devanagari_word_count": page.get("devanagari_word_count", 0),
+                }
+            )
+        for skipped in report.get("skipped_pages", []):
+            rows.append(
+                {
+                    "pdf": report["pdf"],
+                    "page": skipped["page"],
+                    "question_numbers": "",
+                    "question_count": 0,
+                    "severity": "review",
+                    "issues": skipped["reason"],
+                    "previous_last_question": "",
+                    "page_status": skipped["page_status"],
+                    "devanagari_word_count": skipped.get("devanagari_word_count", 0),
                 }
             )
 
@@ -167,6 +272,8 @@ def write_reports(
             "severity",
             "issues",
             "previous_last_question",
+            "page_status",
+            "devanagari_word_count",
         ]
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
@@ -184,6 +291,13 @@ def write_reports(
             r.get("detected_question_marker_count", 0) for r in valid
         ),
         "total_suspicious_pages": sum(r.get("suspicious_page_count", 0) for r in valid),
+        "total_skipped_pages": sum(r.get("skipped_page_count", 0) for r in valid),
+        "total_skipped_mixed_language_pages": sum(
+            r.get("skipped_mixed_language_page_count", 0) for r in valid
+        ),
+        "total_skipped_continuation_pages": sum(
+            r.get("skipped_continuation_page_count", 0) for r in valid
+        ),
         "pdfs_with_suspicious_pages": [
             r["pdf"] for r in valid if r.get("suspicious_page_count", 0)
         ],
@@ -283,7 +397,8 @@ def main() -> None:
             print(
                 f"{pdf_path.name}: status={report['status']}, "
                 f"{report['detected_question_marker_count']} markers, "
-                f"{report['suspicious_page_count']} suspicious pages"
+                f"{report['suspicious_page_count']} suspicious pages, "
+                f"{report['skipped_page_count']} skipped pages"
             )
         except Exception as exc:
             reports.append({
