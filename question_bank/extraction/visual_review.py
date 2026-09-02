@@ -15,7 +15,6 @@ import fitz
 
 from question_bank.extraction.page_renderer import render_page
 from question_bank.extraction.question_cropper import extract_page_questions
-from question_bank.extraction.question_continuation import review_document_sequences
 
 
 def _review_priority(review: dict[str, Any], boundaries: list[dict[str, Any]]) -> str:
