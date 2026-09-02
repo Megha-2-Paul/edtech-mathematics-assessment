@@ -19,7 +19,10 @@ from typing import Any
 import fitz
 
 from question_bank.agents.cbse_board_paper.agent import CBSEBoardPaperAgent
-from question_bank.extraction.layout_diagnostics import diagnose_page
+from question_bank.extraction.layout_diagnostics import (
+    diagnose_page,
+    write_layout_diagnostics,
+)
 from question_bank.extraction.question_boundary import detect_question_boundaries
 from question_bank.extraction.question_continuation import review_document_sequences
 from question_bank.extraction.visual_review import (
@@ -44,7 +47,6 @@ def _page_row(pdf_path: Path, page_number: int, boundaries: list[Any]) -> dict[s
 def benchmark_pdf(
     pdf_path: Path,
     visual_output_dir: Path | None = None,
-    layout_diagnostics_dir: Path | None = None,
     dpi: int = 180,
 ) -> dict[str, Any]:
     """Benchmark one PDF and return a JSON-serializable report."""
@@ -121,25 +123,6 @@ def benchmark_pdf(
         }
         report["_visual_report"] = visual_report
 
-    if layout_diagnostics_dir is not None and suspicious_pages:
-        pdf_diagnostics_dir = layout_diagnostics_dir / pdf_path.stem.replace(" ", "_")
-        diagnostics: list[dict[str, Any]] = []
-        for review in suspicious_pages:
-            diagnostics.append(
-                diagnose_page(
-                    pdf_path,
-                    review["page"],
-                    pdf_diagnostics_dir,
-                    dpi=dpi,
-                )
-            )
-        report["layout_diagnostics"] = {
-            "page_count": len(diagnostics),
-            "output_dir": str(pdf_diagnostics_dir),
-            "pages": [item["page"] for item in diagnostics],
-        }
-        report["_layout_diagnostics"] = diagnostics
-
     return report
 
 
@@ -147,7 +130,6 @@ def write_reports(
     reports: list[dict[str, Any]],
     output_dir: Path,
     visual_reports: list[dict[str, Any]] | None = None,
-    layout_diagnostics: list[dict[str, Any]] | None = None,
 ) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     json_path = output_dir / "boundary_benchmark.json"
@@ -155,11 +137,7 @@ def write_reports(
 
     serializable_reports = []
     for report in reports:
-        clean = {
-            key: value
-            for key, value in report.items()
-            if key not in {"_visual_report", "_layout_diagnostics"}
-        }
+        clean = {key: value for key, value in report.items() if key != "_visual_report"}
         serializable_reports.append(clean)
     json_path.write_text(json.dumps(serializable_reports, indent=2), encoding="utf-8")
 
@@ -222,13 +200,6 @@ def write_reports(
             "output_dir": str(output_dir / "visual_review"),
             "index": str(output_dir / "visual_review" / "visual_review_index.html"),
         }
-    if layout_diagnostics is not None:
-        summary["layout_diagnostics"] = {
-            "suspicious_page_count": len(layout_diagnostics),
-            "output_dir": str(output_dir / "layout_diagnostics"),
-            "json": str(output_dir / "layout_diagnostics" / "marker_diagnostics.json"),
-            "csv": str(output_dir / "layout_diagnostics" / "marker_diagnostics.csv"),
-        }
     (output_dir / "boundary_benchmark_summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8"
     )
@@ -238,10 +209,35 @@ def write_reports(
         write_visual_review_manifests(visual_reports, visual_root)
         write_visual_review_index(visual_reports, visual_root)
 
-    if layout_diagnostics is not None:
-        write_layout_diagnostics(
-            layout_diagnostics,
-            output_dir / "layout_diagnostics",
+    # V1.2.1: diagnose only pages already flagged by sequence review.
+    layout_diagnostics: list[dict[str, Any]] = []
+    for report in serializable_reports:
+        pdf_path = output_dir.parent / "source_pdfs" / report["pdf"]
+        if not pdf_path.exists():
+            continue
+        for review in report.get("sequence_reviews", []):
+            if review.get("severity") == "ok":
+                continue
+            diagnostic_dir = output_dir / "layout_diagnostics" / Path(report["pdf"]).stem
+            layout_diagnostics.append(
+                diagnose_page(
+                    pdf_path,
+                    int(review["page"]),
+                    diagnostic_dir,
+                )
+            )
+
+    if layout_diagnostics:
+        diagnostic_root = output_dir / "layout_diagnostics"
+        write_layout_diagnostics(layout_diagnostics, diagnostic_root)
+        summary["layout_diagnostics"] = {
+            "page_count": len(layout_diagnostics),
+            "output_dir": str(diagnostic_root),
+            "json": str(diagnostic_root / "marker_diagnostics.json"),
+            "csv": str(diagnostic_root / "marker_diagnostics.csv"),
+        }
+        (output_dir / "boundary_benchmark_summary.json").write_text(
+            json.dumps(summary, indent=2), encoding="utf-8"
         )
 
     print(json.dumps(summary, indent=2))
@@ -249,7 +245,7 @@ def write_reports(
     print(f"Page review CSV: {csv_path}")
     if visual_reports is not None:
         print(f"Visual review index: {output_dir / 'visual_review' / 'visual_review_index.html'}")
-    if layout_diagnostics is not None:
+    if layout_diagnostics:
         print(f"Layout diagnostics: {output_dir / 'layout_diagnostics'}")
 
 
@@ -263,11 +259,6 @@ def main() -> None:
         action="store_true",
         help="Skip V1.2 question crops and visual review artifacts",
     )
-    parser.add_argument(
-        "--no-layout-diagnostics",
-        action="store_true",
-        help="Skip V1.2.1 diagnostics for suspicious pages",
-    )
     args = parser.parse_args()
 
     pdfs = sorted(args.source_dir.glob("*.pdf"))
@@ -276,25 +267,19 @@ def main() -> None:
 
     reports: list[dict[str, Any]] = []
     visual_reports: list[dict[str, Any]] = []
-    layout_diagnostics: list[dict[str, Any]] = []
     visual_output_dir = None if args.no_visual_review else args.output_dir / "visual_review"
-    layout_diagnostics_dir = None if args.no_layout_diagnostics else args.output_dir / "layout_diagnostics"
 
     for pdf_path in pdfs:
         try:
             report = benchmark_pdf(
                 pdf_path,
                 visual_output_dir=visual_output_dir,
-                layout_diagnostics_dir=layout_diagnostics_dir,
                 dpi=args.dpi,
             )
             visual_report = report.pop("_visual_report", None)
-            diagnostics = report.pop("_layout_diagnostics", None)
             reports.append(report)
             if visual_report is not None:
                 visual_reports.append(visual_report)
-            if diagnostics is not None:
-                layout_diagnostics.extend(diagnostics)
             print(
                 f"{pdf_path.name}: status={report['status']}, "
                 f"{report['detected_question_marker_count']} markers, "
@@ -312,7 +297,6 @@ def main() -> None:
         reports,
         args.output_dir,
         visual_reports=None if args.no_visual_review else visual_reports,
-        layout_diagnostics=None if args.no_layout_diagnostics else layout_diagnostics,
     )
 
 
