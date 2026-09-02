@@ -1,8 +1,9 @@
 """Detect top-level question boundaries on a single PDF page.
 
-V1 deliberately detects only top-level numbered questions. It uses PyMuPDF
-word coordinates so that the physical region can be rendered without losing
-nearby diagrams, tables, or internal choices.
+V1.1 keeps the V1 coordinate-based approach but makes question-marker
+selection more conservative: CBSE top-level question numbers share a stable
+left text margin, while ordinary numbers inside question text can be indented.
+Only the left-margin candidate cluster is accepted.
 """
 from __future__ import annotations
 
@@ -16,10 +17,10 @@ import fitz
 QUESTION_RE = re.compile(r"^(?:Q\.?\s*)?(\d{1,2})[.)]$", re.IGNORECASE)
 QUESTION_INLINE_RE = re.compile(r"^(?:Q\.?\s*)?(\d{1,2})[.)]\s+", re.IGNORECASE)
 
-# In the supported CBSE board-paper layout, top-level question numbers begin
-# at the left text margin. A tighter threshold avoids numeric labels used in
-# diagrams and internal choices while remaining independent of page numbers.
-LEFT_MARGIN_RATIO = 0.10
+# First restrict candidates to the broad left side. We then identify the
+# actual question-marker x-position from the leftmost candidate cluster.
+LEFT_MARGIN_RATIO = 0.15
+LEFT_MARKER_TOLERANCE_PT = 30.0
 
 
 @dataclass(frozen=True)
@@ -39,18 +40,13 @@ def _words(page: fitz.Page) -> list[tuple]:
     return page.get_text("words") or []
 
 
-def _is_left_margin_marker(page: fitz.Page, x0: float) -> bool:
-    return x0 <= page.rect.width * LEFT_MARGIN_RATIO
-
-
-def _question_markers(page: fitz.Page) -> list[tuple[str, float]]:
-    """Return likely top-level question numbers and their y positions."""
-    markers: list[tuple[str, float]] = []
+def _candidate_markers(page: fitz.Page) -> list[tuple[str, float, float]]:
+    """Collect numeric question-marker candidates on the broad left side."""
+    candidates: list[tuple[str, float, float]] = []
     seen: set[tuple[str, int]] = set()
-
     for word in _words(page):
-        x0, y0, x1, y1, text = word[:5]
-        if not _is_left_margin_marker(page, float(x0)):
+        x0, y0, _x1, _y1, text = word[:5]
+        if x0 > page.rect.width * LEFT_MARGIN_RATIO:
             continue
         match = QUESTION_RE.match(text.strip())
         if not match:
@@ -59,33 +55,52 @@ def _question_markers(page: fitz.Page) -> list[tuple[str, float]]:
         key = (number, round(y0))
         if key not in seen:
             seen.add(key)
-            markers.append((number, float(y0)))
+            candidates.append((number, float(y0), float(x0)))
 
-    # Some PDFs combine a question number and its first word into one token.
-    # Keep this fallback subject to the same left-margin safety rule.
-    if not markers:
-        for word in _words(page):
-            x0, y0, x1, y1, text = word[:5]
-            if not _is_left_margin_marker(page, float(x0)):
-                continue
-            match = QUESTION_INLINE_RE.match(text.strip())
-            if match:
-                number = match.group(1)
-                key = (number, round(y0))
-                if key not in seen:
-                    seen.add(key)
-                    markers.append((number, float(y0)))
+    if candidates:
+        return candidates
 
-    markers.sort(key=lambda item: item[1])
-    return markers
+    # Some PDFs combine a number and the first word into one text token.
+    for word in _words(page):
+        x0, y0, _x1, _y1, text = word[:5]
+        if x0 > page.rect.width * LEFT_MARGIN_RATIO:
+            continue
+        match = QUESTION_INLINE_RE.match(text.strip())
+        if not match:
+            continue
+        number = match.group(1)
+        key = (number, round(y0))
+        if key not in seen:
+            seen.add(key)
+            candidates.append((number, float(y0), float(x0)))
+    return candidates
+
+
+def _question_markers(page: fitz.Page) -> list[tuple[str, float]]:
+    """Return likely top-level question numbers and their y positions."""
+    candidates = _candidate_markers(page)
+    if not candidates:
+        return []
+
+    # In the supported CBSE layout, genuine top-level markers start at the
+    # same left margin. An indented number such as the ``10.`` at the end of
+    # a sentence should therefore not be accepted merely because it is on the
+    # broad left side of the page.
+    marker_x = min(x0 for _number, _y0, x0 in candidates)
+    candidates = [
+        (number, y0)
+        for number, y0, x0 in candidates
+        if x0 <= marker_x + LEFT_MARKER_TOLERANCE_PT
+    ]
+    candidates.sort(key=lambda item: item[1])
+    return candidates
 
 
 def detect_question_boundaries(page: fitz.Page, page_number: int) -> list[QuestionBoundary]:
     """Detect top-level question regions on ``page``.
 
     The final question extends to the bottom of the page. Cross-page question
-    merging is intentionally deferred to a later version because it requires
-    document-level context.
+    merging is intentionally deferred to the document-level V1.1 review step.
     """
     markers = _question_markers(page)
     if not markers:
@@ -109,7 +124,7 @@ def detect_question_boundaries(page: fitz.Page, page_number: int) -> list[Questi
                 bbox=bbox,
                 start_y=start_y,
                 end_y=end_y,
-                confidence=0.90,
+                confidence=0.92,
             )
         )
 
