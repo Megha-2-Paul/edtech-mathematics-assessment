@@ -1,8 +1,10 @@
 """Batch benchmark for CBSE question-boundary extraction.
 
 This tool scans all PDFs in a directory, applies the existing CBSE Board Paper
-agent, detects top-level questions on English pages, and writes a JSON/CSV
-review report. It reports *suspected* boundary problems; it does not claim
+agent, detects top-level questions on English pages, and writes JSON/CSV
+review reports. It can also generate V1.2 visual review artifacts.
+
+The reports identify *suspected* boundary problems; they do not claim
 ground-truth accuracy without human comparison to the source PDFs.
 """
 from __future__ import annotations
@@ -18,6 +20,11 @@ import fitz
 from question_bank.agents.cbse_board_paper.agent import CBSEBoardPaperAgent
 from question_bank.extraction.question_boundary import detect_question_boundaries
 from question_bank.extraction.question_continuation import review_document_sequences
+from question_bank.extraction.visual_review import (
+    generate_visual_review,
+    write_visual_review_index,
+    write_visual_review_manifests,
+)
 
 
 def _page_row(pdf_path: Path, page_number: int, boundaries: list[Any]) -> dict[str, Any]:
@@ -32,7 +39,11 @@ def _page_row(pdf_path: Path, page_number: int, boundaries: list[Any]) -> dict[s
     }
 
 
-def benchmark_pdf(pdf_path: Path) -> dict[str, Any]:
+def benchmark_pdf(
+    pdf_path: Path,
+    visual_output_dir: Path | None = None,
+    dpi: int = 180,
+) -> dict[str, Any]:
     """Benchmark one PDF and return a JSON-serializable report."""
     agent = CBSEBoardPaperAgent()
     result = agent.analyze(str(pdf_path))
@@ -75,7 +86,7 @@ def benchmark_pdf(pdf_path: Path) -> dict[str, Any]:
     detected_numbers = [n for _, numbers in english_pages for n in numbers]
     unique_numbers = sorted(set(detected_numbers))
 
-    return {
+    report: dict[str, Any] = {
         "pdf": pdf_path.name,
         "status": "ok" if not suspicious_pages else "review_flags",
         "document_type": result.document_type,
@@ -92,16 +103,41 @@ def benchmark_pdf(pdf_path: Path) -> dict[str, Any]:
         "sequence_reviews": review_rows,
     }
 
+    if visual_output_dir is not None:
+        visual_report = generate_visual_review(
+            pdf_path,
+            english_pages,
+            review_rows,
+            visual_output_dir,
+            dpi=dpi,
+        )
+        report["visual_review"] = {
+            "question_crop_count": visual_report["question_crop_count"],
+            "high_priority_page_count": visual_report["high_priority_page_count"],
+            "output_dir": visual_report["output_dir"],
+        }
+        report["_visual_report"] = visual_report
 
-def write_reports(reports: list[dict[str, Any]], output_dir: Path) -> None:
+    return report
+
+
+def write_reports(
+    reports: list[dict[str, Any]],
+    output_dir: Path,
+    visual_reports: list[dict[str, Any]] | None = None,
+) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     json_path = output_dir / "boundary_benchmark.json"
     csv_path = output_dir / "boundary_page_review.csv"
 
-    json_path.write_text(json.dumps(reports, indent=2), encoding="utf-8")
+    serializable_reports = []
+    for report in reports:
+        clean = {key: value for key, value in report.items() if key != "_visual_report"}
+        serializable_reports.append(clean)
+    json_path.write_text(json.dumps(serializable_reports, indent=2), encoding="utf-8")
 
     rows: list[dict[str, Any]] = []
-    for report in reports:
+    for report in serializable_reports:
         reviews_by_page = {review["page"]: review for review in report.get("sequence_reviews", [])}
         for page in report.get("pages", []):
             review = reviews_by_page.get(page["page"], {})
@@ -131,12 +167,12 @@ def write_reports(reports: list[dict[str, Any]], output_dir: Path) -> None:
         writer.writeheader()
         writer.writerows(rows)
 
-    valid = [r for r in reports if r.get("status") in {"ok", "review_flags"}]
+    valid = [r for r in serializable_reports if r.get("status") in {"ok", "review_flags"}]
     summary = {
-        "pdf_count": len(reports),
+        "pdf_count": len(serializable_reports),
         "validated_cbse_pdf_count": len(valid),
         "manual_review_pdf_count": sum(
-            r.get("status") == "manual_review_required" for r in reports
+            r.get("status") == "manual_review_required" for r in serializable_reports
         ),
         "total_english_pages": sum(r.get("english_page_count", 0) for r in valid),
         "total_detected_markers": sum(
@@ -147,22 +183,44 @@ def write_reports(reports: list[dict[str, Any]], output_dir: Path) -> None:
             r["pdf"] for r in valid if r.get("suspicious_page_count", 0)
         ],
         "manual_review_pdfs": [
-            r["pdf"] for r in reports if r.get("status") == "manual_review_required"
+            r["pdf"]
+            for r in serializable_reports
+            if r.get("status") == "manual_review_required"
         ],
     }
+    if visual_reports is not None:
+        summary["visual_review"] = {
+            "question_crop_count": sum(r["question_crop_count"] for r in visual_reports),
+            "high_priority_page_count": sum(r["high_priority_page_count"] for r in visual_reports),
+            "output_dir": str(output_dir / "visual_review"),
+            "index": str(output_dir / "visual_review" / "visual_review_index.html"),
+        }
     (output_dir / "boundary_benchmark_summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8"
     )
 
+    if visual_reports is not None:
+        visual_root = output_dir / "visual_review"
+        write_visual_review_manifests(visual_reports, visual_root)
+        write_visual_review_index(visual_reports, visual_root)
+
     print(json.dumps(summary, indent=2))
     print(f"Detailed JSON: {json_path}")
     print(f"Page review CSV: {csv_path}")
+    if visual_reports is not None:
+        print(f"Visual review index: {output_dir / 'visual_review' / 'visual_review_index.html'}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Benchmark CBSE question-boundary extraction")
     parser.add_argument("--source-dir", default="source_pdfs", type=Path)
     parser.add_argument("--output-dir", default="extraction_benchmark", type=Path)
+    parser.add_argument("--dpi", default=180, type=int, help="Rendering DPI for visual review artifacts")
+    parser.add_argument(
+        "--no-visual-review",
+        action="store_true",
+        help="Skip V1.2 question crops and visual review artifacts",
+    )
     args = parser.parse_args()
 
     pdfs = sorted(args.source_dir.glob("*.pdf"))
@@ -170,10 +228,20 @@ def main() -> None:
         raise SystemExit(f"No PDF files found in {args.source_dir}")
 
     reports: list[dict[str, Any]] = []
+    visual_reports: list[dict[str, Any]] = []
+    visual_output_dir = None if args.no_visual_review else args.output_dir / "visual_review"
+
     for pdf_path in pdfs:
         try:
-            report = benchmark_pdf(pdf_path)
+            report = benchmark_pdf(
+                pdf_path,
+                visual_output_dir=visual_output_dir,
+                dpi=args.dpi,
+            )
+            visual_report = report.pop("_visual_report", None)
             reports.append(report)
+            if visual_report is not None:
+                visual_reports.append(visual_report)
             print(
                 f"{pdf_path.name}: status={report['status']}, "
                 f"{report['detected_question_marker_count']} markers, "
@@ -187,7 +255,11 @@ def main() -> None:
             })
             print(f"{pdf_path.name}: ERROR: {exc}")
 
-    write_reports(reports, args.output_dir)
+    write_reports(
+        reports,
+        args.output_dir,
+        visual_reports=None if args.no_visual_review else visual_reports,
+    )
 
 
 if __name__ == "__main__":
