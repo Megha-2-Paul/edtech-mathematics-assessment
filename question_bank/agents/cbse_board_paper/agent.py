@@ -1,10 +1,9 @@
 """CBSE Board Paper agent.
 
-Document-level routing is intentionally the primary language strategy. For
-bilingual CBSE papers that follow an alternating Hindi/English layout, the
-agent detects the repeated two-page structure once and routes pages from that
-pattern instead of independently classifying every page. Page-level signals
-remain safeguards and fallback evidence.
+Detect the document layout first, then route pages from the detected
+bilingual pattern. The agent is deliberately conservative: a pattern is only
+trusted when repeated structure and language evidence agree. Otherwise pages
+are sent to manual review rather than silently misclassified.
 """
 from __future__ import annotations
 
@@ -21,7 +20,7 @@ ENGLISH_WORD_RE = re.compile(
     r"\b(?:the|question|section|marks|find|solve|calculate|prove|show|answer|choose|given|following)\b",
     re.I,
 )
-QUESTION_RE = re.compile(r"\b(?:Q\.?\s*)?\d{1,2}\s*[.)]", re.I)
+QUESTION_RE = re.compile(r"(?:^|\s)(?:Q\.?\s*)?\d{1,2}\s*[.)]", re.I)
 
 
 class CBSEBoardPaperAgent:
@@ -53,12 +52,7 @@ class CBSEBoardPaperAgent:
 
     @staticmethod
     def _pair_similarity(first: dict[str, Any], second: dict[str, Any]) -> float:
-        """Estimate whether adjacent pages have the same question-page structure.
-
-        Bilingual duplicate pages normally contain the same question ranges and
-        therefore have broadly similar text/question-marker density, even when
-        one script is not extractable from the PDF text layer.
-        """
+        """Estimate structural similarity of an adjacent bilingual pair."""
         text_a = max(first["text_length"], 1)
         text_b = max(second["text_length"], 1)
         length_similarity = min(text_a, text_b) / max(text_a, text_b)
@@ -73,19 +67,14 @@ class CBSEBoardPaperAgent:
         return 0.6 * length_similarity + 0.4 * marker_similarity
 
     def _detect_alternating_pattern(self, signals: list[dict[str, Any]]) -> dict[str, Any]:
-        """Detect a repeated bilingual two-page pattern at document level.
+        """Detect the repeated Hindi/English two-page pattern at document level.
 
-        The detector deliberately does not assume that odd pages are English.
-        It first looks for repeated adjacent page pairs, then determines which
-        position in each pair is English using whatever language evidence is
-        available. This is important for scanned PDFs whose Hindi text may not
-        be represented as Unicode Devanagari in the PDF text layer.
+        The first page is excluded from the pattern because it is commonly a
+        cover/instruction page. No page number is hard-coded as English.
         """
         if len(signals) < 5:
             return {"detected": False, "confidence": 0.0, "english_position": None}
 
-        # Page 1 is commonly a cover/instruction page. Do not use it to infer
-        # the bilingual pattern; the repeating body starts from page 2 onward.
         body = signals[1:]
         pairs = [
             (body[index], body[index + 1])
@@ -97,18 +86,10 @@ class CBSEBoardPaperAgent:
         pair_scores = [self._pair_similarity(first, second) for first, second in pairs]
         structural_score = sum(pair_scores) / len(pair_scores)
 
-        # Determine language position independently of pair structure. A page
-        # with recognizable English words is strong evidence for English. A
-        # page with recognizable Devanagari is strong evidence for Hindi. If
-        # both scripts are unavailable, the pair remains uncertain.
-        first_position_scores = []
-        second_position_scores = []
-        for first, second in pairs:
-            first_position_scores.append(self._language_score(first))
-            second_position_scores.append(self._language_score(second))
-
-        first_mean = sum(first_position_scores) / len(first_position_scores)
-        second_mean = sum(second_position_scores) / len(second_position_scores)
+        first_scores = [self._language_score(first) for first, _ in pairs]
+        second_scores = [self._language_score(second) for _, second in pairs]
+        first_mean = sum(first_scores) / len(first_scores)
+        second_mean = sum(second_scores) / len(second_scores)
         separation = abs(first_mean - second_mean)
 
         if first_mean > second_mean:
@@ -118,16 +99,12 @@ class CBSEBoardPaperAgent:
         else:
             english_position = None
 
-        # When one script is not extractable, _language_score returns 0.5.
-        # Therefore a clear English/non-English contrast can still identify
-        # the position. Require both structural repetition and language
-        # separation before trusting the pattern.
-        detected = structural_score >= 0.65 and separation >= 0.35
+        detected = structural_score >= 0.65 and separation >= 0.35 and english_position is not None
         confidence = min(0.99, 0.55 * structural_score + 0.45 * separation)
 
         return {
             "detected": detected,
-            "confidence": round(confidence, 3) if detected else round(confidence, 3),
+            "confidence": round(confidence, 3),
             "english_position": english_position if detected else None,
             "pair_count": len(pairs),
             "structural_score": round(structural_score, 3),
@@ -141,32 +118,28 @@ class CBSEBoardPaperAgent:
         if not path.exists() or path.suffix.lower() != ".pdf":
             raise ValueError("CBSE Board Paper agent requires a PDF file")
 
-        document = fitz.open(str(path))
-        signals = [self._page_signal(page) for page in document]
-        pattern = self._detect_alternating_pattern(signals)
+        with fitz.open(str(path)) as document:
+            signals = [self._page_signal(page) for page in document]
 
+        pattern = self._detect_alternating_pattern(signals)
         pages: list[PageDecision] = []
+
         for page_number, signal in enumerate(signals, 1):
             metadata = dict(signal)
 
-            # The first page of this document family is usually a cover or
-            # instructions page. Keep this as a content-based safety check,
-            # rather than using it to infer the bilingual page pattern.
-            if page_number == 1 and pattern["detected"]:
-                pages.append(
-                    PageDecision(
-                        page_number,
-                        "cover_or_instruction",
-                        "skip",
-                        max(0.90, pattern["confidence"]),
-                        metadata,
-                    )
-                )
-                continue
-
             if pattern["detected"]:
-                # Body starts at page 2. "first" means page 2, 4, 6...;
-                # "second" means page 3, 5, 7....
+                if page_number == 1:
+                    pages.append(
+                        PageDecision(
+                            page_number,
+                            "cover_or_instruction",
+                            "skip",
+                            max(0.90, pattern["confidence"]),
+                            metadata,
+                        )
+                    )
+                    continue
+
                 position_in_pair = "first" if page_number % 2 == 0 else "second"
                 english = position_in_pair == pattern["english_position"]
                 if english:
@@ -191,11 +164,9 @@ class CBSEBoardPaperAgent:
                     )
                 continue
 
-            # No reliable document-level pattern: do not silently guess. This
-            # is the safety path for future CBSE layouts that differ from the
-            # alternating bilingual family.
-            is_question_page = signal["question_marker_count"] > 0
-            if not is_question_page:
+            # Conservative fallback. We do not silently infer an English page
+            # when the document-level bilingual pattern is not reliable.
+            if signal["question_marker_count"] == 0:
                 pages.append(
                     PageDecision(page_number, "cover_or_instruction", "skip", 0.95, metadata)
                 )
@@ -215,7 +186,6 @@ class CBSEBoardPaperAgent:
                     PageDecision(page_number, "uncertain_question_page", "manual_review", 0.50, metadata)
                 )
 
-        document.close()
         return AgentResult(
             document_type=self.document_type,
             confidence=pattern["confidence"],
