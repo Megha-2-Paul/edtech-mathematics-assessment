@@ -36,10 +36,28 @@ def benchmark_pdf(pdf_path: Path) -> dict[str, Any]:
     """Benchmark one PDF and return a JSON-serializable report."""
     agent = CBSEBoardPaperAgent()
     result = agent.analyze(str(pdf_path))
+    layout = result.metadata.get("layout", {})
+
+    if not layout.get("validated", False):
+        return {
+            "pdf": pdf_path.name,
+            "status": "manual_review_required",
+            "document_type": result.document_type,
+            "agent_confidence": result.confidence,
+            "layout_validation": layout,
+            "english_page_count": 0,
+            "pages_with_question_markers": 0,
+            "pages_without_question_markers": 0,
+            "detected_question_marker_count": 0,
+            "unique_question_numbers": [],
+            "duplicate_marker_count": 0,
+            "suspicious_page_count": 0,
+            "pages": [],
+            "sequence_reviews": [],
+        }
 
     page_rows: list[dict[str, Any]] = []
     english_pages: list[tuple[int, list[int]]] = []
-    asset_count = 0
 
     with fitz.open(str(pdf_path)) as document:
         for decision in result.pages:
@@ -54,20 +72,15 @@ def benchmark_pdf(pdf_path: Path) -> dict[str, Any]:
     reviews = review_document_sequences(english_pages)
     review_rows = [review.to_dict() for review in reviews]
     suspicious_pages = [row for row in review_rows if row["severity"] != "ok"]
-
-    for row in page_rows:
-        if row["question_count"]:
-            # Asset counting is intentionally deferred to the crop stage. V1.1
-            # focuses on boundary quality and does not reinterpret diagrams.
-            continue
-
     detected_numbers = [n for _, numbers in english_pages for n in numbers]
     unique_numbers = sorted(set(detected_numbers))
 
     return {
         "pdf": pdf_path.name,
+        "status": "ok" if not suspicious_pages else "review_flags",
         "document_type": result.document_type,
         "agent_confidence": result.confidence,
+        "layout_validation": layout,
         "english_page_count": len(english_pages),
         "pages_with_question_markers": sum(bool(numbers) for _, numbers in english_pages),
         "pages_without_question_markers": sum(not numbers for _, numbers in english_pages),
@@ -89,8 +102,8 @@ def write_reports(reports: list[dict[str, Any]], output_dir: Path) -> None:
 
     rows: list[dict[str, Any]] = []
     for report in reports:
-        reviews_by_page = {review["page"]: review for review in report["sequence_reviews"]}
-        for page in report["pages"]:
+        reviews_by_page = {review["page"]: review for review in report.get("sequence_reviews", [])}
+        for page in report.get("pages", []):
             review = reviews_by_page.get(page["page"], {})
             rows.append(
                 {
@@ -105,16 +118,37 @@ def write_reports(reports: list[dict[str, Any]], output_dir: Path) -> None:
             )
 
     with csv_path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0]) if rows else ["pdf", "page"])
+        fieldnames = [
+            "pdf",
+            "page",
+            "question_numbers",
+            "question_count",
+            "severity",
+            "issues",
+            "previous_last_question",
+        ]
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 
+    valid = [r for r in reports if r.get("status") in {"ok", "review_flags"}]
     summary = {
         "pdf_count": len(reports),
-        "total_english_pages": sum(r["english_page_count"] for r in reports),
-        "total_detected_markers": sum(r["detected_question_marker_count"] for r in reports),
-        "total_suspicious_pages": sum(r["suspicious_page_count"] for r in reports),
-        "pdfs_with_suspicious_pages": [r["pdf"] for r in reports if r["suspicious_page_count"]],
+        "validated_cbse_pdf_count": len(valid),
+        "manual_review_pdf_count": sum(
+            r.get("status") == "manual_review_required" for r in reports
+        ),
+        "total_english_pages": sum(r.get("english_page_count", 0) for r in valid),
+        "total_detected_markers": sum(
+            r.get("detected_question_marker_count", 0) for r in valid
+        ),
+        "total_suspicious_pages": sum(r.get("suspicious_page_count", 0) for r in valid),
+        "pdfs_with_suspicious_pages": [
+            r["pdf"] for r in valid if r.get("suspicious_page_count", 0)
+        ],
+        "manual_review_pdfs": [
+            r["pdf"] for r in reports if r.get("status") == "manual_review_required"
+        ],
     }
     (output_dir / "boundary_benchmark_summary.json").write_text(
         json.dumps(summary, indent=2), encoding="utf-8"
@@ -141,7 +175,8 @@ def main() -> None:
             report = benchmark_pdf(pdf_path)
             reports.append(report)
             print(
-                f"{pdf_path.name}: {report['detected_question_marker_count']} markers, "
+                f"{pdf_path.name}: status={report['status']}, "
+                f"{report['detected_question_marker_count']} markers, "
                 f"{report['suspicious_page_count']} suspicious pages"
             )
         except Exception as exc:
