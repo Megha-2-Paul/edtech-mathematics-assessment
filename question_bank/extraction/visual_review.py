@@ -21,11 +21,7 @@ def _review_priority(review: dict[str, Any], boundaries: list[dict[str, Any]]) -
     """Return HIGH for pages with structural or boundary-review signals."""
     if review.get("severity") != "ok":
         return "HIGH"
-    if any(
-        asset
-        for boundary in boundaries
-        for asset in boundary.get("assets", [])
-    ):
+    if any(asset for boundary in boundaries for asset in boundary.get("assets", [])):
         return "NORMAL"
     return "NORMAL"
 
@@ -50,17 +46,14 @@ def generate_visual_review(
     reviews_by_page = {review["page"]: review for review in sequence_reviews}
     manifest_rows: list[dict[str, Any]] = []
     page_rows: list[dict[str, Any]] = []
+    generated_crop_count = 0
 
     with fitz.open(str(pdf_path)) as document:
         for page_number, expected_numbers in english_pages:
             review = reviews_by_page.get(page_number, {})
             page_dir = pdf_output / f"page_{page_number:02d}"
-            boundaries = extract_page_questions(
-                pdf_path,
-                page_number,
-                page_dir,
-                dpi=dpi,
-            )
+            boundaries = extract_page_questions(pdf_path, page_number, page_dir, dpi=dpi)
+            generated_crop_count += len(boundaries)
 
             priority = _review_priority(review, boundaries)
             full_page_path = ""
@@ -75,6 +68,7 @@ def generate_visual_review(
                     "page": page_number,
                     "question_numbers": expected_numbers,
                     "question_count": len(expected_numbers),
+                    "detected_crop_count": len(boundaries),
                     "severity": review.get("severity", "unknown"),
                     "issues": review.get("issues", []),
                     "review_priority": priority,
@@ -82,38 +76,19 @@ def generate_visual_review(
                 }
             )
 
-            detected_by_number = {item["question_number"]: item for item in boundaries}
-            for question_number in expected_numbers:
-                item = detected_by_number.get(question_number)
-                if item is None:
-                    manifest_rows.append(
-                        {
-                            "pdf": pdf_path.name,
-                            "page": page_number,
-                            "question_number": question_number,
-                            "bbox_x0": "",
-                            "bbox_y0": "",
-                            "bbox_x1": "",
-                            "bbox_y1": "",
-                            "confidence": "",
-                            "sequence_status": review.get("severity", "unknown"),
-                            "issues": ";".join(review.get("issues", [])),
-                            "review_priority": "HIGH",
-                            "crop_path": "",
-                            "continuation_flag": "possible_continuation"
-                            if "no_top_level_question_marker" in review.get("issues", [])
-                            else "",
-                            "human_status": "PENDING",
-                        }
-                    )
-                    continue
-
+            # Use the actual generated boundaries as the source of truth for
+            # the visual manifest. The benchmark's expected sequence is still
+            # retained separately for comparison, but must not suppress a crop.
+            for item in boundaries:
                 bbox = item["bbox"]
+                crop_path = Path(item["crop_path"])
+                if not crop_path.exists():
+                    raise FileNotFoundError(f"Visual crop was not created: {crop_path}")
                 manifest_rows.append(
                     {
                         "pdf": pdf_path.name,
                         "page": page_number,
-                        "question_number": question_number,
+                        "question_number": item["question_number"],
                         "bbox_x0": bbox[0],
                         "bbox_y0": bbox[1],
                         "bbox_x1": bbox[2],
@@ -122,7 +97,7 @@ def generate_visual_review(
                         "sequence_status": review.get("severity", "unknown"),
                         "issues": ";".join(review.get("issues", [])),
                         "review_priority": priority,
-                        "crop_path": str(Path(item["crop_path"]).relative_to(output_root)),
+                        "crop_path": str(crop_path.relative_to(output_root)),
                         "continuation_flag": "possible_continuation"
                         if "no_top_level_question_marker" in review.get("issues", [])
                         else "",
@@ -132,9 +107,7 @@ def generate_visual_review(
 
     return {
         "pdf": pdf_path.name,
-        "question_crop_count": sum(
-            1 for row in manifest_rows if row["crop_path"]
-        ),
+        "question_crop_count": generated_crop_count,
         "high_priority_page_count": sum(
             1 for row in page_rows if row["review_priority"] == "HIGH"
         ),
@@ -225,8 +198,8 @@ def write_visual_review_manifests(
         writer.writerows(question_rows)
 
     page_fields = [
-        "pdf", "page", "question_numbers", "question_count", "severity", "issues",
-        "review_priority", "full_page_path",
+        "pdf", "page", "question_numbers", "question_count", "detected_crop_count",
+        "severity", "issues", "review_priority", "full_page_path",
     ]
     with page_csv.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=page_fields)
