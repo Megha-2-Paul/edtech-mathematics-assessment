@@ -13,6 +13,7 @@ from exam_platform.models import Attempt, Response, AnswerImage, Student, Attemp
 from exam_platform.storage import storage
 from exam_platform.mock_data import load_mock_data
 from exam_platform.admin import register_admin
+from question_bank.extraction.review_app import register_extraction_review
 
 app = Flask(__name__)
 app.secret_key = "dev-secret-key-change-in-production"
@@ -21,6 +22,7 @@ app.config['MAX_IMAGE_SIZE'] = 10 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = str(Path(__file__).parent.parent / "uploads")
 Path(app.config['UPLOAD_FOLDER']).mkdir(parents=True, exist_ok=True)
 register_admin(app)
+register_extraction_review(app)
 
 ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png'}
 
