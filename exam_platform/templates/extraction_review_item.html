@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Review Q{{ question.question_number or question.number }}{% endblock %}
+{% block custom_styles %}
+<style>
+.review-page{max-width:1500px;margin:auto}.topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.meta{color:#666}.workspace{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(380px,.8fr);gap:16px;align-items:start}.panel{background:#fff;border:1px solid #ddd;border-radius:12px;padding:16px}.source-img{width:100%;display:block;border:1px solid #ddd;border-radius:8px;background:#f7f7f7}.source-caption{margin:8px 0;color:#666;font-size:13px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}.field label{font-size:12px;font-weight:700;color:#555}.field input,.field select,.field textarea{width:100%;box-sizing:border-box;padding:9px;border:1px solid #ccc;border-radius:7px;font:inherit}.field textarea{min-height:260px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.btn{border:0;cursor:pointer;text-decoration:none}.approve{background:#146c43!important;color:#fff!important}.reject{background:#b02a37!important;color:#fff!important}.review{background:#087990!important;color:#fff!important}.raw{margin-top:14px}.raw pre{white-space:pre-wrap;word-break:break-word;background:#f6f6f6;padding:12px;border-radius:8px;max-height:300px;overflow:auto}.navlinks{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:950px){.workspace{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="review-page">
+  <div class="topbar"><div><h2>Review Q{{ question.question_number or question.number }}</h2><div class="meta">{{ filename }} · source page {{ page_number }} · item {{ position }} of {{ total }} · <strong>{{ review.status }}</strong></div></div><div class="navlinks">{% if previous_url %}<a class="btn" href="{{ previous_url }}">← Previous</a>{% endif %}{% if next_url %}<a class="btn" href="{{ next_url }}">Next →</a>{% endif %}<a class="btn" href="{{ url_for('extraction_review.dashboard') }}">Inbox</a></div></div>
+  <div class="workspace">
+    <section class="panel"><h3>Original PDF page</h3><div class="source-caption">{{ source_pdf }} · page {{ page_number }}</div><img class="source-img" src="{{ page_url }}" alt="Original source page"></section>
+    <section class="panel">
+      <h3>AI extraction</h3>
+      <form method="post" action="{{ url_for('extraction_review.review', item_id=item_id) }}">
+        <div class="form-grid">
+          <div class="field"><label>Question number</label><input value="{{ question.question_number or question.number or '' }}" disabled></div>
+          <div class="field"><label>Marks</label><input name="marks" value="{{ question.marks or '' }}"></div>
+          <div class="field"><label>Question type</label><select name="question_type">{% for t in ['mcq','vsaq','saq','laq'] %}<option value="{{ t }}" {% if (question.question_type or question.type or '')|lower == t %}selected{% endif %}>{{ t|upper }}</option>{% endfor %}</select></div>
+          <div class="field"><label>Correct answer (if applicable)</label><input name="correct_answer" value="{{ question.correct_answer or '' }}"></div>
+          <div class="field"><label>Board</label><input name="board" value="{{ question.board or 'CBSE' }}"></div>
+          <div class="field"><label>Class</label><input name="class_level" value="{{ question.class_level or 12 }}"></div>
+          <div class="field"><label>Chapter</label><input name="chapter" value="{{ question.chapter or '' }}"></div>
+          <div class="field"><label>Topic</label><input name="topic" value="{{ question.topic or '' }}"></div>
+          <div class="field"><label>Competency</label><input name="competency" value="{{ question.competency or '' }}"></div>
+          <div class="field"><label>Difficulty</label><input name="difficulty" value="{{ question.difficulty or '' }}"></div>
+          <div class="field full"><label>Question text — edit against the source page</label><textarea name="question_text">{{ question.question_text or question.text or question.question or '' }}</textarea></div>
+          <div class="field full"><label>Review note</label><input name="note" value="{{ review.note or '' }}" placeholder="What did you verify or correct?"></div>
+        </div>
+        <div class="actions"><button class="btn approve" name="status" value="APPROVED">✓ Approve & add to question bank</button><button class="btn review" name="status" value="NEEDS_REVIEW">Needs review</button><button class="btn reject" name="status" value="REJECTED">Reject</button></div>
+      </form>
+      <div class="raw"><details><summary>Show raw AI record</summary><pre>{{ question | tojson(indent=2) }}</pre></details></div>
+    </section>
+  </div>
+</div>
+{% endblock %}
