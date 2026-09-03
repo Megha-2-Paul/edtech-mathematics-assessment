@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Extraction Review{% endblock %}
+{% block custom_styles %}
+<style>
+.review-wrap{max-width:1200px;margin:auto}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.stat{background:#fff;border:1px solid #ddd;border-radius:12px;padding:16px}.stat strong{display:block;font-size:26px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.filter{padding:9px;border:1px solid #ccc;border-radius:8px}.review-table{width:100%;border-collapse:collapse;background:#fff}.review-table th,.review-table td{padding:10px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;background:#eee}.badge.pending{background:#fff3cd}.badge.approved{background:#d1e7dd}.badge.rejected{background:#f8d7da}.badge.needs{background:#cff4fc}.muted{color:#666}@media(max-width:800px){.stats{grid-template-columns:repeat(2,1fr)}.review-table{font-size:13px}.hide-mobile{display:none}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="review-wrap">
+  <div class="card"><h2>AI Extraction Review</h2><p class="muted">Review AI-extracted questions against the original PDF before anything enters the canonical question bank.</p></div>
+  <div class="stats">
+    <div class="stat"><strong>{{ stats.PENDING }}</strong><span>Pending</span></div>
+    <div class="stat"><strong>{{ stats.NEEDS_REVIEW }}</strong><span>Needs review</span></div>
+    <div class="stat"><strong>{{ stats.APPROVED }}</strong><span>Approved</span></div>
+    <div class="stat"><strong>{{ stats.REJECTED }}</strong><span>Rejected</span></div>
+  </div>
+  <div class="card">
+    <div class="toolbar"><select id="statusFilter" class="filter"><option value="ALL">All</option><option value="PENDING">Pending</option><option value="NEEDS_REVIEW">Needs review</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></select><input id="search" class="filter" placeholder="Search paper or question..."></div>
+    <table class="review-table"><thead><tr><th>Paper</th><th>Question</th><th>Page</th><th>Marks</th><th>Type</th><th>Status</th><th></th></tr></thead>
+    <tbody id="rows">{% for item in items %}<tr data-status="{{ item.status }}" data-search="{{ (item.file ~ ' ' ~ item.question_number)|lower }}"><td>{{ item.file }}</td><td>Q{{ item.question_number }}</td><td>{{ item.page_number }}</td><td>{{ item.marks or '—' }}</td><td>{{ item.question_type or '—' }}</td><td><span class="badge {% if item.status == 'APPROVED' %}approved{% elif item.status == 'REJECTED' %}rejected{% elif item.status == 'NEEDS_REVIEW' %}needs{% else %}pending{% endif %}">{{ item.status }}</span></td><td><a class="btn" href="{{ url_for('extraction_review.item', item_id=item.item_id) }}">Review →</a></td></tr>{% endfor %}</tbody></table>
+    {% if not items %}<p class="muted">No extraction JSON files found yet. Put provider outputs in <code>extraction_inbox</code>.</p>{% endif %}
+  </div>
+</div>
+<script>
+const status=document.getElementById('statusFilter'), search=document.getElementById('search');
+function filter(){const s=status.value,q=search.value.toLowerCase();document.querySelectorAll('#rows tr').forEach(r=>r.hidden=(s!=='ALL'&&r.dataset.status!==s)||!r.dataset.search.includes(q));}
+status.addEventListener('change',filter);search.addEventListener('input',filter);
+</script>
+{% endblock %}
