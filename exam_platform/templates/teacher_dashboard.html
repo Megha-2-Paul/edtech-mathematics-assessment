@@ -6,7 +6,7 @@
 </style>
 {% endblock %}
 {% block content %}
-<div class="card"><h2>Teacher / Admin</h2><p class="muted">Manage the question bank and build tests.</p><div class="nav"><a class="btn" href="{{ url_for('admin.questions') }}">Question Bank</a><a class="btn" href="{{ url_for('admin.add_question') }}">+ Add Question</a><a class="btn" href="{{ url_for('admin.tests') }}">Tests</a><a class="btn" href="{{ url_for('admin.add_test') }}">+ Create Test</a></div></div>
+<div class="card"><h2>Teacher / Admin</h2><p class="muted">Manage the question bank, build tests, and verify AI-extracted questions.</p><div class="nav"><a class="btn" href="{{ url_for('admin.questions') }}">Question Bank</a><a class="btn" href="{{ url_for('admin.add_question') }}">+ Add Question</a><a class="btn" href="{{ url_for('admin.tests') }}">Tests</a><a class="btn" href="{{ url_for('admin.add_test') }}">+ Create Test</a><a class="btn" href="{{ url_for('extraction_review.dashboard') }}">AI Extraction Review</a></div></div>
 <div class="grid">
 <div class="card"><div class="stat">{{ questions|length }}</div><div class="muted">Questions in database</div><div class="list"><a href="{{ url_for('admin.questions') }}">Open question bank →</a></div></div>
 <div class="card"><div class="stat">{{ tests|length }}</div><div class="muted">Tests in database</div><div class="list"><a href="{{ url_for('admin.tests') }}">Open tests →</a></div></div>
