@@ -1,33 +1,55 @@
 {% extends "base.html" %}
-{% block title %}Review Q{{ question.question_number or question.number }}{% endblock %}
+{% block title %}Review Q{{ values.source_question_number }}{% endblock %}
 {% block custom_styles %}
 <style>
-.review-page{max-width:1500px;margin:auto}.topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.meta{color:#666}.workspace{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(380px,.8fr);gap:16px;align-items:start}.panel{background:#fff;border:1px solid #ddd;border-radius:12px;padding:16px}.source-img{width:100%;display:block;border:1px solid #ddd;border-radius:8px;background:#f7f7f7}.source-caption{margin:8px 0;color:#666;font-size:13px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}.field label{font-size:12px;font-weight:700;color:#555}.field input,.field select,.field textarea{width:100%;box-sizing:border-box;padding:9px;border:1px solid #ccc;border-radius:7px;font:inherit}.field textarea{min-height:260px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.btn{border:0;cursor:pointer;text-decoration:none}.approve{background:#146c43!important;color:#fff!important}.reject{background:#b02a37!important;color:#fff!important}.review{background:#087990!important;color:#fff!important}.raw{margin-top:14px}.raw pre{white-space:pre-wrap;word-break:break-word;background:#f6f6f6;padding:12px;border-radius:8px;max-height:300px;overflow:auto}.navlinks{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:950px){.workspace{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}}
+.review-page{max-width:1600px;margin:auto}.topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.meta{color:#666}.workspace{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(520px,.85fr);gap:16px;align-items:start}.panel{background:#fff;border:1px solid #ddd;border-radius:12px;padding:16px}.source-img{width:100%;display:block;border:1px solid #ddd;border-radius:8px;background:#f7f7f7}.source-caption{margin:8px 0;color:#666;font-size:13px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}.field label{font-size:12px;font-weight:700;color:#555}.field input,.field select,.field textarea{width:100%;box-sizing:border-box;padding:9px;border:1px solid #ccc;border-radius:7px;font:inherit}.field textarea{min-height:150px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.warning{padding:10px 12px;border-radius:8px;background:#fff3cd;border:1px solid #ffecb5;margin-bottom:12px}.ok{padding:10px 12px;border-radius:8px;background:#d1e7dd;border:1px solid #badbcc;margin-bottom:12px}.section-title{grid-column:1/-1;margin:10px 0 0;padding-top:10px;border-top:1px solid #eee}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.btn{border:0;cursor:pointer;text-decoration:none;padding:9px 12px;border-radius:7px}.approve{background:#146c43!important;color:#fff!important}.reject{background:#b02a37!important;color:#fff!important}.review{background:#087990!important;color:#fff!important}.raw{margin-top:14px}.raw pre{white-space:pre-wrap;word-break:break-word;background:#f6f6f6;padding:12px;border-radius:8px;max-height:400px;overflow:auto}.navlinks{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:950px){.workspace{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.field.full,.section-title{grid-column:auto}}
 </style>
 {% endblock %}
 {% block content %}
 <div class="review-page">
-  <div class="topbar"><div><h2>Review Q{{ question.question_number or question.number }}</h2><div class="meta">{{ filename }} · source page {{ page_number }} · item {{ position }} of {{ total }} · <strong>{{ review.status }}</strong></div></div><div class="navlinks">{% if previous_url %}<a class="btn" href="{{ previous_url }}">← Previous</a>{% endif %}{% if next_url %}<a class="btn" href="{{ next_url }}">Next →</a>{% endif %}<a class="btn" href="{{ url_for('extraction_review.dashboard') }}">Inbox</a></div></div>
+  <div class="topbar"><div><h2>Review Q{{ values.source_question_number }}</h2><div class="meta">{{ filename }} · source page {{ values.source_page }} · item {{ position }} of {{ total }} · <strong>{{ review.status }}</strong></div></div><div class="navlinks">{% if previous_url %}<a class="btn" href="{{ previous_url }}">← Previous</a>{% endif %}{% if next_url %}<a class="btn" href="{{ next_url }}">Next →</a>{% endif %}<a class="btn" href="{{ url_for('extraction_review.dashboard') }}">Inbox</a></div></div>
   <div class="workspace">
     <section class="panel"><h3>Original PDF page</h3><div class="source-caption">{{ source_pdf }} · page {{ page_number }}</div><img class="source-img" src="{{ page_url }}" alt="Original source page"></section>
     <section class="panel">
-      <h3>AI extraction</h3>
+      <h3>AI extraction + human verification</h3>
+      {% if missing_inferred_fields %}<div class="warning"><strong>Human verification required:</strong> {{ missing_inferred_fields|join(', ') }}. These inferred fields must be completed before approval.</div>{% else %}<div class="ok">All required inferred fields are populated. Still verify every field against the source page before approval.</div>{% endif %}
       <form method="post" action="{{ url_for('extraction_review.review', item_id=item_id) }}">
         <div class="form-grid">
-          <div class="field"><label>Question number</label><input value="{{ question.question_number or question.number or '' }}" disabled></div>
-          <div class="field"><label>Marks</label><input name="marks" value="{{ question.marks or '' }}"></div>
-          <div class="field"><label>Question type</label><select name="question_type">{% for t in ['mcq','vsaq','saq','laq'] %}<option value="{{ t }}" {% if (question.question_type or question.type or '')|lower == t %}selected{% endif %}>{{ t|upper }}</option>{% endfor %}</select></div>
-          <div class="field"><label>Correct answer (if applicable)</label><input name="correct_answer" value="{{ question.correct_answer or '' }}"></div>
-          <div class="field"><label>Board</label><input name="board" value="{{ question.board or 'CBSE' }}"></div>
-          <div class="field"><label>Class</label><input name="class_level" value="{{ question.class_level or 12 }}"></div>
-          <div class="field"><label>Chapter</label><input name="chapter" value="{{ question.chapter or '' }}"></div>
-          <div class="field"><label>Topic</label><input name="topic" value="{{ question.topic or '' }}"></div>
-          <div class="field"><label>Competency</label><input name="competency" value="{{ question.competency or '' }}"></div>
-          <div class="field"><label>Difficulty</label><input name="difficulty" value="{{ question.difficulty or '' }}"></div>
-          <div class="field full"><label>Question text — edit against the source page</label><textarea name="question_text">{{ question.question_text or question.text or question.question or '' }}</textarea></div>
-          <div class="field full"><label>Review note</label><input name="note" value="{{ review.note or '' }}" placeholder="What did you verify or correct?"></div>
+          <div class="section-title"><strong>Canonical Question Fields</strong></div>
+          <div class="field"><label>Source question number</label><input value="{{ values.source_question_number or '' }}" disabled></div>
+          <div class="field"><label>Marks</label><input name="marks" value="{{ question.marks if question.marks is not none else '' }}"></div>
+          <div class="field"><label>Question type</label><select name="question_type">{% for t in ['mcq','vsaq','saq','laq'] %}<option value="{{ t }}" {% if values.question_type == t %}selected{% endif %}>{{ t|upper }}</option>{% endfor %}</select></div>
+          <div class="field"><label>Answer mode</label><input name="answer_mode" value="{{ values.answer_mode or '' }}" required></div>
+          <div class="field"><label>Handwritten upload mode</label><select name="handwritten_upload_mode">{% for t in ['none','optional','required'] %}<option value="{{ t }}" {% if values.handwritten_upload_mode == t %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></div>
+          <div class="field"><label>Correct answer (if applicable)</label><input name="correct_answer" value="{{ values.correct_answer or '' }}"></div>
+          <div class="field"><label>Subject</label><input name="subject" value="{{ values.subject or 'Mathematics' }}" required></div>
+          <div class="field"><label>Board</label><input name="board" value="{{ values.board or 'CBSE' }}" required></div>
+          <div class="field"><label>Class</label><input name="class_level" value="{{ values.class_level or '' }}" required></div>
+          <div class="field"><label>Chapter <strong>*</strong></label><input name="chapter" value="{{ values.chapter or '' }}" required></div>
+          <div class="field"><label>Topic</label><input name="topic" value="{{ values.topic or '' }}"></div>
+          <div class="field"><label>Subtopic</label><input name="subtopic" value="{{ values.subtopic or '' }}"></div>
+          <div class="field"><label>Difficulty</label><input name="difficulty" value="{{ values.difficulty or '' }}"></div>
+          <div class="field"><label>Competency</label><input name="competency" value="{{ values.competency or '' }}"></div>
+          <div class="field"><label>Source</label><input name="source" value="{{ values.source or '' }}" required></div>
+          <div class="field"><label>Source year</label><input name="source_year" value="{{ values.source_year or '' }}"></div>
+          <div class="field full"><label>Question text — verify exactly against source</label><textarea name="question_text" required>{{ values.question_text }}</textarea></div>
+          <div class="field full"><label>Question parts / subquestions (JSON)</label><textarea name="question_parts">{{ values.question_parts|tojson(indent=2) }}</textarea></div>
+          <div class="field full"><label>Answer choices (JSON)</label><textarea name="answer_choices">{{ values.answer_choices|tojson(indent=2) }}</textarea></div>
+          <div class="field full"><label>Diagram reference</label><input name="diagram_reference" value="{{ values.diagram_reference or '' }}"></div>
+          <div class="field full"><label>Assets (JSON)</label><textarea name="assets">{{ values.assets|tojson(indent=2) }}</textarea></div>
+          <div class="section-title"><strong>Extraction / Provenance — verify, don't silently discard</strong></div>
+          <div class="field"><label>Source PDF</label><input value="{{ values.source_pdf or '' }}" disabled></div>
+          <div class="field"><label>Source page</label><input value="{{ values.source_page or '' }}" disabled></div>
+          <div class="field full"><label>Source pages (JSON)</label><textarea disabled>{{ values.source_pages|tojson(indent=2) }}</textarea></div>
+          <div class="field"><label>Source occurrence ID</label><input value="{{ values.source_occurrence_id or '' }}" disabled></div>
+          <div class="field"><label>Extraction provider</label><input value="{{ values.extraction_provider or '' }}" disabled></div>
+          <div class="field"><label>Extraction model</label><input value="{{ values.extraction_model or '' }}" disabled></div>
+          <div class="field"><label>Extraction run ID</label><input value="{{ values.extraction_run_id or '' }}" disabled></div>
+          <div class="field"><label>Extraction confidence</label><input value="{{ values.extraction_confidence if values.extraction_confidence is not none else '' }}" disabled></div>
+          <div class="field full"><label>Extraction warnings (JSON)</label><textarea disabled>{{ values.extraction_warnings|tojson(indent=2) }}</textarea></div>
+          <div class="field full"><label>Verification note</label><textarea name="note" style="min-height:90px" placeholder="What did you verify or correct?">{{ review.note or '' }}</textarea></div>
         </div>
-        <div class="actions"><button class="btn approve" name="status" value="APPROVED">✓ Approve & add to question bank</button><button class="btn review" name="status" value="NEEDS_REVIEW">Needs review</button><button class="btn reject" name="status" value="REJECTED">Reject</button></div>
+        <div class="actions"><button class="btn approve" name="status" value="APPROVED" {% if missing_inferred_fields %}disabled title="Complete required inferred fields first"{% endif %}>✓ Approve & add to question bank</button><button class="btn review" name="status" value="NEEDS_REVIEW">Needs review</button><button class="btn reject" name="status" value="REJECTED">Reject</button></div>
       </form>
       <div class="raw"><details><summary>Show raw AI record</summary><pre>{{ question | tojson(indent=2) }}</pre></details></div>
     </section>
