@@ -10,36 +10,28 @@
   <div class="topbar"><div><h2>Review Q{{ values.source_question_number }}</h2><div class="meta">{{ filename }} · source page(s) {{ values.source_pages|join(', ') if values.source_pages else values.source_page }} · item {{ position }} of {{ total }} · <strong>{{ review.status }}</strong></div></div><div class="navlinks">{% if previous_url %}<a class="btn" href="{{ previous_url }}">← Previous</a>{% endif %}{% if next_url %}<a class="btn" href="{{ next_url }}">Next →</a>{% endif %}<a class="btn" href="{{ url_for('extraction_review.dashboard') }}">Inbox</a></div></div>
   <div class="workspace">
     <section class="panel">
-      <h3>Original PDF source</h3>
-      <div class="source-caption">{{ source_pdf }}</div>
-      {% if source_page_urls %}
-      <div class="source-pages">
-        {% for page in source_page_urls %}<div class="source-page-card"><h4>PDF page {{ page.number }}</h4><img class="source-img" src="{{ page.url }}" alt="Original source page {{ page.number }}"></div>{% endfor %}
-      </div>
-      {% endif %}
+      <h3>Original PDF source</h3><div class="source-caption">{{ source_pdf }}</div>
+      {% if source_page_urls %}<div class="source-pages">{% for page in source_page_urls %}<div class="source-page-card"><h4>PDF page {{ page.number }}</h4><img class="source-img" src="{{ page.url }}" alt="Original source page {{ page.number }}"></div>{% endfor %}</div>{% endif %}
       {% if question_crop_url %}<div class="source-page-card" style="margin-top:12px"><h4>Question visual crop</h4><div class="source-caption">Generated from the source PDF boundary detector. This is supplementary; the full source page remains the ground truth.</div><img class="source-img" src="{{ question_crop_url }}" alt="Question visual crop"></div>{% endif %}
     </section>
     <section class="panel">
       <h3>AI extraction + human verification</h3>
       {% set chapter_missing = not (values.chapter or '')|trim %}
-      {% set correct_answer_missing = values.question_type == 'mcq' and not (values.correct_answer or '')|trim %}
+      {% set question_type_normalized = (values.question_type or '')|lower|trim %}
+      {% set correct_answer_missing = question_type_normalized == 'mcq' and not (values.correct_answer or '')|trim %}
       {% set approval_blocked = chapter_missing or correct_answer_missing %}
-      {% if approval_blocked %}
-      <div class="warning"><strong>Approval blocked until verified:</strong>{% if chapter_missing %} Chapter{% endif %}{% if chapter_missing and correct_answer_missing %} and{% endif %}{% if correct_answer_missing %} Correct answer (required for MCQ){% endif %}. Topic, subtopic, difficulty and competency are optional and do not block approval.</div>
-      {% else %}
-      <div class="ok"><strong>Ready for approval.</strong> Topic, subtopic, difficulty and competency may be left blank. Still verify every field against the source page.</div>
-      {% endif %}
+      {% if approval_blocked %}<div class="warning"><strong>Approval blocked until verified:</strong>{% if chapter_missing %} Chapter{% endif %}{% if chapter_missing and correct_answer_missing %} and{% endif %}{% if correct_answer_missing %} Correct answer (required for MCQ){% endif %}. Topic, subtopic, difficulty and competency are optional and do not block approval.</div>{% else %}<div class="ok"><strong>Ready for approval.</strong> Topic, subtopic, difficulty and competency may be left blank. Still verify every field against the source page.</div>{% endif %}
       {% if values.assets or values.diagram_reference %}<div class="info"><strong>Visual asset note:</strong> the AI identified one or more visual references. The actual source visual is preserved in the PDF/page/crop above; the JSON asset references are metadata, not image files.</div>{% endif %}
-      <form method="post" action="{{ url_for('extraction_review.review', item_id=item_id) }}">
-        <div class="actions"><button class="btn approve" name="status" value="APPROVED" {% if approval_blocked %}disabled title="Complete the blocking fields first"{% endif %}>✓ Approve & add to question bank</button><button class="btn review" name="status" value="NEEDS_REVIEW">Needs review</button><button class="btn reject" name="status" value="REJECTED">Reject</button></div>
+      <form method="post" action="{{ url_for('extraction_review.review', item_id=item_id) }}" id="review-form">
+        <div class="actions" id="review-actions"><button type="submit" class="btn approve" id="approve-button" name="status" value="APPROVED" title="Ready to approve">✓ Approve & add to question bank</button><button type="submit" class="btn review" name="status" value="NEEDS_REVIEW">Needs review</button><button type="submit" class="btn reject" name="status" value="REJECTED">Reject</button></div>
         <div class="form-grid">
           <div class="section-title"><strong>Canonical Question Fields</strong></div>
           <div class="field"><label>Source question number</label><input value="{{ values.source_question_number or '' }}" disabled></div>
           <div class="field"><label>Marks</label><input name="marks" value="{{ question.marks if question.marks is not none else '' }}" required></div>
-          <div class="field"><label>Question type</label><select name="question_type" id="question_type">{% for t in ['mcq','vsaq','saq','laq'] %}<option value="{{ t }}" {% if values.question_type == t %}selected{% endif %}>{{ t|upper }}</option>{% endfor %}</select></div>
+          <div class="field"><label>Question type</label><select name="question_type" id="question_type">{% for t in ['mcq','vsaq','saq','laq'] %}<option value="{{ t }}" {% if question_type_normalized == t %}selected{% endif %}>{{ t|upper }}</option>{% endfor %}</select></div>
           <div class="field"><label>Answer mode</label><input name="answer_mode" value="{{ values.answer_mode or '' }}"></div>
           <div class="field"><label>Handwritten upload mode</label><select name="handwritten_upload_mode">{% for t in ['none','optional','required'] %}<option value="{{ t }}" {% if values.handwritten_upload_mode == t %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></div>
-          <div class="field"><label>Correct answer <span id="correct-answer-required">(if applicable)</span></label><input name="correct_answer" id="correct_answer" value="{{ values.correct_answer or '' }}"></div>
+          <div class="field"><label>Correct answer <span id="correct-answer-required">{% if question_type_normalized == 'mcq' %}* required for MCQ{% else %}(if applicable){% endif %}</span></label><input name="correct_answer" id="correct_answer" value="{{ values.correct_answer or '' }}"></div>
           <div class="field"><label>Subject</label><input name="subject" value="{{ values.subject or 'Mathematics' }}" required></div>
           <div class="field"><label>Board</label><input name="board" value="{{ values.board or 'CBSE' }}" required></div>
           <div class="field"><label>Class</label><input name="class_level" value="{{ values.class_level or '' }}" required></div>
@@ -73,11 +65,13 @@
   </div>
 </div>
 <script>
-function decodeJsonTextarea(id){const el=document.getElementById(id);if(!el)return;try{const value=JSON.parse(el.value);el.value=JSON.stringify(value,null,2);}catch(e){/* Keep the original text visible for manual correction. */}}
+function decodeJsonTextarea(id){const el=document.getElementById(id);if(!el)return;try{const value=JSON.parse(el.value);el.value=JSON.stringify(value,null,2);}catch(e){}}
 ['question_parts','answer_choices','assets','source_pages','extraction_warnings'].forEach(decodeJsonTextarea);
 const raw=document.getElementById('raw-record');if(raw){try{raw.textContent=JSON.stringify(JSON.parse(raw.textContent),null,2);}catch(e){}}
-const type=document.getElementById('question_type');const answer=document.getElementById('correct_answer');const label=document.getElementById('correct-answer-required');
-function syncCorrectAnswerRequirement(){const isMcq=type && type.value==='mcq';if(answer){answer.required=isMcq;}if(label){label.textContent=isMcq?'* required for MCQ':'(if applicable)';}}
-if(type){type.addEventListener('change',syncCorrectAnswerRequirement);syncCorrectAnswerRequirement();}
+const type=document.getElementById('question_type');const answer=document.getElementById('correct_answer');const label=document.getElementById('correct-answer-required');const approve=document.getElementById('approve-button');const chapter=document.querySelector('input[name="chapter"]');
+function syncCorrectAnswerRequirement(){const isMcq=type && type.value.toLowerCase().trim()==='mcq';if(answer){answer.required=isMcq;}if(label){label.textContent=isMcq?'* required for MCQ':'(if applicable)';}const blocked=!chapter||!chapter.value.trim()||(isMcq&&!answer.value.trim());if(approve){approve.disabled=blocked;approve.title=blocked?'Complete the blocking fields first':'Ready to approve';}}
+if(type){type.addEventListener('change',syncCorrectAnswerRequirement);}
+['chapter','correct_answer'].forEach(name=>{const el=document.querySelector('[name="'+name+'"]');if(el){el.addEventListener('input',syncCorrectAnswerRequirement);}});
+syncCorrectAnswerRequirement();
 </script>
 {% endblock %}
