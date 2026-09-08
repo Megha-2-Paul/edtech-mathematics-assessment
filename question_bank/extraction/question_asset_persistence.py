@@ -119,16 +119,23 @@ def _best_visual_rect(
     if not candidates:
         return None
 
-    image_rects = [fitz.Rect(a.bbox) & question_region for a in candidates if a.asset_type == "image"]
-    drawing_rects = [fitz.Rect(a.bbox) & question_region for a in candidates if a.asset_type == "drawing"]
+    image_rects = [
+        fitz.Rect(a.bbox) & question_region
+        for a in candidates
+        if a.asset_type == "image"
+    ]
+    drawing_rects = [
+        fitz.Rect(a.bbox) & question_region
+        for a in candidates
+        if a.asset_type == "drawing"
+    ]
 
     # Prefer native images when present; multiple image fragments are merged.
     if image_rects:
-        rect = _clusters(image_rects, DRAWING_CLUSTER_GAP)[0]
-        for component in _clusters(image_rects, DRAWING_CLUSTER_GAP)[1:]:
-            if _rect_area(component) > _rect_area(rect):
-                rect = component
-        return rect
+        return max(
+            _clusters(image_rects, DRAWING_CLUSTER_GAP),
+            key=_rect_area,
+        )
 
     if not drawing_rects:
         return None
@@ -136,8 +143,7 @@ def _best_visual_rect(
     components = _clusters(drawing_rects, DRAWING_CLUSTER_GAP)
     # Diagram/vector components normally occupy substantially more coherent
     # area than isolated text glyphs or small decorative marks.
-    rect = max(components, key=lambda r: (_rect_area(r), r.width * r.height))
-    return rect
+    return max(components, key=_rect_area)
 
 
 def persist_source_visuals(
@@ -150,6 +156,8 @@ def persist_source_visuals(
 
     The stored file is a real crop from the original PDF. AI references such as
     ``figure_1`` are metadata only and are never treated as image data.
+    Existing asset records are refreshed in place so a corrected detector can
+    repair an already-approved question without creating duplicate assets.
     """
     pdf_path = Path(pdf_path)
     question_number = str(question_number).strip()
@@ -186,13 +194,25 @@ def persist_source_visuals(
 
         asset_id = f"{question_id}-visual-01"
         existing = storage.get_question_assets(question_id)
-        if any(str(row.get("asset_id")) == asset_id for row in existing):
-            return [dict(row) for row in existing if str(row.get("asset_id")) == asset_id]
 
         output_dir = ASSET_DIR / question_id
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / "visual_01.png"
+
+        # Always regenerate the source crop. This is important when an asset
+        # was created by an older detector and the detector has since been
+        # corrected.
         render_region(page, tuple(rect), output_path, dpi=220)
+
+        existing_row = next(
+            (dict(row) for row in existing if str(row.get("asset_id")) == asset_id),
+            None,
+        )
+        if existing_row:
+            existing_row["file_path"] = str(output_path)
+            existing_row["source_page"] = page_number
+            existing_row["source_bbox"] = tuple(rect)
+            return [existing_row]
 
         storage.create_question_asset(
             asset_id=asset_id,
