@@ -2,17 +2,27 @@
 {% block title %}Review Q{{ values.source_question_number }}{% endblock %}
 {% block custom_styles %}
 <style>
-.review-page{max-width:1600px;margin:auto}.topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.meta{color:#666}.workspace{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(520px,.85fr);gap:16px;align-items:start}.panel{background:#fff;border:1px solid #ddd;border-radius:12px;padding:16px}.source-img{width:100%;display:block;border:1px solid #ddd;border-radius:8px;background:#f7f7f7}.source-caption{margin:8px 0;color:#666;font-size:13px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}.field label{font-size:12px;font-weight:700;color:#555}.field input,.field select,.field textarea{width:100%;box-sizing:border-box;padding:9px;border:1px solid #ccc;border-radius:7px;font:inherit}.field textarea{min-height:150px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.warning{padding:10px 12px;border-radius:8px;background:#fff3cd;border:1px solid #ffecb5;margin-bottom:12px}.ok{padding:10px 12px;border-radius:8px;background:#d1e7dd;border:1px solid #badbcc;margin-bottom:12px}.section-title{grid-column:1/-1;margin:10px 0 0;padding-top:10px;border-top:1px solid #eee}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.btn{border:0;cursor:pointer;text-decoration:none;padding:9px 12px;border-radius:7px}.approve{background:#146c43!important;color:#fff!important}.reject{background:#b02a37!important;color:#fff!important}.review{background:#087990!important;color:#fff!important}.raw{margin-top:14px}.raw pre{white-space:pre-wrap;word-break:break-word;background:#f6f6f6;padding:12px;border-radius:8px;max-height:400px;overflow:auto}.navlinks{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:950px){.workspace{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.field.full,.section-title{grid-column:auto}}
+.review-page{max-width:1600px;margin:auto}.topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.meta{color:#666}.workspace{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(520px,.85fr);gap:16px;align-items:start}.panel{background:#fff;border:1px solid #ddd;border-radius:12px;padding:16px}.source-img{width:100%;display:block;border:1px solid #ddd;border-radius:8px;background:#f7f7f7}.source-caption{margin:8px 0;color:#666;font-size:13px}.source-pages{display:grid;gap:12px}.source-page-card{border:1px solid #ddd;border-radius:10px;padding:10px;background:#fafafa}.source-page-card h4{margin:0 0 8px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}.field label{font-size:12px;font-weight:700;color:#555}.field input,.field select,.field textarea{width:100%;box-sizing:border-box;padding:9px;border:1px solid #ccc;border-radius:7px;font:inherit}.field textarea{min-height:150px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.warning{padding:10px 12px;border-radius:8px;background:#fff3cd;border:1px solid #ffecb5;margin-bottom:12px}.ok{padding:10px 12px;border-radius:8px;background:#d1e7dd;border:1px solid #badbcc;margin-bottom:12px}.info{padding:10px 12px;border-radius:8px;background:#e7f1ff;border:1px solid #cfe2ff;margin-bottom:12px}.section-title{grid-column:1/-1;margin:10px 0 0;padding-top:10px;border-top:1px solid #eee}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.btn{border:0;cursor:pointer;text-decoration:none;padding:9px 12px;border-radius:7px}.approve{background:#146c43!important;color:#fff!important}.reject{background:#b02a37!important;color:#fff!important}.review{background:#087990!important;color:#fff!important}.raw{margin-top:14px}.raw pre{white-space:pre-wrap;word-break:break-word;background:#f6f6f6;padding:12px;border-radius:8px;max-height:400px;overflow:auto}.navlinks{display:flex;gap:8px;flex-wrap:wrap}@media(max-width:950px){.workspace{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.field.full,.section-title{grid-column:auto}}
 </style>
 {% endblock %}
 {% block content %}
 <div class="review-page">
-  <div class="topbar"><div><h2>Review Q{{ values.source_question_number }}</h2><div class="meta">{{ filename }} · source page {{ values.source_page }} · item {{ position }} of {{ total }} · <strong>{{ review.status }}</strong></div></div><div class="navlinks">{% if previous_url %}<a class="btn" href="{{ previous_url }}">← Previous</a>{% endif %}{% if next_url %}<a class="btn" href="{{ next_url }}">Next →</a>{% endif %}<a class="btn" href="{{ url_for('extraction_review.dashboard') }}">Inbox</a></div></div>
+  <div class="topbar"><div><h2>Review Q{{ values.source_question_number }}</h2><div class="meta">{{ filename }} · source page(s) {{ values.source_pages|join(', ') if values.source_pages else values.source_page }} · item {{ position }} of {{ total }} · <strong>{{ review.status }}</strong></div></div><div class="navlinks">{% if previous_url %}<a class="btn" href="{{ previous_url }}">← Previous</a>{% endif %}{% if next_url %}<a class="btn" href="{{ next_url }}">Next →</a>{% endif %}<a class="btn" href="{{ url_for('extraction_review.dashboard') }}">Inbox</a></div></div>
   <div class="workspace">
-    <section class="panel"><h3>Original PDF page</h3><div class="source-caption">{{ source_pdf }} · page {{ page_number }}</div><img class="source-img" src="{{ page_url }}" alt="Original source page"></section>
+    <section class="panel">
+      <h3>Original PDF source</h3>
+      <div class="source-caption">{{ source_pdf }}</div>
+      {% if source_page_urls %}
+      <div class="source-pages">
+        {% for page in source_page_urls %}<div class="source-page-card"><h4>PDF page {{ page.number }}</h4><img class="source-img" src="{{ page.url }}" alt="Original source page {{ page.number }}"></div>{% endfor %}
+      </div>
+      {% endif %}
+      {% if question_crop_url %}<div class="source-page-card" style="margin-top:12px"><h4>Question visual crop</h4><div class="source-caption">Generated from the source PDF boundary detector. This is supplementary; the full source page remains the ground truth.</div><img class="source-img" src="{{ question_crop_url }}" alt="Question visual crop"></div>{% endif %}
+    </section>
     <section class="panel">
       <h3>AI extraction + human verification</h3>
       {% if missing_inferred_fields %}<div class="warning"><strong>Human verification required:</strong> {{ missing_inferred_fields|join(', ') }}. These inferred fields must be completed before approval.</div>{% else %}<div class="ok">All required inferred fields are populated. Still verify every field against the source page before approval.</div>{% endif %}
+      {% if values.assets or values.diagram_reference %}<div class="info"><strong>Visual asset note:</strong> the AI identified one or more visual references. The actual source visual is preserved in the PDF/page/crop above; the JSON asset references are metadata, not image files.</div>{% endif %}
       <form method="post" action="{{ url_for('extraction_review.review', item_id=item_id) }}">
         <div class="form-grid">
           <div class="section-title"><strong>Canonical Question Fields</strong></div>
@@ -33,26 +43,31 @@
           <div class="field"><label>Source</label><input name="source" value="{{ values.source or '' }}" required></div>
           <div class="field"><label>Source year</label><input name="source_year" value="{{ values.source_year or '' }}"></div>
           <div class="field full"><label>Question text — verify exactly against source</label><textarea name="question_text" required>{{ values.question_text }}</textarea></div>
-          <div class="field full"><label>Question parts / subquestions (JSON)</label><textarea name="question_parts">{{ values.question_parts|tojson(indent=2) }}</textarea></div>
-          <div class="field full"><label>Answer choices (JSON)</label><textarea name="answer_choices">{{ values.answer_choices|tojson(indent=2) }}</textarea></div>
+          <div class="field full"><label>Question parts / subquestions (JSON)</label><textarea id="question_parts" name="question_parts">{{ values.question_parts|tojson(indent=2) }}</textarea></div>
+          <div class="field full"><label>Answer choices (JSON)</label><textarea id="answer_choices" name="answer_choices">{{ values.answer_choices|tojson(indent=2) }}</textarea></div>
           <div class="field full"><label>Diagram reference</label><input name="diagram_reference" value="{{ values.diagram_reference or '' }}"></div>
-          <div class="field full"><label>Assets (JSON)</label><textarea name="assets">{{ values.assets|tojson(indent=2) }}</textarea></div>
+          <div class="field full"><label>Assets (JSON)</label><textarea id="assets" name="assets">{{ values.assets|tojson(indent=2) }}</textarea></div>
           <div class="section-title"><strong>Extraction / Provenance — verify, don't silently discard</strong></div>
           <div class="field"><label>Source PDF</label><input value="{{ values.source_pdf or '' }}" disabled></div>
           <div class="field"><label>Source page</label><input value="{{ values.source_page or '' }}" disabled></div>
-          <div class="field full"><label>Source pages (JSON)</label><textarea disabled>{{ values.source_pages|tojson(indent=2) }}</textarea></div>
+          <div class="field full"><label>Source pages (JSON)</label><textarea id="source_pages" disabled>{{ values.source_pages|tojson(indent=2) }}</textarea></div>
           <div class="field"><label>Source occurrence ID</label><input value="{{ values.source_occurrence_id or '' }}" disabled></div>
           <div class="field"><label>Extraction provider</label><input value="{{ values.extraction_provider or '' }}" disabled></div>
           <div class="field"><label>Extraction model</label><input value="{{ values.extraction_model or '' }}" disabled></div>
           <div class="field"><label>Extraction run ID</label><input value="{{ values.extraction_run_id or '' }}" disabled></div>
           <div class="field"><label>Extraction confidence</label><input value="{{ values.extraction_confidence if values.extraction_confidence is not none else '' }}" disabled></div>
-          <div class="field full"><label>Extraction warnings (JSON)</label><textarea disabled>{{ values.extraction_warnings|tojson(indent=2) }}</textarea></div>
+          <div class="field full"><label>Extraction warnings (JSON)</label><textarea id="extraction_warnings" disabled>{{ values.extraction_warnings|tojson(indent=2) }}</textarea></div>
           <div class="field full"><label>Verification note</label><textarea name="note" style="min-height:90px" placeholder="What did you verify or correct?">{{ review.note or '' }}</textarea></div>
         </div>
         <div class="actions"><button class="btn approve" name="status" value="APPROVED" {% if missing_inferred_fields %}disabled title="Complete required inferred fields first"{% endif %}>✓ Approve & add to question bank</button><button class="btn review" name="status" value="NEEDS_REVIEW">Needs review</button><button class="btn reject" name="status" value="REJECTED">Reject</button></div>
       </form>
-      <div class="raw"><details><summary>Show raw AI record</summary><pre>{{ question | tojson(indent=2) }}</pre></details></div>
+      <div class="raw"><details><summary>Show raw AI record</summary><pre id="raw-record">{{ question | tojson(indent=2) }}</pre></details></div>
     </section>
   </div>
 </div>
+<script>
+function decodeJsonTextarea(id){const el=document.getElementById(id);if(!el)return;try{const value=JSON.parse(el.value);el.value=JSON.stringify(value,null,2);}catch(e){/* Keep the original text visible for manual correction. */}}
+['question_parts','answer_choices','assets','source_pages','extraction_warnings'].forEach(decodeJsonTextarea);
+const raw=document.getElementById('raw-record');if(raw){try{raw.textContent=JSON.stringify(JSON.parse(raw.textContent),null,2);}catch(e){}}
+</script>
 {% endblock %}
