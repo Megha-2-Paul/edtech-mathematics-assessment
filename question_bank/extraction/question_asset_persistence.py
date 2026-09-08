@@ -3,26 +3,141 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+import os
 
 import fitz
 
 from exam_platform.storage import storage
-from question_bank.extraction.asset_detector import detect_visual_assets
+from question_bank.extraction.asset_detector import VisualAsset, detect_visual_assets
 from question_bank.extraction.question_boundary import detect_question_boundaries
 from question_bank.extraction.page_renderer import render_region
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-ASSET_DIR = Path(__import__("os").getenv("QUESTION_ASSET_DIR", PROJECT_ROOT / "question_assets"))
+ASSET_DIR = Path(os.getenv("QUESTION_ASSET_DIR", PROJECT_ROOT / "question_assets"))
 ASSET_DIR.mkdir(parents=True, exist_ok=True)
 
+# Conservative settings for PDF vector diagrams. Text glyphs can also appear as
+# vector drawings in some PDFs, so we cluster drawing rectangles and prefer the
+# largest coherent graphic component instead of unioning every drawing on the
+# question page.
+DRAWING_CLUSTER_GAP = 10.0
+VISUAL_PADDING = 12.0
+TEXT_OVERLAP_RATIO = 0.55
 
-def _union_rects(rects: list[tuple[float, float, float, float]], page_rect: fitz.Rect) -> fitz.Rect | None:
-    if not rects:
+
+def _rect_area(rect: fitz.Rect) -> float:
+    return max(0.0, rect.get_area())
+
+
+def _overlap_ratio(a: fitz.Rect, b: fitz.Rect) -> float:
+    overlap = a & b
+    area = _rect_area(a)
+    return _rect_area(overlap) / area if area else 0.0
+
+
+def _text_rects(page: fitz.Page) -> list[fitz.Rect]:
+    rects: list[fitz.Rect] = []
+    try:
+        for block in page.get_text("blocks"):
+            if len(block) >= 4:
+                rect = fitz.Rect(block[:4]) & page.rect
+                if _rect_area(rect) > 0:
+                    rects.append(rect)
+    except (AttributeError, RuntimeError):
+        pass
+    return rects
+
+
+def _graphic_candidates(
+    page: fitz.Page,
+    page_number: int,
+    region: fitz.Rect,
+) -> list[VisualAsset]:
+    """Return graphic candidates while suppressing text-like vector drawings."""
+    detected = detect_visual_assets(page, page_number, tuple(region))
+    if not detected:
+        return []
+
+    text_rects = _text_rects(page)
+    candidates: list[VisualAsset] = []
+
+    for asset in detected:
+        rect = fitz.Rect(asset.bbox) & region
+        if _rect_area(rect) <= 0:
+            continue
+
+        # Native PDF images are already reliable visual objects.
+        if asset.asset_type == "image":
+            candidates.append(asset)
+            continue
+
+        # Vector PDFs sometimes represent letters and text fragments as
+        # drawings. Remove a drawing when most of its area lies inside a text
+        # block. Real diagram lines may touch labels but usually do not occupy
+        # most of a text block.
+        if any(_overlap_ratio(rect, text_rect) >= TEXT_OVERLAP_RATIO for text_rect in text_rects):
+            continue
+        candidates.append(asset)
+
+    return candidates
+
+
+def _clusters(rects: list[fitz.Rect], gap: float) -> list[fitz.Rect]:
+    """Merge nearby/overlapping rectangles into coherent visual components."""
+    components: list[fitz.Rect] = []
+    pending = list(rects)
+
+    while pending:
+        current = pending.pop(0)
+        changed = True
+        while changed:
+            changed = False
+            expanded = fitz.Rect(
+                current.x0 - gap,
+                current.y0 - gap,
+                current.x1 + gap,
+                current.y1 + gap,
+            )
+            remaining: list[fitz.Rect] = []
+            for rect in pending:
+                if _rect_area(expanded & rect) > 0:
+                    current |= rect
+                    changed = True
+                else:
+                    remaining.append(rect)
+            pending = remaining
+        components.append(current)
+
+    return components
+
+
+def _best_visual_rect(
+    page: fitz.Page,
+    candidates: list[VisualAsset],
+    question_region: fitz.Rect,
+) -> fitz.Rect | None:
+    if not candidates:
         return None
-    result = fitz.Rect(rects[0]) & page_rect
-    for rect in rects[1:]:
-        result |= fitz.Rect(rect) & page_rect
-    return result if result.get_area() > 0 else None
+
+    image_rects = [fitz.Rect(a.bbox) & question_region for a in candidates if a.asset_type == "image"]
+    drawing_rects = [fitz.Rect(a.bbox) & question_region for a in candidates if a.asset_type == "drawing"]
+
+    # Prefer native images when present; multiple image fragments are merged.
+    if image_rects:
+        rect = _clusters(image_rects, DRAWING_CLUSTER_GAP)[0]
+        for component in _clusters(image_rects, DRAWING_CLUSTER_GAP)[1:]:
+            if _rect_area(component) > _rect_area(rect):
+                rect = component
+        return rect
+
+    if not drawing_rects:
+        return None
+
+    components = _clusters(drawing_rects, DRAWING_CLUSTER_GAP)
+    # Diagram/vector components normally occupy substantially more coherent
+    # area than isolated text glyphs or small decorative marks.
+    rect = max(components, key=lambda r: (_rect_area(r), r.width * r.height))
+    return rect
 
 
 def persist_source_visuals(
@@ -31,26 +146,42 @@ def persist_source_visuals(
     question_number: str,
     question_id: str,
 ) -> list[dict[str, Any]]:
-    """Extract one consolidated visual region from the source PDF and persist it.
+    """Persist the best source-PDF visual associated with one question.
 
-    The asset is derived from detected image/vector regions inside the question
-    boundary. It is never generated from the AI's visual reference string.
+    The stored file is a real crop from the original PDF. AI references such as
+    ``figure_1`` are metadata only and are never treated as image data.
     """
     pdf_path = Path(pdf_path)
     question_number = str(question_number).strip()
+
     with fitz.open(str(pdf_path)) as document:
         if page_number < 1 or page_number > len(document):
             return []
+
         page = document[page_number - 1]
         boundaries = detect_question_boundaries(page, page_number)
-        boundary = next((b for b in boundaries if str(b.question_number) == question_number), None)
+        boundary = next(
+            (b for b in boundaries if str(b.question_number) == question_number),
+            None,
+        )
         if boundary is None:
             return []
-        visuals = detect_visual_assets(page, page_number, boundary.bbox)
-        if not visuals:
+
+        question_region = fitz.Rect(boundary.bbox) & page.rect
+        candidates = _graphic_candidates(page, page_number, question_region)
+        rect = _best_visual_rect(page, candidates, question_region)
+        if rect is None or _rect_area(rect) <= 0:
             return []
-        rect = _union_rects([a.bbox for a in visuals], page.rect)
-        if rect is None:
+
+        # Add a small amount of whitespace so diagram labels near the vector
+        # lines remain visible, while never escaping the question boundary.
+        rect = fitz.Rect(
+            max(question_region.x0, rect.x0 - VISUAL_PADDING),
+            max(question_region.y0, rect.y0 - VISUAL_PADDING),
+            min(question_region.x1, rect.x1 + VISUAL_PADDING),
+            min(question_region.y1, rect.y1 + VISUAL_PADDING),
+        )
+        if _rect_area(rect) <= 0:
             return []
 
         asset_id = f"{question_id}-visual-01"
@@ -61,7 +192,8 @@ def persist_source_visuals(
         output_dir = ASSET_DIR / question_id
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / "visual_01.png"
-        render_region(page, tuple(rect), output_path, dpi=200)
+        render_region(page, tuple(rect), output_path, dpi=220)
+
         storage.create_question_asset(
             asset_id=asset_id,
             question_id=question_id,
@@ -69,12 +201,14 @@ def persist_source_visuals(
             original_filename=output_path.name,
             file_path=str(output_path),
         )
-        return [{
-            "asset_id": asset_id,
-            "question_id": question_id,
-            "asset_type": "visual",
-            "original_filename": output_path.name,
-            "file_path": str(output_path),
-            "source_page": page_number,
-            "source_bbox": tuple(rect),
-        }]
+        return [
+            {
+                "asset_id": asset_id,
+                "question_id": question_id,
+                "asset_type": "visual",
+                "original_filename": output_path.name,
+                "file_path": str(output_path),
+                "source_page": page_number,
+                "source_bbox": tuple(rect),
+            }
+        ]
