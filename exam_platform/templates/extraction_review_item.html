@@ -21,8 +21,14 @@
     </section>
     <section class="panel">
       <h3>AI extraction + human verification</h3>
-      {% if blocking_fields %}<div class="warning"><strong>Approval blocked until verified:</strong> {{ blocking_fields|join(', ') }}. Classification fields such as topic, difficulty and competency are optional and may be completed later.</div>{% else %}<div class="ok"><strong>Ready for approval.</strong> Topic, subtopic, difficulty and competency may be left blank if you are not ready to classify them. Still verify every field against the source page.</div>{% endif %}
-      {% if optional_missing_fields %}<div class="info"><strong>Optional classification incomplete:</strong> {{ optional_missing_fields|join(', ') }}. These fields do not block approval and can be refined later.</div>{% endif %}
+      {% set chapter_missing = not (values.chapter or '')|trim %}
+      {% set correct_answer_missing = values.question_type == 'mcq' and not (values.correct_answer or '')|trim %}
+      {% set approval_blocked = chapter_missing or correct_answer_missing %}
+      {% if approval_blocked %}
+      <div class="warning"><strong>Approval blocked until verified:</strong>{% if chapter_missing %} Chapter{% endif %}{% if chapter_missing and correct_answer_missing %} and{% endif %}{% if correct_answer_missing %} Correct answer (required for MCQ){% endif %}. Topic, subtopic, difficulty and competency are optional and do not block approval.</div>
+      {% else %}
+      <div class="ok"><strong>Ready for approval.</strong> Topic, subtopic, difficulty and competency may be left blank. Still verify every field against the source page.</div>
+      {% endif %}
       {% if values.assets or values.diagram_reference %}<div class="info"><strong>Visual asset note:</strong> the AI identified one or more visual references. The actual source visual is preserved in the PDF/page/crop above; the JSON asset references are metadata, not image files.</div>{% endif %}
       <form method="post" action="{{ url_for('extraction_review.review', item_id=item_id) }}">
         <div class="form-grid">
@@ -60,7 +66,7 @@
           <div class="field full"><label>Extraction warnings (JSON)</label><textarea id="extraction_warnings" disabled>{{ values.extraction_warnings|tojson(indent=2) }}</textarea></div>
           <div class="field full"><label>Verification note</label><textarea name="note" style="min-height:90px" placeholder="What did you verify or correct?">{{ review.note or '' }}</textarea></div>
         </div>
-        <div class="actions"><button class="btn approve" name="status" value="APPROVED" {% if blocking_fields %}disabled title="Complete the blocking fields first"{% endif %}>✓ Approve & add to question bank</button><button class="btn review" name="status" value="NEEDS_REVIEW">Needs review</button><button class="btn reject" name="status" value="REJECTED">Reject</button></div>
+        <div class="actions"><button class="btn approve" name="status" value="APPROVED" {% if approval_blocked %}disabled title="Complete the blocking fields first"{% endif %}>✓ Approve & add to question bank</button><button class="btn review" name="status" value="NEEDS_REVIEW">Needs review</button><button class="btn reject" name="status" value="REJECTED">Reject</button></div>
       </form>
       <div class="raw"><details><summary>Show raw AI record</summary><pre id="raw-record">{{ question | tojson(indent=2) }}</pre></details></div>
     </section>
