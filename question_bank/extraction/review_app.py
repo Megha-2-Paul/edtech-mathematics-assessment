@@ -2,7 +2,7 @@
 
 AI output stays separate from the canonical question bank until a human approves it.
 The review UI preserves source-page provenance, multi-page questions, visual references,
-and a snapshot of the original extraction record.
+and the original extraction record plus the human-verified values.
 """
 from __future__ import annotations
 
@@ -18,15 +18,10 @@ from flask import Blueprint, abort, jsonify, redirect, render_template, request,
 
 from exam_platform.models import ContentBlock, Question
 from exam_platform.storage import storage
-from question_bank.extraction.extraction_contract import (
-    ALLOWED_QUESTION_TYPES,
-    ALLOWED_UPLOAD_MODES,
-    INFERRED_FIELDS_REQUIRE_HUMAN_VERIFICATION,
-)
+from question_bank.extraction.extraction_contract import ALLOWED_QUESTION_TYPES, ALLOWED_UPLOAD_MODES
 from question_bank.extraction.question_cropper import extract_page_questions
 
 review_bp = Blueprint("extraction_review", __name__, url_prefix="/teacher/extraction-review")
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 INBOX_DIR = Path(os.getenv("EXTRACTION_INBOX_DIR", PROJECT_ROOT / "extraction_inbox"))
 REVIEW_DIR = Path(os.getenv("EXTRACTION_REVIEW_DIR", PROJECT_ROOT / "extraction_reviews"))
@@ -69,25 +64,21 @@ def _load_review(item_id: str) -> dict[str, Any]:
         return {"status": "PENDING", "updated_at": None, "note": ""}
 
 
-def _save_review(item_id: str, status: str, note: str = "", question_id: str | None = None, question_snapshot: dict[str, Any] | None = None) -> None:
-    payload: dict[str, Any] = {"status": status, "updated_at": datetime.now().isoformat(), "note": note}
+def _save_review(item_id: str, status: str, note: str = "", question_id: str | None = None,
+                 question_snapshot: dict[str, Any] | None = None,
+                 human_verified_values: dict[str, Any] | None = None) -> None:
+    payload: dict[str, Any] = {
+        "status": status,
+        "updated_at": datetime.now().isoformat(),
+        "note": note,
+    }
     if question_id:
         payload["question_id"] = question_id
     if question_snapshot is not None:
         payload["extraction_snapshot"] = question_snapshot
+    if human_verified_values is not None:
+        payload["human_verified_values"] = human_verified_values
     _review_path(item_id).write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-
-
-def _question_text(question: dict[str, Any]) -> str:
-    value = question.get("question_text", question.get("text", question.get("question")))
-    if isinstance(value, list):
-        return "\n".join(str(x) for x in value)
-    return str(value or "").strip()
-
-
-def _source_year(source_pdf: str) -> int | None:
-    match = re.search(r"(?:19|20)\d{2}", source_pdf)
-    return int(match.group()) if match else None
 
 
 def _field(question: dict[str, Any], name: str, *aliases: str, default: Any = None) -> Any:
@@ -102,9 +93,7 @@ def _field(question: dict[str, Any], name: str, *aliases: str, default: Any = No
 def _normalise_list(value: Any) -> list[Any]:
     if value is None:
         return []
-    if isinstance(value, list):
-        return value
-    return [value]
+    return value if isinstance(value, list) else [value]
 
 
 def _normalise_pages(question: dict[str, Any]) -> list[int]:
@@ -122,6 +111,18 @@ def _normalise_pages(question: dict[str, Any]) -> list[int]:
         if page >= 1 and page not in pages:
             pages.append(page)
     return pages or [1]
+
+
+def _question_text(question: dict[str, Any]) -> str:
+    value = question.get("question_text", question.get("text", question.get("question")))
+    if isinstance(value, list):
+        return "\n".join(str(x) for x in value)
+    return str(value or "").strip()
+
+
+def _source_year(source_pdf: str) -> int | None:
+    match = re.search(r"(?:19|20)\d{2}", source_pdf)
+    return int(match.group()) if match else None
 
 
 def _parse_json_field(raw: str, label: str, default: Any) -> Any:
@@ -155,10 +156,8 @@ def _question_from_extraction(question: dict[str, Any], data: dict[str, Any], ov
     if marks < 0:
         raise ValueError("Marks cannot be negative")
 
-    text_value = str(overrides.get("question_text") or "").strip()
-    content: list[ContentBlock] = [ContentBlock("text", text_value)]
-    parts = _normalise_list(overrides.get("question_parts"))
-    for part in parts:
+    content: list[ContentBlock] = [ContentBlock("text", str(overrides.get("question_text") or "").strip())]
+    for part in _normalise_list(overrides.get("question_parts")):
         if isinstance(part, dict):
             part_text = str(part.get("part_text") or part.get("text") or "").strip()
             if part_text:
@@ -176,9 +175,10 @@ def _question_from_extraction(question: dict[str, Any], data: dict[str, Any], ov
 
     return Question(
         question_id=_next_question_id(), question_type=question_type, answer_mode=answer_mode,
-        question_content=content, answer_choices=[str(x) for x in _normalise_list(overrides.get("answer_choices"))],
-        correct_answer=overrides.get("correct_answer") or None, marks=marks,
-        handwritten_upload_mode=upload_mode,
+        question_content=content,
+        answer_choices=[str(x) for x in _normalise_list(overrides.get("answer_choices"))],
+        correct_answer=overrides.get("correct_answer") or None,
+        marks=marks, handwritten_upload_mode=upload_mode,
         subject=str(overrides.get("subject") or "Mathematics").strip(),
         board=str(overrides.get("board") or "CBSE").strip(), class_level=class_level,
         chapter=str(overrides.get("chapter") or "").strip() or None,
@@ -191,7 +191,7 @@ def _question_from_extraction(question: dict[str, Any], data: dict[str, Any], ov
     )
 
 
-def _review_form_values(question: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]:
+def _review_form_values(question: dict[str, Any], data: dict[str, Any], review: dict[str, Any]) -> dict[str, Any]:
     source_pdf = str(data.get("source_pdf") or data.get("source_paper") or question.get("source_pdf") or "")
     values = {name: _field(question, name) for name in (
         "answer_mode", "handwritten_upload_mode", "subject", "board", "class_level", "chapter",
@@ -212,6 +212,39 @@ def _review_form_values(question: dict[str, Any], data: dict[str, Any]) -> dict[
     values["extraction_confidence"] = _field(question, "extraction_confidence", default=data.get("extraction_confidence"))
     values["extraction_warnings"] = _field(question, "extraction_warnings", default=data.get("extraction_warnings", []))
     values["question_type"] = str(_field(question, "question_type", "type", default="saq")).lower()
+
+    # Once approved, the canonical database record is the source of truth for the
+    # human-verified values. This also repairs older approvals that predate the
+    # human_verified_values sidecar field.
+    if review.get("status") == "APPROVED" and review.get("question_id"):
+        canonical = storage.get_question(review["question_id"])
+        if canonical:
+            text_blocks = [b for b in canonical.question_content if getattr(b, "type", "") == "text"]
+            if text_blocks:
+                values["question_text"] = str(text_blocks[0].value or "")
+            parts = [getattr(b, "metadata", {}).get("question_part") for b in text_blocks[1:] if getattr(b, "metadata", {}).get("question_part")]
+            values["question_parts"] = parts
+            images = [b for b in canonical.question_content if getattr(b, "type", "") == "image"]
+            refs = []
+            for block in images:
+                metadata = getattr(block, "metadata", {}) or {}
+                ref = metadata.get("source_asset_reference") or metadata.get("source_reference") or block.value
+                if ref and ref not in refs:
+                    refs.append(ref)
+            values["assets"] = refs
+            values["diagram_reference"] = next((str(getattr(b, "value", "")) for b in images if (getattr(b, "metadata", {}) or {}).get("source_reference")), values.get("diagram_reference"))
+            for name in ("answer_mode", "handwritten_upload_mode", "subject", "board", "class_level", "chapter", "topic", "subtopic", "difficulty", "competency", "correct_answer", "source_year"):
+                if hasattr(canonical, name):
+                    values[name] = getattr(canonical, name)
+            values["marks"] = canonical.marks
+            values["question_type"] = canonical.question_type
+            values["source"] = canonical.source or values["source"]
+            values["source_year"] = canonical.source_year
+            values["answer_choices"] = list(canonical.answer_choices or [])
+
+    # New approvals also retain an explicit copy of the submitted human values.
+    if review.get("human_verified_values"):
+        values.update(review["human_verified_values"])
     return values
 
 
@@ -228,42 +261,54 @@ def _items() -> list[dict[str, Any]]:
                 continue
             item_id = f"{path.stem}:{index}"
             review = _load_review(item_id)
-            chapter_missing = not str(question.get("chapter") or "").strip()
-            result.append({"item_id": item_id, "file": path.name, "source_pdf": source_pdf, "index": index,
+            result.append({
+                "item_id": item_id, "file": path.name, "source_pdf": source_pdf, "index": index,
                 "question_number": str(_field(question, "question_number", "number", default=index + 1)),
                 "page_number": _field(question, "source_page", "page_number", "page", default=1),
-                "marks": question.get("marks"), "question_type": question.get("question_type") or question.get("type") or "",
-                "status": review.get("status", "PENDING"), "chapter_missing": chapter_missing})
+                "marks": question.get("marks"),
+                "question_type": question.get("question_type") or question.get("type") or "",
+                "status": review.get("status", "PENDING"),
+                "chapter_missing": not str(question.get("chapter") or "").strip(),
+            })
     return result
 
 
 def _find_item(item_id: str) -> tuple[Path, dict[str, Any], dict[str, Any]]:
     try:
-        filename, raw_index = item_id.rsplit(":", 1); index = int(raw_index)
+        filename, raw_index = item_id.rsplit(":", 1)
+        index = int(raw_index)
     except ValueError:
         abort(404)
     path = INBOX_DIR / f"{filename}.json"
-    if not path.exists(): abort(404)
+    if not path.exists():
+        abort(404)
     data = _load_json(path)
-    if index < 0 or index >= len(data["questions"]): abort(404)
+    if index < 0 or index >= len(data["questions"]):
+        abort(404)
     question = data["questions"][index]
-    if not isinstance(question, dict): abort(404)
+    if not isinstance(question, dict):
+        abort(404)
     return path, data, question
 
 
 def _source_pdf(data: dict[str, Any], question: dict[str, Any]) -> Path:
     filename = str(data.get("source_pdf") or data.get("source_paper") or question.get("source_pdf") or "")
     path = SOURCE_DIR / Path(filename).name
-    if not path.exists(): abort(404, description=f"Source PDF not found: {filename}")
+    if not path.exists():
+        abort(404, description=f"Source PDF not found: {filename}")
     return path
 
 
 def _render_page(pdf_path: Path, page_number: int) -> Path:
-    page_number = max(1, int(page_number)); output_dir = PAGE_DIR / _safe_id(pdf_path.stem); output_dir.mkdir(parents=True, exist_ok=True)
+    page_number = max(1, int(page_number))
+    output_dir = PAGE_DIR / _safe_id(pdf_path.stem)
+    output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"page_{page_number}.png"
-    if output_path.exists(): return output_path
+    if output_path.exists():
+        return output_path
     with fitz.open(str(pdf_path)) as document:
-        if page_number > len(document): abort(404, description=f"Page {page_number} does not exist in {pdf_path.name}")
+        if page_number > len(document):
+            abort(404, description=f"Page {page_number} does not exist in {pdf_path.name}")
         document[page_number - 1].get_pixmap(dpi=150, alpha=False).save(str(output_path))
     return output_path
 
@@ -278,13 +323,15 @@ def _render_question_crop(pdf_path: Path, page_number: int, question_number: str
     for row in rows:
         if str(row.get("question_number")) == target:
             path = Path(row.get("crop_path", ""))
-            if path.exists(): return path
+            if path.exists():
+                return path
     return None
 
 
 @review_bp.route("/")
 def dashboard():
-    items = _items(); statuses = ("PENDING", "APPROVED", "REJECTED", "NEEDS_REVIEW")
+    items = _items()
+    statuses = ("PENDING", "APPROVED", "REJECTED", "NEEDS_REVIEW")
     stats = {status: sum(item["status"] == status for item in items) for status in statuses}
     stats["CHAPTER_REVIEW"] = sum(item["chapter_missing"] and item["status"] not in {"APPROVED", "REJECTED"} for item in items)
     return render_template("extraction_review_dashboard.html", items=items, stats=stats)
@@ -292,41 +339,65 @@ def dashboard():
 
 @review_bp.route("/<path:item_id>", methods=["GET"])
 def item(item_id: str):
-    path, data, question = _find_item(item_id); source_pdf = _source_pdf(data, question); values = _review_form_values(question, data)
-    items = _items(); ids = [x["item_id"] for x in items]; position = ids.index(item_id) if item_id in ids else 0
-    previous_id = ids[position - 1] if position > 0 else None; next_id = ids[position + 1] if position + 1 < len(ids) else None
+    path, data, question = _find_item(item_id)
+    source_pdf = _source_pdf(data, question)
     review = _load_review(item_id)
+    values = _review_form_values(question, data, review)
+    items = _items()
+    ids = [x["item_id"] for x in items]
+    position = ids.index(item_id) if item_id in ids else 0
+    previous_id = ids[position - 1] if position > 0 else None
+    next_id = ids[position + 1] if position + 1 < len(ids) else None
     pages = values["source_pages"]
     source_page_urls = [{"number": p, "url": url_for("extraction_review.page_image_numbered", item_id=item_id, page_number=p)} for p in pages]
     crop_path = _render_question_crop(source_pdf, pages[0], str(values["source_question_number"]), item_id) if pages else None
     question_crop_url = url_for("extraction_review.question_crop", item_id=item_id) if crop_path else None
-    missing_inferred_fields = [name for name in INFERRED_FIELDS_REQUIRE_HUMAN_VERIFICATION if not str(values.get(name) or "").strip()]
-    return render_template("extraction_review_item.html", item_id=item_id, filename=path.name, data=data, question=question,
-        values=values, review=review, missing_inferred_fields=missing_inferred_fields, source_pdf=source_pdf.name,
-        page_number=pages[0] if pages else 1, source_page_urls=source_page_urls, question_crop_url=question_crop_url,
+    return render_template(
+        "extraction_review_item.html", item_id=item_id, filename=path.name, data=data, question=question,
+        values=values, review=review, source_pdf=source_pdf.name, page_number=pages[0] if pages else 1,
+        source_page_urls=source_page_urls, question_crop_url=question_crop_url,
         previous_url=url_for("extraction_review.item", item_id=previous_id) if previous_id else None,
-        next_url=url_for("extraction_review.item", item_id=next_id) if next_id else None, position=position + 1, total=len(ids))
+        next_url=url_for("extraction_review.item", item_id=next_id) if next_id else None,
+        position=position + 1, total=len(ids),
+    )
 
 
 @review_bp.route("/<path:item_id>/review", methods=["POST"])
 def review(item_id: str):
-    _path, data, question = _find_item(item_id); status = request.form.get("status", "NEEDS_REVIEW").upper()
-    if status not in {"APPROVED", "REJECTED", "NEEDS_REVIEW", "PENDING"}: return jsonify({"error": "Invalid review status"}), 400
-    note = request.form.get("note", "").strip(); current = _load_review(item_id)
+    _path, data, question = _find_item(item_id)
+    status = request.form.get("status", "NEEDS_REVIEW").upper()
+    if status not in {"APPROVED", "REJECTED", "NEEDS_REVIEW", "PENDING"}:
+        return jsonify({"error": "Invalid review status"}), 400
+    note = request.form.get("note", "").strip()
+    current = _load_review(item_id)
     if status == "APPROVED":
-        if current.get("status") == "APPROVED" and current.get("question_id"): return redirect(url_for("extraction_review.item", item_id=item_id))
-        overrides = {name: request.form.get(name, "") for name in ("question_text", "marks", "question_type", "answer_mode", "handwritten_upload_mode", "subject", "board", "class_level", "chapter", "topic", "subtopic", "difficulty", "competency", "correct_answer", "source_year", "diagram_reference")}
+        if current.get("status") == "APPROVED" and current.get("question_id"):
+            return redirect(url_for("extraction_review.item", item_id=item_id))
+        overrides = {name: request.form.get(name, "") for name in (
+            "question_text", "marks", "question_type", "answer_mode", "handwritten_upload_mode",
+            "subject", "board", "class_level", "chapter", "topic", "subtopic", "difficulty",
+            "competency", "correct_answer", "source_year", "diagram_reference")}
         try:
             overrides["answer_choices"] = _parse_json_field(request.form.get("answer_choices", "[]"), "Answer choices", [])
             overrides["question_parts"] = _parse_json_field(request.form.get("question_parts", "[]"), "Question parts", [])
             overrides["assets"] = _parse_json_field(request.form.get("assets", "[]"), "Assets", [])
-        except ValueError as exc: return jsonify({"error": str(exc)}), 400
-        if not overrides["question_text"].strip(): return jsonify({"error": "Question text cannot be empty"}), 400
-        if not overrides["chapter"].strip(): return jsonify({"error": "Chapter must be verified before approval. Enter the chapter or choose Needs review."}), 400
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        if not overrides["question_text"].strip():
+            return jsonify({"error": "Question text cannot be empty"}), 400
+        if not overrides["chapter"].strip():
+            return jsonify({"error": "Chapter must be verified before approval. Enter the chapter or choose Needs review."}), 400
+        if str(overrides["question_type"]).lower() == "mcq" and not str(overrides["correct_answer"]).strip():
+            return jsonify({"error": "Correct answer must be verified before approving an MCQ."}), 400
         try:
-            q = _question_from_extraction(question, data, overrides); storage.create_question(q)
-        except ValueError as exc: return jsonify({"error": str(exc)}), 400
-        _save_review(item_id, "APPROVED", note or f"Imported as {q.question_id}", q.question_id, question_snapshot=question)
+            q = _question_from_extraction(question, data, overrides)
+            storage.create_question(q)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        _save_review(
+            item_id, "APPROVED", note or f"Imported as {q.question_id}", q.question_id,
+            question_snapshot=question, human_verified_values=overrides,
+        )
     else:
         _save_review(item_id, status, note, question_snapshot=question)
     return redirect(url_for("extraction_review.item", item_id=item_id))
@@ -334,23 +405,31 @@ def review(item_id: str):
 
 @review_bp.route("/<path:item_id>/page.png")
 def page_image(item_id: str):
-    _path, data, question = _find_item(item_id); source_pdf = _source_pdf(data, question); pages = _normalise_pages(question)
-    return send_file(_render_page(source_pdf, pages[0]), mimetype="image/png", max_age=0)
+    _path, data, question = _find_item(item_id)
+    source_pdf = _source_pdf(data, question)
+    return send_file(_render_page(source_pdf, _normalise_pages(question)[0]), mimetype="image/png", max_age=0)
 
 
 @review_bp.route("/<path:item_id>/page/<int:page_number>.png")
 def page_image_numbered(item_id: str, page_number: int):
-    _path, data, question = _find_item(item_id); source_pdf = _source_pdf(data, question)
-    if page_number not in _normalise_pages(question): abort(404)
+    _path, data, question = _find_item(item_id)
+    source_pdf = _source_pdf(data, question)
+    if page_number not in _normalise_pages(question):
+        abort(404)
     return send_file(_render_page(source_pdf, page_number), mimetype="image/png", max_age=0)
 
 
 @review_bp.route("/<path:item_id>/question-crop.png")
 def question_crop(item_id: str):
-    _path, data, question = _find_item(item_id); source_pdf = _source_pdf(data, question); values = _review_form_values(question, data); pages = values["source_pages"]
-    if not pages: abort(404)
+    _path, data, question = _find_item(item_id)
+    source_pdf = _source_pdf(data, question)
+    values = _review_form_values(question, data, _load_review(item_id))
+    pages = values["source_pages"]
+    if not pages:
+        abort(404)
     path = _render_question_crop(source_pdf, pages[0], str(values["source_question_number"]), item_id)
-    if not path: abort(404, description="Question crop could not be generated for this source page")
+    if not path:
+        abort(404, description="Question crop could not be generated for this source page")
     return send_file(path, mimetype="image/png", max_age=0)
 
 
