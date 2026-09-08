@@ -1,9 +1,4 @@
-"""OR-question approval adapter.
-
-This package shadows the earlier single-file prototype of the same module name.
-It adds automatic splitting for explicit internal-choice questions while keeping
-normal approval behavior unchanged.
-"""
+"""OR-question approval adapter."""
 from __future__ import annotations
 
 from flask import Blueprint, jsonify, redirect, request, url_for
@@ -60,7 +55,7 @@ def _split_and_approve(item_id: str):
         return None
 
     alternatives = split_or_parts(parent["question_text"], parent["question_parts"])
-    if len(alternatives) < 2:
+    if len(alternatives) != 2:
         return None
 
     source_pdf = _source_pdf(data, source_question)
@@ -91,27 +86,35 @@ def _split_and_approve(item_id: str):
             )
 
         child = dict(parent)
-        child.update({
-            "question_text": f"({identifier}) {alternative['question_text']}",
-            "question_parts": [],
-            "marks": marks,
-            "question_type": question_type,
-            "answer_mode": alternative["answer_mode"] or parent["answer_mode"],
-            "handwritten_upload_mode": alternative["handwritten_upload_mode"] or parent["handwritten_upload_mode"],
-            "answer_choices": answer_choices,
-            "correct_answer": correct_answer,
-            "diagram_reference": alternative["diagram_reference"] or "",
-            "assets": alternative["assets"] or [],
-        })
+        child.update(
+            {
+                "question_text": f"({identifier}) {alternative['question_text']}",
+                "question_parts": [],
+                "marks": marks,
+                "question_type": question_type,
+                "answer_mode": alternative["answer_mode"] or parent["answer_mode"],
+                "handwritten_upload_mode": alternative["handwritten_upload_mode"] or parent["handwritten_upload_mode"],
+                "answer_choices": answer_choices,
+                "correct_answer": correct_answer,
+                "diagram_reference": alternative["diagram_reference"] or "",
+                "assets": alternative["assets"] or [],
+            }
+        )
+
         qobj = _question_from_extraction(source_question, data, child)
         storage.create_question(qobj)
         created_ids.append(qobj.question_id)
         labels.append(f"{source_number}({identifier}) → {qobj.question_id}")
 
-        # Only persist a visual for the alternative that explicitly declares one.
+        # Persist a visual only for the alternative that explicitly declares one.
         if alternative["diagram_reference"] or alternative["assets"]:
             try:
-                persist_source_visuals(source_pdf, source_page, source_number, qobj.question_id)
+                persist_source_visuals(
+                    source_pdf,
+                    source_page,
+                    source_number,
+                    qobj.question_id,
+                )
             except Exception as exc:
                 labels[-1] += f" [visual warning: {exc}]"
 
@@ -121,6 +124,20 @@ def _split_and_approve(item_id: str):
         item_id,
         "APPROVED",
         f"{note + ' ' if note else ''}{summary}",
+        question_id=created_ids[0],
+        question_snapshot=source_question,
+        human_verified_values=parent,
+    )
+
+    # Keep the complete mapping in the review record for auditing and later
+    # test-generation logic. question_id remains the first child for backwards
+    # compatibility with the existing review page.
+    review_record = _load_review(item_id)
+    review_record["question_ids"] = created_ids
+    _save_review(
+        item_id,
+        review_record.get("status", "APPROVED"),
+        review_record.get("note", summary),
         question_id=created_ids[0],
         question_snapshot=source_question,
         human_verified_values=parent,
