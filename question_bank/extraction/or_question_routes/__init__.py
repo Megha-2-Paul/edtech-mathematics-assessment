@@ -1,6 +1,8 @@
 """OR-question approval adapter."""
 from __future__ import annotations
 
+import json
+
 from flask import Blueprint, jsonify, redirect, request, url_for
 
 from exam_platform.storage import storage
@@ -13,6 +15,7 @@ from question_bank.extraction.review_app import (
     _normalise_pages,
     _parse_json_field,
     _question_from_extraction,
+    _review_path,
     _save_review,
     _source_pdf,
 )
@@ -46,11 +49,7 @@ def _split_and_approve(item_id: str):
     if current.get("status") == "APPROVED":
         return None
 
-    try:
-        parent = _build_parent_values(source_question)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
-
+    parent = _build_parent_values(source_question)
     if not parent["question_text"].strip() or not parent["chapter"].strip():
         return None
 
@@ -129,18 +128,13 @@ def _split_and_approve(item_id: str):
         human_verified_values=parent,
     )
 
-    # Keep the complete mapping in the review record for auditing and later
-    # test-generation logic. question_id remains the first child for backwards
-    # compatibility with the existing review page.
+    # Keep the complete child mapping in the review record for auditability.
+    review_path = _review_path(item_id)
     review_record = _load_review(item_id)
     review_record["question_ids"] = created_ids
-    _save_review(
-        item_id,
-        review_record.get("status", "APPROVED"),
-        review_record.get("note", summary),
-        question_id=created_ids[0],
-        question_snapshot=source_question,
-        human_verified_values=parent,
+    review_path.write_text(
+        json.dumps(review_record, indent=2, ensure_ascii=False),
+        encoding="utf-8",
     )
     return redirect(url_for("extraction_review.item", item_id=item_id))
 
