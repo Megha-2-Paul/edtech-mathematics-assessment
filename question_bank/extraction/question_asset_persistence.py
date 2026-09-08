@@ -23,6 +23,11 @@ ASSET_DIR.mkdir(parents=True, exist_ok=True)
 DRAWING_CLUSTER_GAP = 10.0
 VISUAL_PADDING = 12.0
 TEXT_OVERLAP_RATIO = 0.55
+# Exam PDFs commonly place QR codes and other document metadata in a narrow
+# footer band. They are page artifacts, not question visuals, and must not be
+# persisted as assets for the question above them.
+FOOTER_EXCLUSION_PT = 55.0
+SMALL_FOOTER_IMAGE_MAX_PT = 110.0
 
 
 def _rect_area(rect: fitz.Rect) -> float:
@@ -33,6 +38,20 @@ def _overlap_ratio(a: fitz.Rect, b: fitz.Rect) -> float:
     overlap = a & b
     area = _rect_area(a)
     return _rect_area(overlap) / area if area else 0.0
+
+
+def _looks_like_footer_artifact(page: fitz.Page, rect: fitz.Rect, asset_type: str) -> bool:
+    """Reject small page-footer images such as QR codes from question assets."""
+    if asset_type != "image":
+        return False
+
+    # Only apply the footer rule to compact images. A legitimate full-width
+    # figure near the bottom of a question should remain eligible.
+    width = max(0.0, rect.width)
+    height = max(0.0, rect.height)
+    compact = width <= SMALL_FOOTER_IMAGE_MAX_PT and height <= SMALL_FOOTER_IMAGE_MAX_PT
+    in_footer = rect.y1 >= page.rect.y1 - FOOTER_EXCLUSION_PT
+    return compact and in_footer
 
 
 def _text_rects(page: fitz.Page) -> list[fitz.Rect]:
@@ -64,6 +83,11 @@ def _graphic_candidates(
     for asset in detected:
         rect = fitz.Rect(asset.bbox) & region
         if _rect_area(rect) <= 0:
+            continue
+
+        # Footer QR codes/document metadata are page artifacts, not question
+        # visuals. Filter them before native images are automatically preferred.
+        if _looks_like_footer_artifact(page, rect, asset.asset_type):
             continue
 
         # Native PDF images are already reliable visual objects.
