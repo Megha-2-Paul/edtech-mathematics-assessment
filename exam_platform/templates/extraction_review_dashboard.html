@@ -2,28 +2,31 @@
 {% block title %}Extraction Review{% endblock %}
 {% block custom_styles %}
 <style>
-.review-wrap{max-width:1200px;margin:auto}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.stat{background:#fff;border:1px solid #ddd;border-radius:12px;padding:16px}.stat strong{display:block;font-size:26px}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.filter{padding:9px;border:1px solid #ccc;border-radius:8px}.review-table{width:100%;border-collapse:collapse;background:#fff}.review-table th,.review-table td{padding:10px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;background:#eee}.badge.pending{background:#fff3cd}.badge.approved{background:#d1e7dd}.badge.rejected{background:#f8d7da}.badge.needs{background:#cff4fc}.muted{color:#666}@media(max-width:800px){.stats{grid-template-columns:repeat(2,1fr)}.review-table{font-size:13px}.hide-mobile{display:none}}
+.review-wrap{max-width:1500px;margin:auto}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}.stat{background:#fff;border:1px solid #ddd;border-radius:12px;padding:16px}.stat strong{display:block;font-size:26px}.stat-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.stat-btn{border:1px solid #ccc;background:#fff;border-radius:8px;padding:7px 11px;cursor:pointer;font-weight:600}.stat-btn:hover,.stat-btn.active{background:#eef4ff;border-color:#6c8fe8}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.filter{padding:9px;border:1px solid #ccc;border-radius:8px}.table-wrap{overflow:auto;border-radius:10px}.review-table{width:100%;border-collapse:collapse;background:#fff;min-width:1200px}.review-table th,.review-table td{padding:10px;border-bottom:1px solid #eee;text-align:left;vertical-align:top;white-space:nowrap}.review-table th{background:#f8f9fa;position:sticky;top:0;z-index:1}.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;background:#eee}.badge.pending{background:#fff3cd}.badge.approved{background:#d1e7dd}.badge.rejected{background:#f8d7da}.badge.needs{background:#cff4fc}.muted{color:#666}.small{font-size:12px;color:#666}.review-btn{display:inline-block;background:#2864dc;color:#fff!important;text-decoration:none;padding:8px 12px;border-radius:7px;font-weight:600}.review-btn:hover{background:#1f55bf}@media(max-width:800px){.stats{grid-template-columns:repeat(2,1fr)}.review-table{font-size:13px}}
 </style>
 {% endblock %}
 {% block content %}
 <div class="review-wrap">
   <div class="card"><h2>AI Extraction Review</h2><p class="muted">Review AI-extracted questions against the original PDF before anything enters the canonical question bank.</p></div>
   <div class="stats">
-    <div class="stat"><strong>{{ stats.PENDING }}</strong><span>Pending</span></div>
-    <div class="stat"><strong>{{ stats.NEEDS_REVIEW }}</strong><span>Needs review</span></div>
-    <div class="stat"><strong>{{ stats.APPROVED }}</strong><span>Approved</span></div>
-    <div class="stat"><strong>{{ stats.REJECTED }}</strong><span>Rejected</span></div>
+    <div class="stat"><strong>{{ stats.PENDING }}</strong><span>Pending</span><div class="stat-buttons"><button class="stat-btn" data-status="PENDING">View pending</button></div></div>
+    <div class="stat"><strong>{{ stats.NEEDS_REVIEW }}</strong><span>Needs review</span><div class="stat-buttons"><button class="stat-btn" data-status="NEEDS_REVIEW">View needs review</button></div></div>
+    <div class="stat"><strong>{{ stats.APPROVED }}</strong><span>Approved</span><div class="stat-buttons"><button class="stat-btn" data-status="APPROVED">View approved</button></div></div>
+    <div class="stat"><strong>{{ stats.REJECTED }}</strong><span>Rejected</span><div class="stat-buttons"><button class="stat-btn" data-status="REJECTED">View rejected</button></div></div>
   </div>
   <div class="card">
-    <div class="toolbar"><select id="statusFilter" class="filter"><option value="ALL">All</option><option value="PENDING">Pending</option><option value="NEEDS_REVIEW">Needs review</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></select><input id="search" class="filter" placeholder="Search paper or question..."></div>
-    <table class="review-table"><thead><tr><th>Paper</th><th>Question</th><th>Page</th><th>Marks</th><th>Type</th><th>Status</th><th></th></tr></thead>
-    <tbody id="rows">{% for item in items %}<tr data-status="{{ item.status }}" data-search="{{ (item.file ~ ' ' ~ item.question_number)|lower }}"><td>{{ item.file }}</td><td>Q{{ item.question_number }}</td><td>{{ item.page_number }}</td><td>{{ item.marks or '—' }}</td><td>{{ item.question_type or '—' }}</td><td><span class="badge {% if item.status == 'APPROVED' %}approved{% elif item.status == 'REJECTED' %}rejected{% elif item.status == 'NEEDS_REVIEW' %}needs{% else %}pending{% endif %}">{{ item.status }}</span></td><td><a class="btn" href="{{ url_for('extraction_review.item', item_id=item.item_id) }}">Review →</a></td></tr>{% endfor %}</tbody></table>
+    <div class="toolbar"><select id="statusFilter" class="filter"><option value="ALL">All questions</option><option value="PENDING">Pending</option><option value="NEEDS_REVIEW">Needs review</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option></select><input id="search" class="filter" placeholder="Search paper, question, chapter, topic, board..."></div>
+    <div class="table-wrap">
+      <table class="review-table"><thead><tr><th>Paper</th><th>Question</th><th>Class</th><th>Board</th><th>Year</th><th>Chapter</th><th>Topic</th><th>Page</th><th>Marks</th><th>Type</th><th>Difficulty</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="rows">{% for item in items %}<tr data-status="{{ item.status }}" data-search="{{ (item.file ~ ' ' ~ item.question_number ~ ' ' ~ (item.chapter or '') ~ ' ' ~ (item.topic or '') ~ ' ' ~ (item.board or '') ~ ' ' ~ (item.class_level or '') ~ ' ' ~ (item.source_year or ''))|lower }}"><td>{{ item.file }}</td><td><strong>Q{{ item.question_number }}</strong></td><td>{{ item.class_level or '—' }}</td><td>{{ item.board or '—' }}</td><td>{{ item.source_year or '—' }}</td><td>{{ item.chapter or '—' }}</td><td>{{ item.topic or '—' }}</td><td>{{ item.page_number }}</td><td>{{ item.marks or '—' }}</td><td>{{ item.question_type or '—' }}</td><td>{{ item.difficulty or '—' }}</td><td><span class="badge {% if item.status == 'APPROVED' %}approved{% elif item.status == 'REJECTED' %}rejected{% elif item.status == 'NEEDS_REVIEW' %}needs{% else %}pending{% endif %}">{{ item.status }}</span></td><td><a class="review-btn" href="{{ url_for('extraction_review.item', item_id=item.item_id) }}">Review →</a></td></tr>{% endfor %}</tbody></table>
+    </div>
     {% if not items %}<p class="muted">No extraction JSON files found yet. Put provider outputs in <code>extraction_inbox</code>.</p>{% endif %}
   </div>
 </div>
 <script>
-const status=document.getElementById('statusFilter'), search=document.getElementById('search');
-function filter(){const s=status.value,q=search.value.toLowerCase();document.querySelectorAll('#rows tr').forEach(r=>r.hidden=(s!=='ALL'&&r.dataset.status!==s)||!r.dataset.search.includes(q));}
-status.addEventListener('change',filter);search.addEventListener('input',filter);
+const status=document.getElementById('statusFilter'),search=document.getElementById('search');
+function applyFilter(){const s=status.value,q=search.value.toLowerCase();document.querySelectorAll('#rows tr').forEach(r=>r.hidden=(s!=='ALL'&&r.dataset.status!==s)||!r.dataset.search.includes(q));document.querySelectorAll('.stat-btn').forEach(b=>b.classList.toggle('active',b.dataset.status===s));}
+status.addEventListener('change',applyFilter);search.addEventListener('input',applyFilter);document.querySelectorAll('.stat-btn').forEach(b=>b.addEventListener('click',()=>{status.value=b.dataset.status;applyFilter();window.scrollTo({top:document.querySelector('.review-table').getBoundingClientRect().top+window.scrollY-20,behavior:'smooth'});}));
+applyFilter();
 </script>
 {% endblock %}
