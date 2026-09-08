@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 from flask import Blueprint, jsonify, redirect, request, url_for
 
@@ -21,6 +22,8 @@ from question_bank.extraction.review_app import (
 )
 
 or_bp = Blueprint("extraction_or_review", __name__, url_prefix="/teacher/extraction-review")
+
+_VISUAL_CUE = re.compile(r"\b(figure|diagram|graph|chart|table)\b", re.IGNORECASE)
 
 
 def _build_parent_values(question):
@@ -43,6 +46,32 @@ def _build_parent_values(question):
     return values
 
 
+def _part_has_explicit_visual(alternative: dict) -> bool:
+    return bool(alternative.get("diagram_reference") or alternative.get("assets"))
+
+
+def _unique_visual_alternative(alternatives: list[dict]) -> set[str]:
+    """Infer a visual-bearing alternative only when exactly one is obvious.
+
+    This is intentionally conservative. If both alternatives mention a figure,
+    or neither does, we do not guess which visual belongs to which alternative.
+    """
+    explicit = {
+        str(a["part_identifier"])
+        for a in alternatives
+        if _part_has_explicit_visual(a)
+    }
+    if explicit:
+        return explicit if len(explicit) == 1 else set()
+
+    cue_matches = {
+        str(a["part_identifier"])
+        for a in alternatives
+        if _VISUAL_CUE.search(str(a.get("question_text") or ""))
+    }
+    return cue_matches if len(cue_matches) == 1 else set()
+
+
 def _split_and_approve(item_id: str):
     _path, data, source_question = _find_item(item_id)
     current = _load_review(item_id)
@@ -62,6 +91,7 @@ def _split_and_approve(item_id: str):
     source_number = str(
         _field(source_question, "source_question_number", "question_number", "number", default="")
     ).strip()
+    visual_alternatives = _unique_visual_alternative(alternatives)
 
     created_ids: list[str] = []
     labels: list[str] = []
@@ -105,15 +135,19 @@ def _split_and_approve(item_id: str):
         created_ids.append(qobj.question_id)
         labels.append(f"{source_number}({identifier}) → {qobj.question_id}")
 
-        # Persist a visual only for the alternative that explicitly declares one.
-        if alternative["diagram_reference"] or alternative["assets"]:
+        # If AI explicitly identifies a visual, use it. Otherwise, for the
+        # common a/b case where exactly one alternative says "figure/diagram",
+        # associate the detected source visual with that alternative only.
+        if identifier in visual_alternatives:
             try:
-                persist_source_visuals(
+                persisted = persist_source_visuals(
                     source_pdf,
                     source_page,
                     source_number,
                     qobj.question_id,
                 )
+                if not persisted:
+                    labels[-1] += " [visual warning: no source visual detected]"
             except Exception as exc:
                 labels[-1] += f" [visual warning: {exc}]"
 
