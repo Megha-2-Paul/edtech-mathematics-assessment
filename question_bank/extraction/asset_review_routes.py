@@ -1,4 +1,4 @@
-"""Deprecated duplicate asset-review routes.
+"""Deprecated duplicate extraction asset routes.
 
-The active asset status/image routes now live in review_app.py.
+No longer registered or used. Kept temporarily as a marker until the next cleanup commit.
 """
