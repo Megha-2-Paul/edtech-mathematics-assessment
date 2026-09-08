@@ -7,10 +7,12 @@ refresh, to register cleanly.
 """
 from __future__ import annotations
 
+import html
 import importlib.util
 from pathlib import Path
 
 from question_bank.extraction.question_asset_persistence import persist_source_visuals
+from question_bank.extraction.or_question_splitter import split_or_parts
 
 _LEGACY_PATH = Path(__file__).resolve().parents[1] / "review_app.py"
 _SPEC = importlib.util.spec_from_file_location(
@@ -26,10 +28,9 @@ _SPEC.loader.exec_module(_legacy)
 def _source_review_form_values(q, data, review):
     """Return the immutable source/AI extraction view for the review page.
 
-    Approval creates a separate canonical Question record.  The review page
-    must not replace the original AI extraction with the human-corrected
-    canonical record after approval, otherwise the audit view appears to have
-    changed the source extraction itself.
+    Approval creates a separate canonical Question record. The review page must
+    not replace the original AI extraction with the human-corrected canonical
+    record after approval.
     """
     source_pdf = str(
         data.get("source_pdf") or data.get("source_paper") or q.get("source_pdf") or ""
@@ -67,9 +68,70 @@ def _source_review_form_values(q, data, review):
 
 
 # The legacy item view resolves its form values through its module-global
-# function. Replace that function before registering the blueprint so approved
-# pages continue to show the original extraction, not the canonical edits.
+# function. Replace it so approved pages continue to show the original source
+# extraction rather than the canonical edits.
 _legacy._review_form_values = _source_review_form_values
+
+
+_LEGACY_RENDER_TEMPLATE = _legacy.render_template
+
+
+def _or_preview_html(values):
+    """Build a pre-approval preview of the canonical questions an OR will create."""
+    alternatives = split_or_parts(
+        str(values.get("question_text") or ""), values.get("question_parts") or []
+    )
+    if len(alternatives) < 2:
+        return ""
+
+    cards = []
+    for alternative in alternatives:
+        identifier = html.escape(str(alternative.get("part_identifier") or "").upper())
+        text = html.escape(str(alternative.get("question_text") or ""))
+        marks = alternative.get("marks")
+        marks_text = f" · {html.escape(str(marks))} marks" if marks not in (None, "") else ""
+        visual = bool(alternative.get("diagram_reference") or alternative.get("assets"))
+        visual_text = " · visual attached" if visual else ""
+        cards.append(
+            f'<div class="or-preview-card">'
+            f'<div class="or-preview-title">Question {identifier}{marks_text}{visual_text}</div>'
+            f'<div class="or-preview-text">{text}</div>'
+            f'</div>'
+        )
+
+    return (
+        '<div class="or-preview" id="or-preview">'
+        '<strong>✓ Internal-choice OR detected</strong>'
+        '<div class="or-preview-help">'
+        'This question will be saved as separate canonical questions. '
+        'Nothing is written to the question bank until you approve it.'
+        '</div>'
+        + "".join(cards)
+        + '</div>'
+    )
+
+
+def _render_review_template(template_name, **context):
+    rendered = _LEGACY_RENDER_TEMPLATE(template_name, **context)
+    if template_name == "extraction_review_item.html":
+        review = context.get("review") or {}
+        if review.get("status") != "APPROVED":
+            preview = _or_preview_html(context.get("values") or {})
+            if preview:
+                style = (
+                    '<style>.or-preview{padding:12px;border:1px solid #9ec5fe;'
+                    'background:#e7f1ff;border-radius:8px;margin:0 0 14px}.or-preview-help{'
+                    'font-size:13px;color:#495057;margin:5px 0 10px}.or-preview-card{'
+                    'background:#fff;border:1px solid #ced4da;border-radius:7px;padding:10px;'
+                    'margin-top:8px}.or-preview-title{font-weight:700}.or-preview-text{'
+                    'margin-top:5px;white-space:pre-wrap}</style>'
+                )
+                marker = '<h3>AI extraction + human verification</h3>'
+                rendered = rendered.replace(marker, marker + style + preview, 1)
+    return rendered
+
+
+_legacy.render_template = _render_review_template
 
 # Re-export the legacy module's implementation so existing imports keep working.
 for _name in dir(_legacy):
