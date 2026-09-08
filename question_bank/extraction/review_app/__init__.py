@@ -54,6 +54,7 @@ _LEGACY_RENDER_TEMPLATE = _legacy.render_template
 
 
 def _or_preview_html(values):
+    """Show the proposed OR split before approval without changing the source fields."""
     alternatives = split_or_parts(str(values.get("question_text") or ""), values.get("question_parts") or [])
     if len(alternatives) < 2:
         return ""
@@ -65,7 +66,7 @@ def _or_preview_html(values):
         marks_text = f" · {html.escape(str(marks))} marks" if marks not in (None, "") else ""
         visual_text = " · visual attached" if (alternative.get("diagram_reference") or alternative.get("assets")) else ""
         cards.append(f'<div class="or-preview-card"><div class="or-preview-title">Question {identifier}{marks_text}{visual_text}</div><div class="or-preview-text">{text}</div></div>')
-    return '<div class="or-preview" id="or-preview"><strong>✓ Internal-choice OR detected</strong><div class="or-preview-help">This question will be saved as separate canonical questions. Nothing is written to the question bank until you approve it.</div>' + "".join(cards) + '</div>'
+    return '<div class="or-preview" id="or-preview"><strong>✓ Internal-choice OR detected</strong><div class="or-preview-help">This question will be saved as separate canonical questions. Nothing is written to the question bank until you approve it.</div>' + "<div class=\"or-preview-separator\">OR</div>".join([cards[0], cards[1]]) + '</div>'
 
 
 def _render_review_template(template_name, **context):
@@ -75,13 +76,112 @@ def _render_review_template(template_name, **context):
         if review.get("status") != "APPROVED":
             preview = _or_preview_html(context.get("values") or {})
             if preview:
-                style = '<style>.or-preview{padding:12px;border:1px solid #9ec5fe;background:#e7f1ff;border-radius:8px;margin:0 0 14px}.or-preview-help{font-size:13px;color:#495057;margin:5px 0 10px}.or-preview-card{background:#fff;border:1px solid #ced4da;border-radius:7px;padding:10px;margin-top:8px}.or-preview-title{font-weight:700}.or-preview-text{margin-top:5px;white-space:pre-wrap}</style>'
+                style = '<style>.or-preview{padding:12px;border:1px solid #9ec5fe;background:#e7f1ff;border-radius:8px;margin:0 0 14px}.or-preview-help{font-size:13px;color:#495057;margin:5px 0 10px}.or-preview-card{background:#fff;border:1px solid #ced4da;border-radius:7px;padding:10px;margin-top:8px}.or-preview-title{font-weight:700}.or-preview-text{margin-top:5px;white-space:pre-wrap}.or-preview-separator{font-weight:800;text-align:center;padding:8px 0;color:#495057}</style>'
                 marker = '<h3>AI extraction + human verification</h3>'
                 rendered = rendered.replace(marker, marker + style + preview, 1)
     return rendered
 
 
 _legacy.render_template = _render_review_template
+
+
+def _canonical_question_ids(review):
+    """Return all canonical question IDs created by approval, in source order."""
+    ids = review.get("question_ids") or []
+    if isinstance(ids, str):
+        ids = [ids]
+    if not ids and review.get("question_id"):
+        ids = [review["question_id"]]
+    return [str(x) for x in ids if x]
+
+
+def _question_text_from_canonical(question):
+    blocks = [b for b in (question.question_content or []) if getattr(b, "type", "") == "text"]
+    return str(blocks[0].value or "") if blocks else ""
+
+
+def _canonical_preview_item(question, index, total):
+    """Build the minimal display data needed for a student-facing preview."""
+    text = _question_text_from_canonical(question)
+    label = f"Question {text[:4].strip()}" if text.startswith("(") else f"Question {index + 1}"
+    if total > 1 and text.startswith("("):
+        label = f"Question {text[1:2].upper()}"
+    assets = []
+    try:
+        assets = [dict(x) for x in _legacy.storage.get_question_assets(question.question_id)]
+    except Exception:
+        assets = []
+    return {
+        "question_id": question.question_id,
+        "label": label,
+        "text": text,
+        "choices": list(question.answer_choices or []),
+        "assets": assets,
+        "marks": question.marks,
+    }
+
+
+def _canonical_preview_html(item_id, review):
+    question_ids = _canonical_question_ids(review)
+    questions = [q for q in ([_legacy.storage.get_question(qid) for qid in question_ids]) if q is not None]
+    if not questions:
+        return ""
+    items = [_canonical_preview_item(q, i, len(questions)) for i, q in enumerate(questions)]
+    cards = []
+    for item in items:
+        text = html.escape(item["text"])
+        choices = item["choices"]
+        choices_html = '<div class="student-preview-choices">' + "".join(f'<div>{html.escape(str(choice))}</div>' for choice in choices) + '</div>' if choices else ""
+        asset_html = ""
+        for asset in item["assets"]:
+            asset_id = str(asset.get("asset_id") or "")
+            if not asset_id:
+                continue
+            image_url = url_for("extraction_review.student_preview_asset", item_id=item_id, asset_id=asset_id)
+            asset_html += f'<div class="student-preview-visual"><img src="{html.escape(image_url)}" alt="Question visual"></div>'
+        marks = f'<div class="student-preview-marks">{html.escape(str(item["marks"]))} marks</div>' if item["marks"] is not None else ""
+        cards.append(f'<div class="student-preview-paper"><div class="student-preview-question-label">{html.escape(item["label"])}</div><div class="student-preview-question">{text.replace(chr(10), "<br>")}</div>{marks}{choices_html}{asset_html}</div>')
+    separator = '<div class="student-preview-or">OR</div>' if len(cards) == 2 else ""
+    body = separator.join(cards)
+    return '<div class="student-preview" id="student-preview"><div class="student-preview-heading">Live student preview — approved canonical version</div><div class="student-preview-note">This preview uses the saved canonical Question record(s), so human corrections are reflected here. The AI extraction above remains unchanged for audit.</div>' + body + '</div>'
+
+
+def _source_preview_html(item_id, source_question, data, values):
+    """Render a pre-approval preview, splitting explicit OR alternatives visually."""
+    alternatives = split_or_parts(str(values.get("question_text") or ""), values.get("question_parts") or [])
+    if len(alternatives) == 2:
+        cards = []
+        for alternative in alternatives:
+            identifier = html.escape(str(alternative.get("part_identifier") or "").upper())
+            text = html.escape(str(alternative.get("question_text") or ""))
+            choices = alternative.get("answer_choices") or []
+            choices_html = '<div class="student-preview-choices">' + "".join(f'<div>{html.escape(str(choice))}</div>' for choice in choices) + '</div>' if choices else ""
+            cards.append(f'<div class="student-preview-paper"><div class="student-preview-question-label">Question {identifier}</div><div class="student-preview-question">{text.replace(chr(10), "<br>")}</div>{choices_html}</div>')
+        body = '<div class="student-preview-or">OR</div>'.join(cards)
+        return '<div class="student-preview" id="student-preview"><div class="student-preview-heading">Live student preview — proposed OR split</div><div class="student-preview-note">This is the student layout that will be created if you approve this extraction. The original AI extraction remains unchanged above.</div>' + body + '</div>'
+
+    visual_path = _student_preview_visual_path(item_id, source_question, data)
+    text = html.escape(str(values.get("question_text") or ""))
+    choices = values.get("answer_choices") or []
+    choices_html = '<div class="student-preview-choices">' + "".join(f'<div>{html.escape(str(choice))}</div>' for choice in choices) + '</div>' if choices else ""
+    image_html = ""
+    if visual_path:
+        image_url = url_for("extraction_review.student_preview_visual", item_id=item_id)
+        image_html = f'<div class="student-preview-visual"><img src="{html.escape(image_url)}" alt="Question diagram preview"></div>'
+    return '<div class="student-preview" id="student-preview"><div class="student-preview-heading">Live student preview</div><div class="student-preview-note">This is an approximation of how the question will be presented to a student. The source PDF remains the verification ground truth.</div><div class="student-preview-paper"><div class="student-preview-question">' + text.replace(chr(10), "<br>") + '</div>' + choices_html + image_html + '</div></div>'
+
+
+def _inject_student_preview(rendered, item_id, source_question, data, values, review):
+    if review.get("status") == "APPROVED":
+        preview = _canonical_preview_html(item_id, review)
+    else:
+        preview = _source_preview_html(item_id, source_question, data, values)
+    rendered = rendered.replace("The fields below are loaded from the canonical question that was approved. The original AI extraction remains preserved separately for audit.", "This page continues to show the original AI extraction and source for audit. Human corrections are stored in the approved canonical question record(s).")
+    if not preview:
+        return rendered
+    style = '<style>.student-preview{margin-bottom:16px;padding:14px;border:1px solid #b7c9e8;background:#f4f8ff;border-radius:10px}.student-preview-heading{font-size:18px;font-weight:700;margin-bottom:4px}.student-preview-note{font-size:12px;color:#666;margin-bottom:10px}.student-preview-paper{background:#fff;border:1px solid #d7dce2;border-radius:8px;padding:16px}.student-preview-paper+.student-preview-paper{margin-top:8px}.student-preview-question-label{font-weight:700;font-size:14px;margin-bottom:5px}.student-preview-question{font-size:17px;line-height:1.6}.student-preview-marks{font-size:12px;color:#666;margin-top:8px}.student-preview-choices{margin-top:10px;display:grid;gap:6px}.student-preview-choices div{padding:7px 9px;border:1px solid #e3e6ea;border-radius:6px}.student-preview-or{font-weight:800;text-align:center;padding:8px 0;color:#495057}.student-preview-visual{margin-top:14px;text-align:center}.student-preview-visual img{max-width:100%;max-height:320px;border:1px solid #ddd;border-radius:6px;background:#fff}</style>'
+    marker = '<h3>AI extraction + human verification</h3>'
+    return rendered.replace(marker, style + preview + marker, 1)
 
 
 def _dashboard_view():
@@ -99,12 +199,12 @@ def _dashboard_view():
             item_id = f"{p.stem}:{index}"
             review = _legacy._load_review(item_id)
             values = _source_review_form_values(q, data, review)
-            if review.get("status") == "APPROVED" and review.get("question_id"):
-                canonical = _legacy.storage.get_question(review["question_id"])
-                if canonical:
-                    for name in ("class_level", "board", "chapter", "topic", "difficulty", "source_year", "marks", "question_type"):
-                        if hasattr(canonical, name):
-                            values[name] = getattr(canonical, name)
+            question_ids = _canonical_question_ids(review)
+            canonical = _legacy.storage.get_question(question_ids[0]) if question_ids else None
+            if canonical:
+                for name in ("class_level", "board", "chapter", "topic", "difficulty", "source_year", "marks", "question_type"):
+                    if hasattr(canonical, name):
+                        values[name] = getattr(canonical, name)
             source_year = values.get("source_year") or _legacy._source_year(source_pdf)
             items.append({"item_id": item_id, "file": p.name, "source_pdf": source_pdf, "index": index, "question_number": str(values.get("source_question_number") or index + 1), "page_number": values.get("source_page") or 1, "marks": values.get("marks"), "question_type": values.get("question_type") or "", "status": review.get("status", "PENDING"), "chapter_missing": not str(values.get("chapter") or "").strip(), "class_level": values.get("class_level"), "board": values.get("board"), "source_year": source_year, "chapter": values.get("chapter"), "topic": values.get("topic"), "difficulty": values.get("difficulty")})
     stats = {s: sum(x["status"] == s for x in items) for s in ("PENDING", "APPROVED", "REJECTED", "NEEDS_REVIEW")}
@@ -113,7 +213,7 @@ def _dashboard_view():
 
 
 def _student_preview_visual_path(item_id, source_question, data):
-    """Render a non-persistent visual crop for the student preview."""
+    """Render a non-persistent visual crop for the pre-approval student preview."""
     try:
         pdf_path = _legacy._source_pdf(data, source_question)
         pages = _legacy._normalise_pages(source_question)
@@ -144,57 +244,22 @@ def _student_preview_visual_path(item_id, source_question, data):
         return None
 
 
-def _student_preview_html(item_id, source_question, data, values):
-    visual_path = _student_preview_visual_path(item_id, source_question, data)
-    text = html.escape(str(values.get("question_text") or ""))
-    choices = values.get("answer_choices") or []
-    choices_html = '<div class="student-preview-choices">' + "".join(f'<div>{html.escape(str(choice))}</div>' for choice in choices) + '</div>' if choices else ""
-    image_html = ""
-    if visual_path:
-        image_url = url_for("extraction_review.student_preview_visual", item_id=item_id)
-        image_html = f'<div class="student-preview-visual"><img src="{html.escape(image_url)}" alt="Question diagram preview"></div>'
-    return '<div class="student-preview" id="student-preview"><div class="student-preview-heading">Live student preview</div><div class="student-preview-note">This is an approximation of how the question will be presented to a student. The source PDF remains the verification ground truth.</div><div class="student-preview-paper"><div class="student-preview-question">' + text.replace(chr(10), "<br>") + '</div>' + choices_html + image_html + '</div></div>'
-
-
-def _inject_student_preview(rendered, item_id, source_question, data, values):
-    preview = _student_preview_html(item_id, source_question, data, values)
-    rendered = rendered.replace("The fields below are loaded from the canonical question that was approved. The original AI extraction remains preserved separately for audit.", "This page continues to show the original AI extraction and source for audit. Human corrections are stored in the approved canonical question record(s).")
-    if not preview:
-        return rendered
-    style = '<style>.student-preview{margin-bottom:16px;padding:14px;border:1px solid #b7c9e8;background:#f4f8ff;border-radius:10px}.student-preview-heading{font-size:18px;font-weight:700;margin-bottom:4px}.student-preview-note{font-size:12px;color:#666;margin-bottom:10px}.student-preview-paper{background:#fff;border:1px solid #d7dce2;border-radius:8px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.06)}.student-preview-question{font-size:17px;line-height:1.6}.student-preview-choices{margin-top:10px;display:grid;gap:6px}.student-preview-choices div{padding:7px 9px;border:1px solid #e3e6ea;border-radius:6px}.student-preview-visual{margin-top:14px;text-align:center}.student-preview-visual img{max-width:100%;max-height:320px;border:1px solid #ddd;border-radius:6px;background:#fff}</style>'
-    marker = '<h3>AI extraction + human verification</h3>'
-    return rendered.replace(marker, style + preview + marker, 1)
-
-
-_legacy_item_view = None
-
-
-def _asset_refresh_view(item_id):
-    """Refresh approved assets and add the live student preview to every review page."""
+def _student_preview_asset(item_id, asset_id):
+    """Serve an already-persisted canonical question asset after checking ownership."""
     try:
-        _path, data, source_question = _legacy._find_item(item_id)
         review = _legacy._load_review(item_id)
-        question_ids = review.get("question_ids") or []
-        question_id = review.get("question_id")
-        if review.get("status") == "APPROVED" and question_id and len(question_ids) <= 1:
-            values = _legacy._review_form_values(source_question, data, review)
-            refs = values.get("assets") or values.get("diagram_reference")
-            if refs:
-                pages = _legacy._normalise_pages(source_question)
-                source_number = str(_legacy._field(source_question, "source_question_number", "question_number", "number", default="")).strip()
-                if pages and source_number:
-                    persist_source_visuals(_legacy._source_pdf(data, source_question), int(pages[0]), source_number, str(question_id))
+        question_ids = _canonical_question_ids(review)
+        if review.get("status") != "APPROVED" or not question_ids:
+            return ("Asset preview not available.", 404)
+        for question_id in question_ids:
+            for asset in _legacy.storage.get_question_assets(question_id):
+                if str(asset.get("asset_id")) == str(asset_id):
+                    path = Path(str(asset.get("file_path") or ""))
+                    if path.exists() and path.is_file():
+                        return send_file(path)
     except Exception:
         pass
-    rendered = _legacy_item_view(item_id)
-    try:
-        _path, data, source_question = _legacy._find_item(item_id)
-        review = _legacy._load_review(item_id)
-        values = _legacy._review_form_values(source_question, data, review)
-        rendered = _inject_student_preview(rendered, item_id, source_question, data, values)
-    except Exception:
-        pass
-    return rendered
+    return ("Asset preview not available.", 404)
 
 
 def _student_preview_visual(item_id):
@@ -224,4 +289,35 @@ def register_extraction_review(app):
         app.view_functions["extraction_review.item"] = _asset_refresh_view
     app.view_functions["extraction_review.dashboard"] = _dashboard_view
     app.add_url_rule("/teacher/extraction-review/<path:item_id>/student-preview-visual", endpoint="extraction_review.student_preview_visual", view_func=_student_preview_visual)
+    app.add_url_rule("/teacher/extraction-review/<path:item_id>/student-preview-asset/<asset_id>", endpoint="extraction_review.student_preview_asset", view_func=_student_preview_asset)
     register_or_question_review(app)
+
+
+_legacy_item_view = None
+
+
+def _asset_refresh_view(item_id):
+    """Refresh approved assets and add the live student preview to every review page."""
+    try:
+        _path, data, source_question = _legacy._find_item(item_id)
+        review = _legacy._load_review(item_id)
+        question_ids = _canonical_question_ids(review)
+        if review.get("status") == "APPROVED" and len(question_ids) == 1:
+            values = _legacy._review_form_values(source_question, data, review)
+            refs = values.get("assets") or values.get("diagram_reference")
+            if refs:
+                pages = _legacy._normalise_pages(source_question)
+                source_number = str(_legacy._field(source_question, "source_question_number", "question_number", "number", default="")).strip()
+                if pages and source_number:
+                    persist_source_visuals(_legacy._source_pdf(data, source_question), int(pages[0]), source_number, str(question_ids[0]))
+    except Exception:
+        pass
+    rendered = _legacy_item_view(item_id)
+    try:
+        _path, data, source_question = _legacy._find_item(item_id)
+        review = _legacy._load_review(item_id)
+        values = _source_review_form_values(source_question, data, review)
+        rendered = _inject_student_preview(rendered, item_id, source_question, data, values, review)
+    except Exception:
+        pass
+    return rendered
