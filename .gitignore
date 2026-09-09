@@ -59,3 +59,12 @@ credentials*
 # Operating-system files
 .DS_Store
 Thumbs.db
+
+# Extraction runtime data
+extraction_inbox/*
+!extraction_inbox/.gitkeep
+extraction_reviews/
+question_assets/
+
+# Local test output
+test_results.txt
