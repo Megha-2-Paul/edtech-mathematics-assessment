@@ -251,9 +251,16 @@ def _asset_refresh_view(item_id):
                     continue
                 identifier = _part_identifier_from_canonical(question)
                 if len(ids) > 1 and identifier:
-                    refreshed = persist_source_visuals(_legacy._source_pdf(data, source_question), int(pages[0]), source_number, qid, part_identifier=identifier)
-                    if not refreshed:
-                        storage.delete_question_assets(qid)
+                    # Always refresh each OR child. If no visual belongs to this
+                    # child, persistence removes any stale asset left by an older
+                    # detector version.
+                    persist_source_visuals(
+                        _legacy._source_pdf(data, source_question),
+                        int(pages[0]),
+                        source_number,
+                        qid,
+                        part_identifier=identifier,
+                    )
                 elif len(ids) == 1:
                     values = _source_review_form_values(source_question, data, review)
                     if values.get("assets") or values.get("diagram_reference"):
