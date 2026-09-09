@@ -23,8 +23,6 @@ from question_bank.extraction.review_app import (
 
 or_bp = Blueprint("extraction_or_review", __name__, url_prefix="/teacher/extraction-review")
 
-_VISUAL_CUE = re.compile(r"\b(figure|diagram|graph|chart|table)\b", re.IGNORECASE)
-
 
 def _build_parent_values(question):
     names = (
@@ -34,42 +32,10 @@ def _build_parent_values(question):
         "correct_answer", "source_year", "diagram_reference",
     )
     values = {name: request.form.get(name, "") for name in names}
-    values["answer_choices"] = _parse_json_field(
-        request.form.get("answer_choices", "[]"), "Answer choices", []
-    )
-    values["question_parts"] = _parse_json_field(
-        request.form.get("question_parts", "[]"), "Question parts", []
-    )
-    values["assets"] = _parse_json_field(
-        request.form.get("assets", "[]"), "Assets", []
-    )
+    values["answer_choices"] = _parse_json_field(request.form.get("answer_choices", "[]"), "Answer choices", [])
+    values["question_parts"] = _parse_json_field(request.form.get("question_parts", "[]"), "Question parts", [])
+    values["assets"] = _parse_json_field(request.form.get("assets", "[]"), "Assets", [])
     return values
-
-
-def _part_has_explicit_visual(alternative: dict) -> bool:
-    return bool(alternative.get("diagram_reference") or alternative.get("assets"))
-
-
-def _unique_visual_alternative(alternatives: list[dict]) -> set[str]:
-    """Infer a visual-bearing alternative only when exactly one is obvious.
-
-    This is intentionally conservative. If both alternatives mention a figure,
-    or neither does, we do not guess which visual belongs to which alternative.
-    """
-    explicit = {
-        str(a["part_identifier"])
-        for a in alternatives
-        if _part_has_explicit_visual(a)
-    }
-    if explicit:
-        return explicit if len(explicit) == 1 else set()
-
-    cue_matches = {
-        str(a["part_identifier"])
-        for a in alternatives
-        if _VISUAL_CUE.search(str(a.get("question_text") or ""))
-    }
-    return cue_matches if len(cue_matches) == 1 else set()
 
 
 def _split_and_approve(item_id: str):
@@ -88,10 +54,7 @@ def _split_and_approve(item_id: str):
 
     source_pdf = _source_pdf(data, source_question)
     source_page = int(_normalise_pages(source_question)[0])
-    source_number = str(
-        _field(source_question, "source_question_number", "question_number", "number", default="")
-    ).strip()
-    visual_alternatives = _unique_visual_alternative(alternatives)
+    source_number = str(_field(source_question, "source_question_number", "question_number", "number", default="")).strip()
 
     created_ids: list[str] = []
     labels: list[str] = []
@@ -100,55 +63,49 @@ def _split_and_approve(item_id: str):
         identifier = alternative["part_identifier"]
         question_type = alternative["question_type"] or parent["question_type"]
         marks = alternative["marks"] if alternative["marks"] not in (None, "") else parent["marks"]
-        correct_answer = (
-            alternative["correct_answer"]
-            if alternative["correct_answer"] not in (None, "")
-            else parent["correct_answer"]
-        )
+        correct_answer = alternative["correct_answer"] if alternative["correct_answer"] not in (None, "") else parent["correct_answer"]
         answer_choices = alternative["answer_choices"] or parent["answer_choices"]
 
         if marks in (None, ""):
             raise ValueError(f"Marks must be verified for OR alternative ({identifier}).")
         if str(question_type).strip().lower() == "mcq" and not str(correct_answer or "").strip():
-            raise ValueError(
-                f"Correct answer must be verified for OR alternative ({identifier}) because it is an MCQ."
-            )
+            raise ValueError(f"Correct answer must be verified for OR alternative ({identifier}) because it is an MCQ.")
 
         child = dict(parent)
-        child.update(
-            {
-                "question_text": f"({identifier}) {alternative['question_text']}",
-                "question_parts": [],
-                "marks": marks,
-                "question_type": question_type,
-                "answer_mode": alternative["answer_mode"] or parent["answer_mode"],
-                "handwritten_upload_mode": alternative["handwritten_upload_mode"] or parent["handwritten_upload_mode"],
-                "answer_choices": answer_choices,
-                "correct_answer": correct_answer,
-                "diagram_reference": alternative["diagram_reference"] or "",
-                "assets": alternative["assets"] or [],
-            }
-        )
+        child.update({
+            "question_text": f"({identifier}) {alternative['question_text']}",
+            "question_parts": [],
+            "marks": marks,
+            "question_type": question_type,
+            "answer_mode": alternative["answer_mode"] or parent["answer_mode"],
+            "handwritten_upload_mode": alternative["handwritten_upload_mode"] or parent["handwritten_upload_mode"],
+            "answer_choices": answer_choices,
+            "correct_answer": correct_answer,
+            "diagram_reference": alternative["diagram_reference"] or "",
+            "assets": alternative["assets"] or [],
+        })
 
         qobj = _question_from_extraction(source_question, data, child)
         storage.create_question(qobj)
         created_ids.append(qobj.question_id)
         labels.append(f"{source_number}({identifier}) → {qobj.question_id}")
 
-        # If AI explicitly identifies a visual, use it. Otherwise, for the
-        # common a/b case where exactly one alternative says "figure/diagram",
-        # associate the detected source visual with that alternative only.
-        if identifier in visual_alternatives:
-            try:
-                persisted = persist_source_visuals(
-                    source_pdf,
-                    source_page,
-                    source_number,
-                    qobj.question_id,
-                )
-                if not persisted:
-                    labels[-1] += " [visual warning: no source visual detected]"
-            except Exception as exc:
+        # Do not trust the AI's part-level visual reference for ownership. The
+        # source PDF is ground truth. The detector now scopes the candidate
+        # visual to the (a)/(b) marker, so a formula/diagram below (b) belongs
+        # to B even if Gemini/Claude attached its asset metadata to A.
+        try:
+            persisted = persist_source_visuals(
+                source_pdf,
+                source_page,
+                source_number,
+                qobj.question_id,
+                part_identifier=identifier,
+            )
+            if not persisted and (alternative.get("diagram_reference") or alternative.get("assets")):
+                labels[-1] += " [visual warning: source visual could not be scoped to this part]"
+        except Exception as exc:
+            if alternative.get("diagram_reference") or alternative.get("assets"):
                 labels[-1] += f" [visual warning: {exc}]"
 
     note = request.form.get("note", "").strip()
@@ -162,14 +119,10 @@ def _split_and_approve(item_id: str):
         human_verified_values=parent,
     )
 
-    # Keep the complete child mapping in the review record for auditability.
     review_path = _review_path(item_id)
     review_record = _load_review(item_id)
     review_record["question_ids"] = created_ids
-    review_path.write_text(
-        json.dumps(review_record, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
+    review_path.write_text(json.dumps(review_record, indent=2, ensure_ascii=False), encoding="utf-8")
     return redirect(url_for("extraction_review.item", item_id=item_id))
 
 
