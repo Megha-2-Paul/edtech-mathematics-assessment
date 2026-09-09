@@ -157,18 +157,22 @@ def _best_visual_rect(page: fitz.Page, candidates: list[VisualAsset], question_r
         scored.append((center_y - marker_y, rect))
 
     if not scored:
-        # Critical for OR questions: do not fall back to the other alternative's
-        # visual. A part with no visual in its own source-page region must remain
-        # asset-free rather than inheriting B's diagram/formula.
         return None
     scored.sort(key=lambda item: (item[0], -_rect_area(item[1])))
     return scored[0][1]
 
 
 def persist_source_visuals(pdf_path: str | Path, page_number: int, question_number: str, question_id: str, part_identifier: str | None = None) -> list[dict[str, Any]]:
-    """Persist the best source-PDF visual for a question or OR alternative."""
+    """Persist the best source-PDF visual for a question or OR alternative.
+
+    For an OR alternative, a refresh with no visual in that alternative's
+    source region removes any stale visual previously attached to that child.
+    """
     pdf_path = Path(pdf_path)
     question_number = str(question_number).strip()
+    asset_id = f"{question_id}-visual-01"
+    existing = storage.get_question_assets(question_id)
+
     with fitz.open(str(pdf_path)) as document:
         if page_number < 1 or page_number > len(document):
             return []
@@ -181,12 +185,23 @@ def persist_source_visuals(pdf_path: str | Path, page_number: int, question_numb
         candidates = _graphic_candidates(page, page_number, question_region)
         rect = _best_visual_rect(page, candidates, question_region, part_identifier=part_identifier)
         if rect is None or _rect_area(rect) <= 0:
+            if existing:
+                storage.delete_question_assets(question_id)
+                output_path = ASSET_DIR / question_id / "visual_01.png"
+                try:
+                    if output_path.exists():
+                        output_path.unlink()
+                except OSError:
+                    pass
             return []
-        rect = fitz.Rect(max(question_region.x0, rect.x0 - VISUAL_PADDING), max(question_region.y0, rect.y0 - VISUAL_PADDING), min(question_region.x1, rect.x1 + VISUAL_PADDING), min(question_region.y1, rect.y1 + VISUAL_PADDING))
+        rect = fitz.Rect(
+            max(question_region.x0, rect.x0 - VISUAL_PADDING),
+            max(question_region.y0, rect.y0 - VISUAL_PADDING),
+            min(question_region.x1, rect.x1 + VISUAL_PADDING),
+            min(question_region.y1, rect.y1 + VISUAL_PADDING),
+        )
         if _rect_area(rect) <= 0:
             return []
-        asset_id = f"{question_id}-visual-01"
-        existing = storage.get_question_assets(question_id)
         output_dir = ASSET_DIR / question_id
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / "visual_01.png"
