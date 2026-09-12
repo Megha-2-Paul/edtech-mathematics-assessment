@@ -10,7 +10,7 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from exam_platform.models import Attempt, Response, AnswerImage, Student, AttemptStatus, AnswerStatus
-from exam_platform.storage import storage
+from exam_platform.db_source import storage
 from exam_platform.mock_data import load_mock_data
 from exam_platform.admin import register_admin
 from question_bank.extraction.review_app import register_extraction_review
@@ -62,7 +62,7 @@ def index(): return redirect(url_for('test_listing'))
 
 @app.route('/tests')
 def test_listing():
-    student_id=get_or_create_student_id(); tests=list(storage.tests.values()); test_status={}
+    student_id=get_or_create_student_id(); tests=storage.get_all_tests(); test_status={}
     for test in tests:
         attempt=storage.get_student_test_attempt(student_id,test.test_id)
         if attempt and attempt.status==AttemptStatus.SUBMITTED.value: test_status[test.test_id]='taken'
