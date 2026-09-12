@@ -7,7 +7,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from werkzeug.utils import secure_filename
 
 from .models import Question, Test, ContentBlock
-from .storage import storage
+from .db_source import storage
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/teacher")
 QUESTION_ASSET_DIR = Path(__file__).parent.parent / "uploads" / "question_assets"
@@ -77,7 +77,7 @@ def _validate_question(q):
     return None
 
 @admin_bp.route("/")
-def dashboard(): return render_template("teacher_dashboard.html",questions=list(storage.questions.values()),tests=list(storage.tests.values()))
+def dashboard(): return render_template("teacher_dashboard.html",questions=storage.get_all_questions(),tests=storage.get_all_tests())
 
 @admin_bp.route("/api/chapters")
 def api_chapters():
@@ -88,7 +88,7 @@ def api_competencies(): return jsonify([dict(x) for x in storage.get_competencie
 
 @admin_bp.route("/questions")
 def questions():
-    query=request.args.get("q","").strip().lower(); question_type=request.args.get("type","").strip(); board=request.args.get("board","").strip(); class_level=request.args.get("class_level","").strip(); subject=request.args.get("subject","").strip(); chapter=request.args.get("chapter","").strip(); difficulty=request.args.get("difficulty","").strip(); competency=request.args.get("competency","").strip(); status=request.args.get("status","active").strip(); items=list(storage.questions.values())
+    query=request.args.get("q","").strip().lower(); question_type=request.args.get("type","").strip(); board=request.args.get("board","").strip(); class_level=request.args.get("class_level","").strip(); subject=request.args.get("subject","").strip(); chapter=request.args.get("chapter","").strip(); difficulty=request.args.get("difficulty","").strip(); competency=request.args.get("competency","").strip(); status=request.args.get("status","active").strip(); items=storage.get_all_questions()
     if query: items=[q for q in items if query in q.question_id.lower() or query in (q.chapter or "").lower() or query in (q.topic or "").lower() or query in str(q.question_content[0].value).lower()]
     if question_type: items=[q for q in items if q.question_type==question_type]
     if board: items=[q for q in items if (q.board or "")==board]
@@ -154,15 +154,15 @@ def activate_question(question_id):
     storage.activate_question(question_id); flash(f"Question {question_id} activated.","success"); return redirect(url_for("admin.questions"))
 
 @admin_bp.route("/tests")
-def tests(): return render_template("teacher_tests.html",tests=list(storage.tests.values()),questions=list(storage.questions.values()))
+def tests(): return render_template("teacher_tests.html",tests=storage.get_all_tests(),questions=storage.get_all_questions())
 
 @admin_bp.route("/tests/new",methods=["GET","POST"])
 def add_test():
     if request.method=="POST":
         selected=[qid for qid in request.form.getlist("question_ids") if qid in storage.questions and storage.questions[qid].status=="active"]
-        if not selected: flash("Select at least one active question.","error"); return render_template("teacher_test_form.html",questions=list(storage.questions.values()),form=request.form)
+        if not selected: flash("Select at least one active question.","error"); return render_template("teacher_test_form.html",questions=storage.get_all_questions(),form=request.form)
         test_id=_next_test_id(); test=Test(test_id=test_id,title=_form_value("title") or test_id,subject=_form_value("subject","Mathematics") or "Mathematics",class_level=int(request.form.get("class_level","10")),duration_minutes=int(request.form.get("duration_minutes","60")),total_marks=sum(storage.questions[qid].marks for qid in selected),questions=selected,status=_form_value("status","active") or "active",board=_form_value("board") or None,test_date=request.form.get("test_date") or None,test_type=_form_value("test_type","weekly") or "weekly")
         storage.create_test(test); flash(f"Test {test_id} created with {len(selected)} questions.","success"); return redirect(url_for("admin.tests"))
-    return render_template("teacher_test_form.html",questions=[q for q in storage.questions.values() if q.status=="active"],form={})
+    return render_template("teacher_test_form.html",questions=[q for q in storage.get_all_questions() if q.status=="active"],form={})
 
 def register_admin(app): app.register_blueprint(admin_bp)
