@@ -123,8 +123,10 @@ class DatabaseFirstStorage:
     def get_questions(self, qids):
         if not qids:
             return []
+        placeholders = ", ".join(f":id{i}" for i in range(len(qids)))
+        params = {f"id{i}": qid for i, qid in enumerate(qids)}
         with engine.connect() as db:
-            rows = db.execute(text("SELECT * FROM questions WHERE question_id IN :ids"), {"ids": tuple(qids)}).mappings().all()
+            rows = db.execute(text(f"SELECT * FROM questions WHERE question_id IN ({placeholders})"), params).mappings().all()
         by_id = {r["question_id"]: _question(r) for r in rows}
         return [by_id[qid] for qid in qids if qid in by_id]
 
