@@ -1,10 +1,12 @@
-"""Teacher evaluation workflow and student result calculations."""
+"""Teacher evaluation workflow, diagnosis, and student result calculations."""
 import os
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, session
 from sqlalchemy import text
 from database import engine
 from .db_source import storage
+from .diagnosis import diagnose_attempt
+from .reporting import build_report
 
 evaluation_bp = Blueprint("evaluation", __name__)
 ERROR_CODES = [("C01", "Calculation"),("C02", "Conceptual"),("C03", "Formula"),("C04", "Sign"),("C05", "Incomplete steps"),("C06", "Wrong method"),("C07", "Missing justification"),("C08", "Misunderstood question"),("C09", "Time/attempt")]
@@ -68,6 +70,11 @@ def evaluate(attempt_id):
         response_data.append({"question":q,"response":r,"errors":_evaluation_errors(r.response_id) if r else [],"images":[{"url":url_for("uploaded_file",filename=os.path.basename(image.file_path)),"page_number":image.page_number,"name":image.original_filename} for image in images]})
     return render_template("teacher_evaluation.html",attempt=attempt,test=test,response_data=response_data,error_codes=ERROR_CODES)
 
+def _student_report(attempt_id):
+    attempt=_attempt_or_404(attempt_id); test=storage.get_test(attempt.test_id); questions=storage.get_questions(test.questions); responses=storage.get_attempt_responses(attempt_id); student=storage.get_student(attempt.student_id)
+    diagnosis=diagnose_attempt(attempt,test,questions,responses)
+    return build_report(diagnosis,student,test,attempt)
+
 @evaluation_bp.route("/result/<attempt_id>")
 def student_result(attempt_id):
     attempt=_attempt_or_404(attempt_id)
@@ -77,8 +84,18 @@ def student_result(attempt_id):
     with engine.connect() as db:
         rows=db.execute(text("SELECT r.question_id,e.error_code,e.comment FROM evaluation_errors e JOIN responses r ON r.response_id=e.response_id WHERE r.attempt_id=:attempt ORDER BY e.evaluation_error_id"),{"attempt":attempt_id}).mappings().all()
     for row in rows: error_map.setdefault(row["question_id"],[]).append(row)
-    total=sum(float(q.marks) for q in questions); score=sum(float(response_map[q.question_id].marks_awarded or 0) for q in questions if q.question_id in response_map); attempted=sum(1 for r in responses if r.answer_status=="answered"); correct=sum(1 for r in responses if r.is_correct is True)
-    attempt.score=round(score,2); attempt.percentage=round(score/total*100,2) if total else 0; attempt.attempt_rate=round(attempted/len(questions)*100,2) if questions else 0; attempt.accuracy=round(correct/attempted*100,2) if attempted else 0
-    return render_template("student_result.html",attempt=attempt,test=test,questions=questions,response_map=response_map,error_map=error_map)
+    report=_student_report(attempt_id)
+    diagnosis=report["diagnosis"]
+    attempt.score=diagnosis["score"]; attempt.percentage=diagnosis["percentage"]; attempt.attempt_rate=diagnosis["attempt_rate"]
+    return render_template("student_result.html",attempt=attempt,test=test,questions=questions,response_map=response_map,error_map=error_map,diagnosis=diagnosis,report=report)
+
+@evaluation_bp.route("/report/<attempt_id>")
+def student_report(attempt_id):
+    attempt=_attempt_or_404(attempt_id)
+    if attempt.student_id!=session.get("student_id"): return "Access denied",403
+    if attempt.status!="submitted": return redirect(url_for("test_listing"))
+    report=_student_report(attempt_id)
+    if not report["diagnosis"]["evaluation_complete"]: return render_template("student_report.html",report=report,awaiting=True)
+    return render_template("student_report.html",report=report,awaiting=False)
 
 def register_evaluation(app): app.register_blueprint(evaluation_bp)
