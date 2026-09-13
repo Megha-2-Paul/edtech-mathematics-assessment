@@ -1,1 +1,0 @@
-Phase 1 and Phase 2 cleanup is in progress before functional testing.
