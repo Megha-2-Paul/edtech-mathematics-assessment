@@ -105,6 +105,24 @@ Potential channels:
 
 Content should demonstrate real lost-mark patterns, marking issues, calculation/sign errors, presentation mistakes, chapter weaknesses and exam strategy.
 
+## Research and knowledge workflow
+
+NotebookLM is a supporting internal tool for source-grounded research and content/question development. It can help the founder work through authoritative/permitted CBSE/ICSE documents, sample papers, marking schemes, licensed material and original content.
+
+Use it for:
+
+- syllabus/curriculum research
+- marking-scheme research
+- question-bank research and classification
+- assessment/content validation
+- educational research and internal knowledge bases
+
+Do not make NotebookLM a dependency of the student exam platform or production data model. It must not own grading, student records, analytics, diagnosis, recommendations or report generation. Final mathematical and assessment decisions remain validated by the business.
+
+Start with available free/standard access; do not make a paid NotebookLM plan a prerequisite for MVP. Specific limits/features should be re-checked against Google's current documentation when needed.
+
+See `NOTEBOOKLM_WORKFLOW.md` for the detailed operating procedure and boundaries.
+
 ## MVP economics
 
 Manual evaluation is acceptable for validation but is not the final scaling model.
@@ -114,18 +132,25 @@ For example, 100 students × 15 minutes of evaluation is 25 hours for one test c
 ## Roadmap
 
 ### V1
+
 Forms/registration + Sheets where useful + MySQL + manual evaluation + automated analysis/reports.
 
+NotebookLM is available as an **internal research tool** for curriculum, marking-scheme, question-bank and content research. No API integration is required.
+
 ### V2
-Automated processing, reporting and communication.
+
+Automated processing, reporting and communication. Standardise NotebookLM notebooks/prompts/research outputs where this reduces founder effort.
 
 ### V3
+
 Student dashboard and cumulative analytics.
 
 ### V4
+
 AI-assisted evaluation and personalised recommendations.
 
 ### V5
+
 Scalable assessment platform with tutor/school capabilities.
 
 Do not jump to V5 before validating V1.
