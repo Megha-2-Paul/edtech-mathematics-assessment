@@ -7,6 +7,7 @@ from database import engine
 from .db_source import storage
 from .diagnosis import diagnose_attempt
 from .reporting import build_report
+from .diagnostic_rules_adapter import add_diagnostic_interpretation
 
 evaluation_bp = Blueprint("evaluation", __name__)
 ERROR_CODES = [("C01", "Calculation"),("C02", "Conceptual"),("C03", "Formula"),("C04", "Sign"),("C05", "Incomplete steps"),("C06", "Wrong method"),("C07", "Missing justification"),("C08", "Misunderstood question"),("C09", "Time/attempt")]
@@ -72,7 +73,7 @@ def evaluate(attempt_id):
 
 def _student_report(attempt_id):
     attempt=_attempt_or_404(attempt_id); test=storage.get_test(attempt.test_id); questions=storage.get_questions(test.questions); responses=storage.get_attempt_responses(attempt_id); student=storage.get_student(attempt.student_id)
-    diagnosis=diagnose_attempt(attempt,test,questions,responses)
+    diagnosis=add_diagnostic_interpretation(diagnose_attempt(attempt,test,questions,responses))
     return build_report(diagnosis,student,test,attempt)
 
 @evaluation_bp.route("/result/<attempt_id>")
@@ -84,8 +85,7 @@ def student_result(attempt_id):
     with engine.connect() as db:
         rows=db.execute(text("SELECT r.question_id,e.error_code,e.comment FROM evaluation_errors e JOIN responses r ON r.response_id=e.response_id WHERE r.attempt_id=:attempt ORDER BY e.evaluation_error_id"),{"attempt":attempt_id}).mappings().all()
     for row in rows: error_map.setdefault(row["question_id"],[]).append(row)
-    report=_student_report(attempt_id)
-    diagnosis=report["diagnosis"]
+    report=_student_report(attempt_id); diagnosis=report["diagnosis"]
     attempt.score=diagnosis["score"]; attempt.percentage=diagnosis["percentage"]; attempt.attempt_rate=diagnosis["attempt_rate"]
     return render_template("student_result.html",attempt=attempt,test=test,questions=questions,response_map=response_map,error_map=error_map,diagnosis=diagnosis,report=report)
 
