@@ -8,6 +8,7 @@ from werkzeug.utils import secure_filename
 
 from .models import Question, Test, ContentBlock
 from .db_source import storage
+from .evaluation import register_evaluation
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/teacher")
 QUESTION_ASSET_DIR = Path(__file__).parent.parent / "uploads" / "question_assets"
@@ -165,4 +166,6 @@ def add_test():
         storage.create_test(test); flash(f"Test {test_id} created with {len(selected)} questions.","success"); return redirect(url_for("admin.tests"))
     return render_template("teacher_test_form.html",questions=[q for q in storage.get_all_questions() if q.status=="active"],form={})
 
-def register_admin(app): app.register_blueprint(admin_bp)
+def register_admin(app):
+    app.register_blueprint(admin_bp)
+    register_evaluation(app)
