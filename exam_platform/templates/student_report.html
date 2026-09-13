@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Performance Report - {{ report.test_title }}{% endblock %}
+{% block content %}
+<div class="card">
+<h2>Mathematics Performance Report</h2>
+<p><strong>{{ report.student_name }}</strong> · Student ID: {{ report.student_id }}</p>
+<p>{{ report.test_title }} · Attempt: {{ report.attempt_id }}</p>
+{% if awaiting %}
+<div class="notice"><strong>Awaiting teacher evaluation</strong><br>Your submission has been received. The detailed diagnosis will appear after evaluation.</div>
+{% else %}
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0">
+<div class="notice"><strong>Score</strong><br>{{ report.diagnosis.score }} / {{ report.diagnosis.total_marks }}</div>
+<div class="notice"><strong>Percentage</strong><br>{{ report.diagnosis.percentage }}%</div>
+<div class="notice"><strong>Attempt rate</strong><br>{{ report.diagnosis.attempt_rate }}%</div>
+<div class="notice"><strong>Marks lost</strong><br>{{ report.diagnosis.marks_lost }}</div>
+</div>
+<h3>Where marks were lost</h3>
+{% if report.diagnosis.error_counts %}
+<ul>{% for e in report.diagnosis.error_counts %}<li><strong>{{ e.label }}</strong> — {{ e.count }} occurrence(s)</li>{% endfor %}</ul>
+{% else %}<p>No teacher-coded errors were recorded.</p>{% endif %}
+
+<h3>Chapter performance</h3>
+<table style="width:100%;border-collapse:collapse"><tr><th style="text-align:left">Chapter</th><th>Marks</th><th>Performance</th></tr>
+{% for item in report.diagnosis.chapter_analysis %}<tr><td>{{ item.name }}</td><td style="text-align:center">{{ item.marks|round(1) }} / {{ item.max_marks|round(1) }}</td><td style="text-align:center">{{ item.percentage }}%</td></tr>{% endfor %}</table>
+
+<h3>Strengths</h3>
+{% if report.diagnosis.strengths %}<ul>{% for item in report.diagnosis.strengths %}<li>{{ item.name }} — {{ item.percentage }}%</li>{% endfor %}</ul>{% else %}<p>No clear chapter strength crossed the current benchmark.</p>{% endif %}
+
+<h3>Priority weaknesses</h3>
+{% if report.diagnosis.weaknesses %}<ul>{% for item in report.diagnosis.weaknesses %}<li>{{ item.name }} — {{ item.percentage }}%</li>{% endfor %}</ul>{% else %}<p>No chapter fell below the current weakness benchmark.</p>{% endif %}
+
+{% if report.diagnosis.previous_attempt_count %}
+<h3>Progress</h3>
+<p>Previous test: <strong>{{ report.diagnosis.previous_score }}</strong> marks{% if report.diagnosis.score_change is not none %}. Change: <strong>{% if report.diagnosis.score_change >= 0 %}+{% endif %}{{ report.diagnosis.score_change }}</strong> marks.{% endif %}</p>
+{% if report.diagnosis.recurring_errors %}<p><strong>Recurring error patterns:</strong> {% for e in report.diagnosis.recurring_errors %}{{ e.label }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+{% else %}<h3>Progress</h3><p>This is the first recorded test, so future reports will show improvement against this baseline.</p>{% endif %}
+
+<h3>What to work on next</h3>
+<ol>{% for item in report.recommendations %}<li style="margin-bottom:10px"><strong>{{ item.title }}</strong><br>{{ item.action }}</li>{% endfor %}</ol>
+{% endif %}
+</div>
+{% endblock %}
