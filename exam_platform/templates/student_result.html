@@ -4,12 +4,16 @@
 <div class="card">
 <h2>{{test.title}} — Result</h2>
 <p>Attempt: <strong>{{attempt.attempt_id}}</strong></p>
+{% if not diagnosis.evaluation_complete %}
+<div class="notice"><strong>Awaiting teacher evaluation</strong><br>Your submission has been received. Marks and detailed feedback will be available after evaluation.</div>
+{% else %}
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0">
 <div class="notice"><strong>Score</strong><br>{{attempt.score}} / {{test.total_marks}}</div>
 <div class="notice"><strong>Percentage</strong><br>{{attempt.percentage}}%</div>
 <div class="notice"><strong>Attempt rate</strong><br>{{attempt.attempt_rate}}%</div>
 <div class="notice"><strong>Accuracy</strong><br>{{attempt.accuracy}}%</div>
 </div>
+<p><a href="{{ url_for('evaluation.student_report', attempt_id=attempt.attempt_id) }}">View full performance report →</a></p>
 <h3>Question-level review</h3>
 {% for q in questions %}{% set r=response_map.get(q.question_id) %}
 <div class="card" style="margin:12px 0;border:1px solid #ddd"><strong>Q{{loop.index}}</strong> · {{q.marks}} marks
@@ -17,5 +21,6 @@
 <p>Marks: <strong>{{r.marks_awarded if r and r.marks_awarded is not none else 0}} / {{q.marks}}</strong></p>
 {% if error_map.get(q.question_id) %}<p><strong>Errors:</strong> {% for e in error_map[q.question_id] %}<span>{{e.error_code}}{% if e.comment %} — {{e.comment}}{% endif %}{% if not loop.last %}; {% endif %}</span>{% endfor %}</p>{% endif %}
 </div>{% endfor %}
+{% endif %}
 </div>
 {% endblock %}
