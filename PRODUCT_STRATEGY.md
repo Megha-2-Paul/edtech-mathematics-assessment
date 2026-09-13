@@ -123,35 +123,72 @@ Start with available free/standard access; do not make a paid NotebookLM plan a 
 
 See `NOTEBOOKLM_WORKFLOW.md` for the detailed operating procedure and boundaries.
 
+## Automation strategy
+
+Automation should reduce repetitive founder work without turning the MVP into a large software project.
+
+The target operating model is:
+
+> **The founder evaluates the student's mathematics once; the system performs the repetitive work around that evaluation.**
+
+Automate early:
+
+- Student IDs and database records
+- Objective scoring
+- Score/percentage/attempt calculations
+- Chapter, topic and error analysis
+- Longitudinal comparison and recurring-error detection
+- Student-profile updates
+- Charts and report generation
+
+Keep human-controlled initially:
+
+- Subjective mathematics evaluation
+- Ambiguous answer decisions
+- Final marks
+- Uncertain error classification
+- Question-quality decisions
+- Customer support and feedback interpretation
+
+Use n8n as an orchestration/integration layer rather than as the owner of mathematical scoring, analytics, diagnosis, authentication, exam timing or the core database model. Use Python for assessment analytics/diagnosis/reporting, MySQL as the production source of truth, and NotebookLM only as an internal research/content-support tool.
+
+See `AUTOMATION_WORKFLOW.md` for the detailed automation matrix, tool responsibilities, priorities and V1–V5 evolution.
+
 ## MVP economics
 
 Manual evaluation is acceptable for validation but is not the final scaling model.
 
 For example, 100 students × 15 minutes of evaluation is 25 hours for one test cycle. The business therefore needs standardised evaluation, better workflows and eventually human-assisted automation as volume grows.
 
+Automation should first eliminate repetitive work around evaluation rather than attempting to eliminate human mathematical judgment.
+
 ## Roadmap
 
-### V1
+### V1 — Founder-operated MVP
 
-Forms/registration + Sheets where useful + MySQL + manual evaluation + automated analysis/reports.
+Flask + MySQL + manual subjective evaluation + automated Python analysis/reports.
 
-NotebookLM is available as an **internal research tool** for curriculum, marking-scheme, question-bank and content research. No API integration is required.
+NotebookLM is available as an internal research tool for curriculum, marking-scheme, question-bank and content research. No API integration is required.
 
-### V2
+The MVP should keep the operational stack small and prove the full assessment → diagnosis → report loop.
 
-Automated processing, reporting and communication. Standardise NotebookLM notebooks/prompts/research outputs where this reduces founder effort.
+### V2 — Automated operations
 
-### V3
+Automated processing, report generation and communication. Add n8n orchestration where it materially reduces repeated work; standardise NotebookLM notebooks/prompts/research outputs where useful.
 
-Student dashboard and cumulative analytics.
+The target is that the founder evaluates a submission once and does not manually recalculate scores, create charts/reports, update cumulative statistics or send routine notifications.
 
-### V4
+### V3 — Productised analytics
 
-AI-assisted evaluation and personalised recommendations.
+Student dashboard and cumulative analytics, including longitudinal errors, chapter trends, recurring mistakes and improvement areas.
 
-### V5
+### V4 — AI-assisted assessment
 
-Scalable assessment platform with tutor/school capabilities.
+AI-assisted handwriting/evaluation and personalised recommendations, with confidence-based human verification/exception handling. AI should assist evaluation rather than be assumed to replace human grading completely.
+
+### V5 — Scalable assessment platform
+
+Scalable assessment platform with tutor/school capabilities and broader workflow automation.
 
 Do not jump to V5 before validating V1.
 
@@ -167,5 +204,7 @@ Do not jump to V5 before validating V1.
 - Seasonality
 - Competition
 - Founder workload
+- Automation complexity
+- AI grading reliability
 
 The strategy must remain evidence-driven. Revenue, subscriptions, retention and conversion should never be assumed before measurement.
