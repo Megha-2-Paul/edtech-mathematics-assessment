@@ -43,6 +43,46 @@ The production source of truth remains the application database and structured b
 
 See [`NOTEBOOKLM_WORKFLOW.md`](NOTEBOOKLM_WORKFLOW.md) for the operating procedure, boundaries, suggested notebooks and roadmap placement.
 
+## Automation strategy
+
+The MVP should automate repetitive operational work while keeping mathematical judgment human-controlled.
+
+The preferred operating model is:
+
+> **The founder evaluates the student's mathematics once; the system performs the repetitive work around that evaluation.**
+
+### Automate early
+
+- Student IDs and database records
+- Objective scoring
+- Score, percentage and attempt calculations
+- Chapter/topic/error analysis
+- Longitudinal comparison and recurring-error detection
+- Student-profile updates
+- Charts and individual PDF reports
+- Scheduled reminders and report delivery
+
+### Keep human-controlled initially
+
+- Subjective mathematics evaluation
+- Ambiguous answer decisions
+- Final marks
+- Uncertain error classification
+- Question-quality decisions
+- Customer support and feedback interpretation
+
+### Tool roles
+
+- **Flask + MySQL:** core student/exam system and source of truth
+- **Python/pandas:** scoring, analytics, diagnosis and recommendations
+- **ReportLab:** report generation
+- **n8n:** workflow orchestration and integrations, not core mathematical logic
+- **Email:** formal report/record delivery
+- **WhatsApp Business API:** high-engagement notifications as the communication layer matures
+- **NotebookLM:** internal source-grounded research and question/content support
+
+See [`AUTOMATION_WORKFLOW.md`](AUTOMATION_WORKFLOW.md) for the detailed automation matrix, boundaries, priorities and V1–V5 evolution.
+
 ## Architecture
 
 ```text
@@ -96,6 +136,7 @@ Planned orchestration and communication can use n8n, Python reporting/analytics,
 ├── .env.example
 ├── .gitignore
 ├── PRODUCT_WORKFLOW.md
+├── AUTOMATION_WORKFLOW.md
 ├── PRODUCT_STRATEGY.md
 ├── NOTEBOOKLM_WORKFLOW.md
 ├── EXAM_PLATFORM_REPORT.md
