@@ -24,6 +24,10 @@ from exam_platform.models import (
 from question_bank.extraction.review_app import register_extraction_review
 
 
+# ---------------------------------------------------------------------------
+# Application configuration
+# ---------------------------------------------------------------------------
+
 app = Flask(__name__)
 app.secret_key = "dev-secret-key-change-in-production"
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
@@ -35,6 +39,11 @@ register_admin(app)
 register_extraction_review(app)
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}
+
+
+# ---------------------------------------------------------------------------
+# Student/session helpers
+# ---------------------------------------------------------------------------
 
 
 def allowed_file(filename):
@@ -61,28 +70,47 @@ def ensure_student_record(student_id):
         )
 
 
+# ---------------------------------------------------------------------------
+# Attempt and timer helpers
+# ---------------------------------------------------------------------------
+
+
 def attempt_is_expired(attempt):
     test = storage.get_test(attempt.test_id)
     if not test or attempt.status != AttemptStatus.IN_PROGRESS.value:
         return attempt.status == AttemptStatus.EXPIRED.value
-    return datetime.now() >= attempt.started_at + timedelta(minutes=test.duration_minutes)
+
+    return datetime.now() >= attempt.started_at + timedelta(
+        minutes=test.duration_minutes
+    )
 
 
 def ensure_attempt_access(attempt_id):
     attempt = storage.get_attempt(attempt_id)
     if not attempt:
         return None, (jsonify({"error": "Attempt not found"}), 404)
+
     if attempt.student_id != session.get("student_id"):
-        return None, (jsonify({"error": "You do not have access to this attempt"}), 403)
+        return None, (
+            jsonify({"error": "You do not have access to this attempt"}),
+            403,
+        )
+
     if attempt_is_expired(attempt):
         attempt.status = AttemptStatus.EXPIRED.value
         attempt.submitted_at = attempt.submitted_at or datetime.now()
         storage.update_attempt(attempt)
         return None, (jsonify({"error": "Time is up", "status": "expired"}), 410)
+
     return attempt, None
 
 
 load_mock_data()
+
+
+# ---------------------------------------------------------------------------
+# Student test listing and instructions
+# ---------------------------------------------------------------------------
 
 
 @app.route("/")
@@ -98,6 +126,7 @@ def test_listing():
 
     for test in tests:
         attempt = storage.get_student_test_attempt(student_id, test.test_id)
+
         if attempt and attempt.status == AttemptStatus.SUBMITTED.value:
             test_status[test.test_id] = "taken"
         elif attempt and attempt.status == AttemptStatus.EXPIRED.value:
@@ -113,7 +142,11 @@ def test_listing():
         else:
             test_status[test.test_id] = "available"
 
-    return render_template("test_listing.html", tests=tests, test_status=test_status)
+    return render_template(
+        "test_listing.html",
+        tests=tests,
+        test_status=test_status,
+    )
 
 
 @app.route("/test/<test_id>/instructions")
@@ -127,6 +160,7 @@ def test_instructions(test_id):
 
     if existing and existing.status == AttemptStatus.SUBMITTED.value:
         return redirect(url_for("test_listing"))
+
     if (
         existing
         and existing.status == AttemptStatus.IN_PROGRESS.value
@@ -159,7 +193,10 @@ def start_test(test_id):
 
     if existing:
         if existing.status == AttemptStatus.SUBMITTED.value:
-            return jsonify({"error": "Test already taken", "status": "taken"}), 409
+            return jsonify(
+                {"error": "Test already taken", "status": "taken"}
+            ), 409
+
         if (
             existing.status == AttemptStatus.IN_PROGRESS.value
             and not attempt_is_expired(existing)
@@ -177,6 +214,7 @@ def start_test(test_id):
                     ),
                 }
             )
+
         if (
             existing.status == AttemptStatus.EXPIRED.value
             or attempt_is_expired(existing)
@@ -210,16 +248,23 @@ def start_test(test_id):
     )
 
 
+# ---------------------------------------------------------------------------
+# Exam interface and question/response APIs
+# ---------------------------------------------------------------------------
+
+
 @app.route("/test/<test_id>/attempt/<attempt_id>")
 def exam_interface(test_id, attempt_id):
     test = storage.get_test(test_id)
     attempt = storage.get_attempt(attempt_id)
+
     if not test or not attempt:
         return "Test or Attempt not found", 404
     if attempt.student_id != session.get("student_id"):
         return "Access denied", 403
     if attempt.status != AttemptStatus.IN_PROGRESS.value:
         return redirect(url_for("test_listing"))
+
     if attempt_is_expired(attempt):
         attempt.status = AttemptStatus.EXPIRED.value
         attempt.submitted_at = datetime.now()
@@ -236,6 +281,7 @@ def exam_interface(test_id, attempt_id):
             ).total_seconds()
         ),
     )
+
     return render_template(
         "exam_interface.html",
         test=test,
@@ -253,27 +299,28 @@ def get_attempt_questions(attempt_id):
 
     test = storage.get_test(attempt.test_id)
     responses = storage.get_attempt_responses(attempt_id)
-    response_map = {r.question_id: r for r in responses}
+    response_map = {response.question_id: response for response in responses}
     question_data = []
 
-    for q in storage.get_questions(test.questions):
-        resp = response_map.get(q.question_id)
+    for question in storage.get_questions(test.questions):
+        response = response_map.get(question.question_id)
         question_data.append(
             {
-                "question_id": q.question_id,
-                "question_type": q.question_type,
-                "answer_mode": q.answer_mode,
+                "question_id": question.question_id,
+                "question_type": question.question_type,
+                "answer_mode": question.answer_mode,
                 "question_content": [
-                    {"type": c.type, "value": c.value} for c in q.question_content
+                    {"type": block.type, "value": block.value}
+                    for block in question.question_content
                 ],
-                "answer_choices": q.answer_choices,
-                "marks": q.marks,
-                "handwritten_upload_mode": q.handwritten_upload_mode,
-                "requires_handwritten_upload": q.requires_handwritten_upload,
-                "selected_answer": resp.selected_answer if resp else None,
+                "answer_choices": question.answer_choices,
+                "marks": question.marks,
+                "handwritten_upload_mode": question.handwritten_upload_mode,
+                "requires_handwritten_upload": question.requires_handwritten_upload,
+                "selected_answer": response.selected_answer if response else None,
                 "answer_status": (
-                    resp.answer_status
-                    if resp
+                    response.answer_status
+                    if response
                     else AnswerStatus.UNANSWERED.value
                 ),
             }
@@ -289,6 +336,7 @@ def get_attempt_questions(attempt_id):
             ).total_seconds()
         ),
     )
+
     return jsonify(
         {
             "questions": question_data,
@@ -311,6 +359,7 @@ def save_response(attempt_id):
 
     if not question or question_id not in test.questions:
         return jsonify({"error": "Invalid question"}), 400
+
     if selected_answer not in {
         None,
         *[chr(65 + i) for i in range(len(question.answer_choices))],
@@ -323,6 +372,7 @@ def save_response(attempt_id):
         if selected_answer
         else AnswerStatus.UNANSWERED.value
     )
+
     if existing:
         existing.selected_answer = selected_answer
         existing.answer_status = status
@@ -341,6 +391,11 @@ def save_response(attempt_id):
     return jsonify({"status": "saved"})
 
 
+# ---------------------------------------------------------------------------
+# Handwritten answer-image APIs
+# ---------------------------------------------------------------------------
+
+
 @app.route("/api/attempt/<attempt_id>/upload", methods=["POST"])
 def upload_answer_image(attempt_id):
     attempt, error = ensure_attempt_access(attempt_id)
@@ -351,11 +406,13 @@ def upload_answer_image(attempt_id):
 
     file = request.files["file"]
     question_id = request.form.get("question_id")
+
     if not file or not question_id:
         return jsonify({"error": "Missing file or question_id"}), 400
 
     test = storage.get_test(attempt.test_id)
     question = storage.get_question(question_id)
+
     if (
         not question
         or question_id not in test.questions
@@ -364,12 +421,14 @@ def upload_answer_image(attempt_id):
         return jsonify(
             {"error": "Handwritten upload is not enabled for this question"}
         ), 400
+
     if not allowed_file(file.filename):
         return jsonify({"error": "Only JPG/JPEG/PNG allowed"}), 400
 
     file.seek(0, os.SEEK_END)
     size = file.tell()
     file.seek(0)
+
     if size > app.config["MAX_IMAGE_SIZE"]:
         return jsonify({"error": "Image exceeds the 10 MB per-file limit"}), 413
 
@@ -420,12 +479,12 @@ def get_question_images(attempt_id, question_id):
     return jsonify(
         [
             {
-                "image_id": img.image_id,
-                "page_number": img.page_number,
-                "filename": img.original_filename,
-                "url": f"/uploads/{Path(img.file_path).name}",
+                "image_id": image.image_id,
+                "page_number": image.page_number,
+                "filename": image.original_filename,
+                "url": f"/uploads/{Path(image.file_path).name}",
             }
-            for img in storage.get_attempt_images(attempt_id, question_id)
+            for image in storage.get_attempt_images(attempt_id, question_id)
         ]
     )
 
@@ -438,19 +497,26 @@ def delete_image(attempt_id, image_id):
 
     image = next(
         (
-            img
-            for img in storage.images.values()
-            if img.image_id == image_id and img.attempt_id == attempt_id
+            image
+            for image in storage.images.values()
+            if image.image_id == image_id and image.attempt_id == attempt_id
         ),
         None,
     )
+
     if not image:
         return jsonify({"error": "Image not found"}), 404
 
     if os.path.exists(image.file_path):
         os.remove(image.file_path)
+
     storage.delete_image(image_id)
     return jsonify({"status": "deleted"})
+
+
+# ---------------------------------------------------------------------------
+# Submission preview and final submission
+# ---------------------------------------------------------------------------
 
 
 @app.route("/api/attempt/<attempt_id>/submit-preview", methods=["GET"])
@@ -463,16 +529,19 @@ def get_submission_preview(attempt_id):
     questions = storage.get_questions(test.questions)
     responses = storage.get_attempt_responses(attempt_id)
     answered = sum(
-        1 for r in responses if r.answer_status == AnswerStatus.ANSWERED.value
+        1
+        for response in responses
+        if response.answer_status == AnswerStatus.ANSWERED.value
     )
     required_uploads = []
     optional_uploads = 0
 
-    for index, q in enumerate(questions, 1):
-        images = storage.get_attempt_images(attempt_id, q.question_id)
-        if q.handwritten_upload_mode == "required" and not images:
+    for index, question in enumerate(questions, 1):
+        images = storage.get_attempt_images(attempt_id, question.question_id)
+
+        if question.handwritten_upload_mode == "required" and not images:
             required_uploads.append(index)
-        elif q.handwritten_upload_mode == "optional" and images:
+        elif question.handwritten_upload_mode == "optional" and images:
             optional_uploads += 1
 
     return jsonify(
@@ -496,11 +565,12 @@ def submit_attempt(attempt_id):
     test = storage.get_test(attempt.test_id)
     questions = storage.get_questions(test.questions)
     missing = [
-        i
-        for i, q in enumerate(questions, 1)
-        if q.handwritten_upload_mode == "required"
-        and not storage.get_attempt_images(attempt_id, q.question_id)
+        index
+        for index, question in enumerate(questions, 1)
+        if question.handwritten_upload_mode == "required"
+        and not storage.get_attempt_images(attempt_id, question.question_id)
     ]
+
     if missing:
         return jsonify(
             {
@@ -512,12 +582,14 @@ def submit_attempt(attempt_id):
     attempt.submitted_at = datetime.now()
     attempt.status = AttemptStatus.SUBMITTED.value
     storage.update_attempt(attempt)
+
     return jsonify(
         {
             "status": "submitted",
             "submitted_at": attempt.submitted_at.isoformat(),
             "redirect_url": url_for(
-                "submission_confirmation", attempt_id=attempt_id
+                "submission_confirmation",
+                attempt_id=attempt_id,
             ),
         }
     )
@@ -530,11 +602,17 @@ def submission_confirmation(attempt_id):
         return "Attempt not found", 404
     if attempt.student_id != session.get("student_id"):
         return "Access denied", 403
+
     return render_template(
         "submission_confirmation.html",
         attempt=attempt,
         test=storage.get_test(attempt.test_id),
     )
+
+
+# ---------------------------------------------------------------------------
+# Uploaded-file serving and local development entry point
+# ---------------------------------------------------------------------------
 
 
 @app.route("/uploads/<path:filename>")
