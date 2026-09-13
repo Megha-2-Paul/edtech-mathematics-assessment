@@ -24,20 +24,48 @@ This is not intended to be a generic mock-test marketplace. The product loop is:
 - Student result and performance-report views
 - Cumulative question/performance history foundation
 
+## Supporting research tool — NotebookLM
+
+[NotebookLM](https://notebooklm.google.com/) is included in the project workflow as a **supporting research and knowledge tool**, not as part of the core assessment engine.
+
+It can be used to work with authoritative/permitted source material such as CBSE/ICSE documents, sample papers, marking schemes, licensed content and the business's own material. Intended uses include:
+
+- syllabus and curriculum research
+- marking-scheme research
+- question-bank research and classification
+- assessment/content validation
+- source-grounded educational research
+- internal founder research
+
+NotebookLM should **not** own student records, exam timing, submissions, grading, error coding, analytics, diagnosis, recommendations, report generation, authentication or payments.
+
+The production source of truth remains the application database and structured business logic. Final mathematical and assessment decisions must be human-validated.
+
+See [`NOTEBOOKLM_WORKFLOW.md`](NOTEBOOKLM_WORKFLOW.md) for the operating procedure, boundaries, suggested notebooks and roadmap placement.
+
 ## Architecture
 
 ```text
-Student Website
-      ↓
- Flask / API
-      ↓
- MySQL
-      ↓
- Evaluation / Analytics / Diagnosis
-      ↓
- Performance Report + Student Profile
-      ↓
- Next Assessment
+                  SOURCE / KNOWLEDGE LAYER
+
+ CBSE/ICSE official or permitted sources + own material
+                          ↓
+                     NotebookLM
+               Research / source analysis
+                          ↓
+                  Validated decisions
+                          ↓
+                    Question Bank
+                          ↓
+ Student Website → Flask/API → MySQL
+                          ↓
+                  Human Evaluation
+                          ↓
+              Python Analytics / Diagnosis
+                          ↓
+              Report + Student Profile
+                          ↓
+                    Next Assessment
 ```
 
 Planned orchestration and communication can use n8n, Python reporting/analytics, email, and WhatsApp. These integrations are not the core exam engine.
@@ -69,6 +97,7 @@ Planned orchestration and communication can use n8n, Python reporting/analytics,
 ├── .gitignore
 ├── PRODUCT_WORKFLOW.md
 ├── PRODUCT_STRATEGY.md
+├── NOTEBOOKLM_WORKFLOW.md
 ├── EXAM_PLATFORM_REPORT.md
 ├── PLATFORM_VERIFICATION.md
 ├── SESSION_SUMMARY.md
