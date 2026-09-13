@@ -1,4 +1,5 @@
 """Small adapter keeping diagnostic interpretation separate from data collection."""
+
 from .diagnostic_rules import interpret_diagnosis
 
 
