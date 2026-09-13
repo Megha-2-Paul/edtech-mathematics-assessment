@@ -5,10 +5,11 @@ env/
 __pycache__/
 *.py[cod]
 
-# Local application data
+# Local application data and uploads
 /data/
-*.sqlite3
 /uploads/
+question_assets/
+*.sqlite3
 
 # Local source PDFs and archives
 math_question_bank/raw_pdfs/
@@ -19,6 +20,7 @@ math_question_bank/raw_pdfs/
 math_question_bank/extracted/
 math_question_bank/validated/
 math_question_bank/question_images/
+extraction_reviews/
 
 # Temporary diagnostics and benchmark output
 temporary/
@@ -63,8 +65,7 @@ Thumbs.db
 # Extraction runtime data
 extraction_inbox/*
 !extraction_inbox/.gitkeep
-extraction_reviews/
-question_assets/
 
 # Local test output
 test_results.txt
+*.log
