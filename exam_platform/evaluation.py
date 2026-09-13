@@ -1,4 +1,5 @@
 """Teacher evaluation workflow and student result calculations."""
+import os
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, session
 from sqlalchemy import text
@@ -63,7 +64,8 @@ def evaluate(attempt_id):
         return redirect(url_for("evaluation.evaluate",attempt_id=attempt_id))
     response_data=[]
     for q in questions:
-        r=responses.get(q.question_id); response_data.append({"question":q,"response":r,"errors":_evaluation_errors(r.response_id) if r else [],"images":storage.get_attempt_images(attempt_id,q.question_id) if r else []})
+        r=responses.get(q.question_id); images=storage.get_attempt_images(attempt_id,q.question_id) if r else []
+        response_data.append({"question":q,"response":r,"errors":_evaluation_errors(r.response_id) if r else [],"images":[{"url":url_for("uploaded_file",filename=os.path.basename(image.file_path)),"page_number":image.page_number,"name":image.original_filename} for image in images]})
     return render_template("teacher_evaluation.html",attempt=attempt,test=test,response_data=response_data,error_codes=ERROR_CODES)
 
 @evaluation_bp.route("/result/<attempt_id>")
