@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Submissions{% endblock %}
+{% block content %}
+<div class="card">
+<h2>Student Submissions</h2>
+<p style="color:#666">Review submitted tests and open an attempt for marking.</p>
+{% if submissions %}
+<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left;padding:8px">Student</th><th style="text-align:left;padding:8px">Test</th><th style="text-align:left;padding:8px">Submitted</th><th style="text-align:left;padding:8px">Status</th><th style="text-align:left;padding:8px">Score</th><th></th></tr></thead><tbody>
+{% for s in submissions %}<tr style="border-top:1px solid #eee"><td style="padding:8px">{{s.student_name}}<br><small>{{s.student_id}}</small></td><td style="padding:8px">{{s.title}}<br><small>{{s.test_id}}</small></td><td style="padding:8px">{{s.submitted_at or '-'}}</td><td style="padding:8px">{{s.status}}</td><td style="padding:8px">{{s.score if s.score is not none else '-'}}{% if s.percentage is not none %} ({{s.percentage}}%){% endif %}</td><td style="padding:8px"><a class="btn" href="{{url_for('evaluation.evaluate',attempt_id=s.attempt_id)}}">Evaluate</a></td></tr>{% endfor %}
+</tbody></table>
+{% else %}<div class="notice">No submitted attempts yet.</div>{% endif %}
+</div>
+{% endblock %}
