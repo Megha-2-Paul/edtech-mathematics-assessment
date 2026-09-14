@@ -90,8 +90,15 @@ class MySQLStorage:
         with engine.connect() as db: return db.execute(text("SELECT * FROM subjects WHERE active=1 ORDER BY name")).mappings().all()
 
     def create_student(self,s: Student):
+        email = s.email.strip() if isinstance(s.email, str) and s.email.strip() else None
         with engine.begin() as db:
-            db.execute(text("""INSERT INTO students(student_id,name,email,phone,city,role,class_level,board,school,registration_date,registration_source,status) VALUES(:id,:name,:email,:phone,:city,:role,:class,:board,:school,:reg,:source,:status) ON DUPLICATE KEY UPDATE name=VALUES(name),phone=VALUES(phone),city=VALUES(city),role=VALUES(role),class_level=VALUES(class_level),board=VALUES(board),school=VALUES(school),registration_source=VALUES(registration_source),status=VALUES(status)"""),{'id':s.student_id,'name':s.name,'email':s.email,'phone':s.phone,'city':s.city,'role':s.role,'class':s.class_level,'board':s.board,'school':s.school,'reg':s.registration_date,'source':s.registration_source,'status':s.status})
+            existing = db.execute(text("SELECT student_id FROM students WHERE student_id=:id"), {'id':s.student_id}).scalar_one_or_none()
+            params={'id':s.student_id,'name':s.name,'email':email,'phone':s.phone,'city':s.city,'role':s.role,'class':s.class_level,'board':s.board,'school':s.school,'reg':s.registration_date,'source':s.registration_source,'status':s.status}
+            if existing:
+                db.execute(text("""UPDATE students SET name=:name,email=:email,phone=:phone,city=:city,role=:role,class_level=:class,board=:board,school=:school,registration_date=:reg,registration_source=:source,status=:status WHERE student_id=:id"""), params)
+            else:
+                db.execute(text("""INSERT INTO students(student_id,name,email,phone,city,role,class_level,board,school,registration_date,registration_source,status) VALUES(:id,:name,:email,:phone,:city,:role,:class,:board,:school,:reg,:source,:status)"""), params)
+        s.email = email
         self.students[s.student_id]=s
 
     def get_student(self,sid): return self.students.get(sid)
