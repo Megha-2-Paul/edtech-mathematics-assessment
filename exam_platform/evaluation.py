@@ -209,12 +209,13 @@ def evaluate(attempt_id):
     response_data = []
     for q in questions:
         r = responses.get(q.question_id)
-        images = storage.get_attempt_images(attempt_id, q.question_id) if r else []
+        images = storage.get_attempt_images(attempt_id, q.question_id)
         response_data.append(
             {
                 "question": q,
                 "response": r,
                 "errors": _evaluation_errors(r.response_id) if r else [],
+                "handwritten_upload_mode": q.handwritten_upload_mode,
                 "images": [
                     {
                         "url": url_for(
