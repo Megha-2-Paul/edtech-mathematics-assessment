@@ -15,7 +15,7 @@ DATABASE_URL = os.getenv("DATABASE_URL") or f"mysql+pymysql://{DB_USER}:{DB_PASS
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
 
 SCHEMA = [
-"""CREATE TABLE IF NOT EXISTS students (student_id VARCHAR(32) PRIMARY KEY,name VARCHAR(150) NOT NULL,email VARCHAR(255) NOT NULL,phone VARCHAR(30),city VARCHAR(100),role VARCHAR(30) NOT NULL DEFAULT 'student',class_level INT,board VARCHAR(30),school VARCHAR(255),registration_date DATE,registration_source VARCHAR(100),status VARCHAR(30) NOT NULL DEFAULT 'active',created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,UNIQUE KEY uq_students_email(email)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS students (student_id VARCHAR(32) PRIMARY KEY,name VARCHAR(150) NOT NULL,email VARCHAR(255),phone VARCHAR(30),city VARCHAR(100),role VARCHAR(30) NOT NULL DEFAULT 'student',class_level INT,board VARCHAR(30),school VARCHAR(255),registration_date DATE,registration_source VARCHAR(100),status VARCHAR(30) NOT NULL DEFAULT 'active',created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,UNIQUE KEY uq_students_email(email)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS student_academic_profiles (profile_id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(32) NOT NULL,study_hours_per_week DECIMAL(5,2),preparation_level VARCHAR(100),current_study_methods_json TEXT,completed_chapters_json TEXT,current_chapter VARCHAR(150),most_difficult_chapter VARCHAR(150),improvement_areas_json TEXT,recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,INDEX idx_profile_student(student_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS student_chapter_status (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(32) NOT NULL,chapter VARCHAR(150) NOT NULL,status VARCHAR(30) NOT NULL,board VARCHAR(30),class_level INT,recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,INDEX idx_chapter_student(student_id,chapter)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS student_improvement_areas (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(32) NOT NULL,area VARCHAR(150) NOT NULL,priority INT NOT NULL DEFAULT 1,recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,INDEX idx_area_student(student_id,area)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
@@ -70,6 +70,12 @@ def initialize_database():
             connection.execute(text("ALTER TABLE questions ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'active'"))
         except Exception as exc:
             if "Duplicate column" not in str(exc) and "1060" not in str(exc):
+                raise
+        try:
+            connection.execute(text("ALTER TABLE students MODIFY COLUMN email VARCHAR(255) NULL"))
+            connection.execute(text("UPDATE students SET email=NULL WHERE email=''"))
+        except Exception as exc:
+            if "1068" not in str(exc):
                 raise
         for subject_id, (name,) in SUBJECTS.items():
             connection.execute(text("INSERT INTO subjects(subject_id,name,active) VALUES(:id,:name,1) ON DUPLICATE KEY UPDATE name=VALUES(name),active=1"), {"id": subject_id, "name": name})
