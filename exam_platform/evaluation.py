@@ -3,7 +3,7 @@
 import os
 from datetime import datetime
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, session, send_from_directory, url_for
 from sqlalchemy import text
 
 from database import engine
@@ -316,3 +316,11 @@ def student_report(attempt_id):
 
 def register_evaluation(app):
     app.register_blueprint(evaluation_bp)
+    existing_uploaded_file = app.view_functions.get("uploaded_file")
+    if existing_uploaded_file:
+        upload_folder = app.config["UPLOAD_FOLDER"]
+
+        def serve_uploaded_file(filename):
+            return send_from_directory(upload_folder, filename)
+
+        app.view_functions["uploaded_file"] = serve_uploaded_file
