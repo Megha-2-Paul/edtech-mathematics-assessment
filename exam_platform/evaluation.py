@@ -156,16 +156,25 @@ ON DUPLICATE KEY UPDATE attempt_count=attempt_count+1,correct_count=correct_coun
 
 @evaluation_bp.route("/teacher/submissions")
 def submissions():
+    test_id = request.args.get("test_id", "").strip()
     with engine.connect() as db:
-        rows = db.execute(
-            text(
-                """SELECT a.attempt_id,a.student_id,a.test_id,a.started_at,a.submitted_at,a.status,a.score,a.percentage,t.title,s.name AS student_name
+        query = """SELECT a.attempt_id,a.student_id,a.test_id,a.started_at,a.submitted_at,a.status,a.score,a.percentage,t.title,s.name AS student_name
 FROM attempts a JOIN tests t ON t.test_id=a.test_id JOIN students s ON s.student_id=a.student_id
-WHERE a.status='submitted' ORDER BY COALESCE(a.submitted_at,a.started_at) DESC"""
-            )
-        ).mappings().all()
+WHERE a.status='submitted'"""
+        params = {}
+        if test_id:
+            query += " AND a.test_id=:test_id"
+            params["test_id"] = test_id
+        query += " ORDER BY COALESCE(a.submitted_at,a.started_at) DESC"
+        rows = db.execute(text(query), params).mappings().all()
 
-    return render_template("teacher_submissions.html", submissions=rows)
+    selected_test = storage.get_test(test_id) if test_id else None
+    return render_template(
+        "teacher_submissions.html",
+        submissions=rows,
+        selected_test=selected_test,
+        selected_test_id=test_id,
+    )
 
 
 @evaluation_bp.route("/teacher/evaluate/<attempt_id>", methods=["GET", "POST"])
