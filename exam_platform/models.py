@@ -22,6 +22,12 @@ class HandwrittenUploadMode(Enum):
     REQUIRED = "required"
 
 
+class ExamMonitoringMode(Enum):
+    OFF = "off"
+    OPTIONAL = "optional"
+    REQUIRED = "required"
+
+
 @dataclass
 class ContentBlock:
     type: str
@@ -62,6 +68,11 @@ class Test:
     board: Optional[str] = None
     test_date: Optional[str] = None
     test_type: str = "weekly"
+    monitoring_mode: str = ExamMonitoringMode.OFF.value
+
+    def __post_init__(self):
+        if self.monitoring_mode not in {m.value for m in ExamMonitoringMode}:
+            self.monitoring_mode = ExamMonitoringMode.OFF.value
 
     def to_dict(self):
         return asdict(self)
