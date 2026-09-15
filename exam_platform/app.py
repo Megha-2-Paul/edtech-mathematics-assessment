@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from PIL import Image
 from werkzeug.utils import secure_filename
 
@@ -33,6 +33,7 @@ app.secret_key = "dev-secret-key-change-in-production"
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 app.config["MAX_IMAGE_SIZE"] = 10 * 1024 * 1024
 app.config["UPLOAD_FOLDER"] = str(Path(__file__).parent.parent / "uploads")
+app.config["EXAM_MONITORING_MODES"] = {"off", "optional", "required"}
 Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
 
 register_admin(app)
@@ -617,7 +618,7 @@ def submission_confirmation(attempt_id):
 
 @app.route("/uploads/<path:filename>")
 def uploaded_file(filename):
-    return app.send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 
 if __name__ == "__main__":
