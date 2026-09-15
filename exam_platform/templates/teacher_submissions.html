@@ -4,8 +4,21 @@
 
 {% block content %}
 <div class="card">
-    <h2>Student Submissions</h2>
-    <p style="color:#666">Review submitted tests and open an attempt for marking.</p>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+            <h2>{% if selected_test %}Results: {{ selected_test.title }}{% else %}Student Submissions{% endif %}</h2>
+            <p style="color:#666">
+                {% if selected_test %}
+                    {{ selected_test.test_id }} · Review submitted attempts for this test.
+                {% else %}
+                    Review submitted tests and open an attempt for marking.
+                {% endif %}
+            </p>
+        </div>
+        {% if selected_test_id %}
+            <a class="btn" href="{{ url_for('evaluation.submissions') }}">All Submissions</a>
+        {% endif %}
+    </div>
 
     {% if submissions %}
         <table style="width:100%;border-collapse:collapse">
@@ -46,7 +59,19 @@
             </tbody>
         </table>
     {% else %}
-        <div class="notice">No submitted attempts yet.</div>
+        <div class="notice">
+            {% if selected_test %}
+                No submitted attempts for this test yet.
+            {% else %}
+                No submitted attempts yet.
+            {% endif %}
+        </div>
     {% endif %}
 </div>
+
+{% if selected_test %}
+    <p><a href="{{ url_for('admin.tests') }}">← Back to Tests</a></p>
+{% else %}
+    <p><a href="{{ url_for('admin.dashboard') }}">← Teacher dashboard</a></p>
+{% endif %}
 {% endblock %}
