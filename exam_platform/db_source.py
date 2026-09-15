@@ -64,6 +64,7 @@ def _test(row):
         row["board"],
         str(row["test_date"]) if row["test_date"] else None,
         row["test_type"],
+        row.get("monitoring_mode", "off"),
     )
 
 
