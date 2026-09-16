@@ -1,100 +1,50 @@
 {% extends "base.html" %}
-
-{% block title %}Available Tests{% endblock %}
-
-{% block custom_styles %}
-<style>
-    .test-card {
-        display: flex;
-        justify-content: space-between;
-        gap: 24px;
-        align-items: center;
-    }
-
-    .test-meta {
-        color: #666;
-        font-size: 14px;
-        line-height: 1.8;
-    }
-
-    .status-badge {
-        display: inline-block;
-        padding: 6px 10px;
-        border-radius: 999px;
-        font-size: 12px;
-        font-weight: 600;
-    }
-
-    .status-available { background: #ecfdf5; color: #047857; }
-    .status-taken { background: #f3f4f6; color: #6b7280; }
-    .status-progress { background: #eff6ff; color: #1d4ed8; }
-    .status-expired { background: #fef2f2; color: #b91c1c; }
-
-    @media (max-width: 700px) {
-        .test-card {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .test-card .action,
-        .test-card .btn {
-            width: 100%;
-        }
-
-        .test-card .btn {
-            text-align: center;
-        }
-    }
-</style>
-{% endblock %}
+{% block title %}My Tests - Improvia{% endblock %}
 
 {% block content %}
-<div class="card">
-    <h2>Available Tests</h2>
-    <p style="color:#666; margin-top:8px;">Choose a test to begin.</p>
+<div class="page-title-row">
+    <div>
+        <h1>Available Tests</h1>
+        <p>Practice, identify your weak areas, and improve with every assessment.</p>
+    </div>
 </div>
 
-<div style="display:grid; gap:16px;">
+<div style="display:grid;gap:16px;">
     {% for test in tests %}
         {% set status = test_status.get(test.test_id, 'available') %}
-
-        <div class="card test-card">
-            <div style="flex:1;">
-                <h3 style="margin-bottom:8px;">{{ test.title }}</h3>
-
-                <div class="test-meta">
-                    <div>
-                        <strong>Subject:</strong> {{ test.subject }}
-                        &nbsp;|&nbsp;
-                        <strong>Class:</strong> {{ test.class_level }}
-                    </div>
-                    <div>
-                        <strong>Duration:</strong> {{ test.duration_minutes }} minutes
-                        &nbsp;|&nbsp;
-                        <strong>Total Marks:</strong> {{ test.total_marks }}
-                    </div>
-                    <div><strong>Questions:</strong> {{ test.questions|length }}</div>
+        <div class="card test-card" style="display:flex;justify-content:space-between;gap:24px;align-items:center;">
+            <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:9px;">
+                    <span class="badge badge-blue">{{ test.subject }}</span>
+                    {% if status == 'in_progress' %}<span class="status-badge status-progress">In Progress</span>
+                    {% elif status == 'taken' %}<span class="status-badge status-taken">Completed</span>
+                    {% elif status == 'expired' %}<span class="status-badge status-expired">Expired</span>{% endif %}
+                </div>
+                <h2 style="font-size:1.18rem;margin-bottom:8px;">{{ test.title }}</h2>
+                <div class="muted" style="font-size:.9rem;line-height:1.9;">
+                    <span><strong>Class:</strong> {{ test.class_level }}</span>
+                    <span style="margin-left:14px;"><strong>Duration:</strong> {{ test.duration_minutes }} min</span>
+                    <span style="margin-left:14px;"><strong>Total:</strong> {{ test.total_marks }} marks</span>
+                    <span style="margin-left:14px;"><strong>Questions:</strong> {{ test.questions|length }}</span>
                 </div>
             </div>
 
-            <div class="action">
+            <div style="min-width:150px;">
                 {% if status == 'taken' %}
-                    <span class="status-badge status-taken">Test Already Taken</span>
+                    <span class="status-badge status-taken" style="width:100%;justify-content:center;">Test Already Taken</span>
                 {% elif status == 'expired' %}
-                    <span class="status-badge status-expired">Test Expired</span>
+                    <span class="status-badge status-expired" style="width:100%;justify-content:center;">Test Expired</span>
                 {% elif status == 'in_progress' %}
-                    <a href="{{ url_for('test_instructions', test_id=test.test_id) }}" class="btn">
-                        Resume Test
-                    </a>
-                    <div style="margin-top:6px;">
-                        <span class="status-badge status-progress">In Progress</span>
-                    </div>
+                    <a href="{{ url_for('test_instructions', test_id=test.test_id) }}" class="btn btn-accent" style="width:100%;">Resume Test <span>→</span></a>
                 {% else %}
-                    <a href="{{ url_for('test_instructions', test_id=test.test_id) }}" class="btn">
-                        Start Test
-                    </a>
+                    <a href="{{ url_for('test_instructions', test_id=test.test_id) }}" class="btn btn-primary" style="width:100%;">Start Test <span>→</span></a>
                 {% endif %}
             </div>
+        </div>
+    {% else %}
+        <div class="card empty-state">
+            <h3>No tests available yet</h3>
+            <p>New mathematics assessments will appear here when they are published.</p>
         </div>
     {% endfor %}
 </div>
