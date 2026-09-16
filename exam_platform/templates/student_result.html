@@ -1,26 +1,55 @@
 {% extends "base.html" %}
-{% block title %}Result - {{test.title}}{% endblock %}
+{% block title %}Result - {{ test.title }} - Improvia{% endblock %}
 {% block content %}
-<div class="card">
-<h2>{{test.title}} — Result</h2>
-<p>Attempt: <strong>{{attempt.attempt_id}}</strong></p>
+<div class="page-title-row">
+    <div>
+        <span class="badge badge-blue">Assessment result</span>
+        <h1 style="margin-top:10px;">{{ test.title }}</h1>
+        <p>Attempt {{ attempt.attempt_id }} · Your result and evaluation summary.</p>
+    </div>
+    {% if diagnosis.evaluation_complete %}<a class="btn btn-secondary" href="{{ url_for('evaluation.student_report', attempt_id=attempt.attempt_id) }}">View Full Report →</a>{% endif %}
+</div>
+
 {% if not diagnosis.evaluation_complete %}
-<div class="notice"><strong>Awaiting teacher evaluation</strong><br>Your submission has been received. Marks and detailed feedback will be available after evaluation.</div>
+<div class="card" style="text-align:center;padding:46px 24px;">
+    <div style="width:62px;height:62px;margin:0 auto 18px;border-radius:50%;background:var(--improvia-light-blue);color:var(--improvia-navy);display:flex;align-items:center;justify-content:center;font-size:28px;">⏳</div>
+    <h2>Evaluation in progress</h2>
+    <p class="muted">Your submission has been received. Marks and detailed feedback will be available after teacher evaluation.</p>
+</div>
 {% else %}
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0">
-<div class="notice"><strong>Score</strong><br>{{attempt.score}} / {{test.total_marks}}</div>
-<div class="notice"><strong>Percentage</strong><br>{{attempt.percentage}}%</div>
-<div class="notice"><strong>Attempt rate</strong><br>{{attempt.attempt_rate}}%</div>
-<div class="notice"><strong>Accuracy</strong><br>{{attempt.accuracy}}%</div>
+<div class="grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+    <div class="stat-card"><div class="stat-label">Your score</div><div class="stat-value">{{ attempt.score }} / {{ test.total_marks }}</div></div>
+    <div class="stat-card"><div class="stat-label">Percentage</div><div class="stat-value">{{ attempt.percentage }}%</div></div>
+    <div class="stat-card"><div class="stat-label">Attempt rate</div><div class="stat-value">{{ attempt.attempt_rate }}%</div></div>
+    <div class="stat-card"><div class="stat-label">Marks lost</div><div class="stat-value" style="color:var(--improvia-coral);">{{ diagnosis.marks_lost }}</div></div>
 </div>
-<p><a href="{{ url_for('evaluation.student_report', attempt_id=attempt.attempt_id) }}">View full performance report →</a></p>
-<h3>Question-level review</h3>
-{% for q in questions %}{% set r=response_map.get(q.question_id) %}
-<div class="card" style="margin:12px 0;border:1px solid #ddd"><strong>Q{{loop.index}}</strong> · {{q.marks}} marks
-<p>Your final answer: <strong>{{r.selected_answer if r else 'Not answered'}}</strong></p>
-<p>Marks: <strong>{{r.marks_awarded if r and r.marks_awarded is not none else 0}} / {{q.marks}}</strong></p>
-{% if error_map.get(q.question_id) %}<p><strong>Errors:</strong> {% for e in error_map[q.question_id] %}<span>{{e.error_code}}{% if e.comment %} — {{e.comment}}{% endif %}{% if not loop.last %}; {% endif %}</span>{% endfor %}</p>{% endif %}
-</div>{% endfor %}
+
+<div class="card">
+    <div class="page-title-row" style="margin-bottom:14px;"><div><h2>Where marks were lost</h2><p>These patterns help identify what to improve next.</p></div></div>
+    {% if diagnosis.error_counts %}
+        <div style="display:grid;gap:10px;">
+        {% for e in diagnosis.error_counts %}
+            <div style="display:flex;justify-content:space-between;gap:15px;align-items:center;padding:12px 14px;border-radius:10px;background:{% if loop.index == 1 %}var(--improvia-blush){% else %}#f7fafc{% endif %};">
+                <strong>{{ e.label }}</strong><span class="badge badge-coral">{{ e.count }} occurrence(s)</span>
+            </div>
+        {% endfor %}
+        </div>
+    {% else %}<div class="notice notice-success">No teacher-coded errors were recorded.</div>{% endif %}
+</div>
+
+<div class="card">
+    <h2>Question-level review</h2>
+    <p class="muted">See how each response was evaluated.</p>
+    {% for q in questions %}{% set r=response_map.get(q.question_id) %}
+    <div style="padding:16px 0;border-bottom:1px solid #edf0f3;">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
+            <strong>Q{{ loop.index }}</strong><span class="badge badge-blue">{{ q.marks }} marks</span>
+        </div>
+        <p style="margin:8px 0 5px;">Your final answer: <strong>{{ r.selected_answer if r else 'Not answered' }}</strong></p>
+        <p class="muted" style="margin-bottom:5px;">Marks awarded: <strong style="color:var(--improvia-navy);">{{ r.marks_awarded if r and r.marks_awarded is not none else 0 }} / {{ q.marks }}</strong></p>
+        {% if error_map.get(q.question_id) %}<p class="small"><strong>Feedback:</strong> {% for e in error_map[q.question_id] %}{{ e.error_code }}{% if e.comment %} — {{ e.comment }}{% endif %}{% if not loop.last %}; {% endif %}{% endfor %}</p>{% endif %}
+    </div>
+    {% endfor %}
+</div>
 {% endif %}
-</div>
 {% endblock %}
