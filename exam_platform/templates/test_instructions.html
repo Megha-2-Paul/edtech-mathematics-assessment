@@ -1,72 +1,59 @@
 {% extends "base.html" %}
-
-{% block title %}Test Instructions{% endblock %}
+{% block title %}{{ test.title }} - Improvia{% endblock %}
 
 {% block content %}
-<div class="card">
-    <h2>{{ test.title }}</h2>
-
-    <div style="margin-top:16px; color:#666;">
-        <p><strong>Subject:</strong> {{ test.subject }}</p>
-        <p><strong>Class:</strong> {{ test.class_level }}</p>
-        <p><strong>Duration:</strong> {{ test.duration_minutes }} minutes</p>
-        <p><strong>Total Marks:</strong> {{ test.total_marks }}</p>
-        <p><strong>Number of Questions:</strong> {{ total_questions }}</p>
+<div class="page-title-row">
+    <div>
+        <span class="badge badge-blue">Class {{ test.class_level }}{% if test.board %} · {{ test.board }}{% endif %}</span>
+        <h1 style="margin-top:10px;">{{ test.title }}</h1>
+        <p>Review the assessment details before you begin.</p>
     </div>
 </div>
 
-<div class="card">
-    <h3>Instructions</h3>
-
-    <div style="margin-top:16px; line-height:1.8;">
-        <p>Please read the following instructions carefully before starting the test:</p>
-
-        <ol style="margin-left:20px; margin-top:16px;">
-            <li>This is an exam-style test. Answer all questions to the best of your ability.</li>
-            <li>For multiple choice questions, select exactly one correct option.</li>
-            <li>
-                For subjective questions requiring handwritten work:
-                <ul style="margin-left:20px; margin-top:8px;">
-                    <li>Solve the problem on paper.</li>
-                    <li>Upload clear images of your complete solution.</li>
-                    <li>Select the final answer you obtained from the given choices.</li>
-                </ul>
-            </li>
-            <li>You can navigate between questions using the question navigator on the left.</li>
-            <li>A timer will show your remaining time. The test will automatically submit when time expires.</li>
-            <li>Answers are saved automatically as you navigate.</li>
-            <li>Before submitting, you will see a confirmation showing answered/unanswered questions.</li>
-            <li>Once submitted, your test cannot be modified.</li>
-        </ol>
-
-        <div style="background-color:#fef3c7; border-left:4px solid #f59e0b; padding:12px; margin-top:20px;">
-            <strong>Note:</strong> For questions requiring handwritten uploads, please ensure your solutions are legible and complete.
-        </div>
-    </div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+    <div class="stat-card"><div class="stat-value">{{ test.duration_minutes }}</div><div class="stat-label">Minutes</div></div>
+    <div class="stat-card"><div class="stat-value">{{ test.total_marks }}</div><div class="stat-label">Total marks</div></div>
+    <div class="stat-card"><div class="stat-value">{{ total_questions }}</div><div class="stat-label">Questions</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--improvia-coral);">Maths</div><div class="stat-label">Subject</div></div>
 </div>
 
-<div style="display:flex; gap:12px; margin-top:20px;">
-    <a href="{{ url_for('test_listing') }}" class="btn btn-secondary">Back to Tests</a>
-    <button onclick="startTest('{{ test.test_id }}')" class="btn" style="flex:1;">Start Test</button>
+<div class="card">
+    <h2>Before you start</h2>
+    <p class="muted" style="margin-bottom:18px;">Treat this like an exam. Your work will be evaluated for both answers and mathematical working.</p>
+    <ol style="padding-left:22px;line-height:1.95;">
+        <li>Answer each question to the best of your ability.</li>
+        <li>For MCQs, select exactly one option.</li>
+        <li>For questions requiring handwritten work, solve on paper and upload clear images of your complete solution.</li>
+        <li>You can move between questions using the question navigator.</li>
+        <li>The timer shows your remaining time and the test submits automatically when time expires.</li>
+        <li>Answers are saved as you navigate.</li>
+        <li>Before final submission, you will see a summary of answered and unanswered questions.</li>
+        <li>Once submitted, the test cannot be modified.</li>
+    </ol>
+</div>
+
+<div class="notice notice-warning" style="margin-bottom:22px;">
+    <strong>Handwritten work matters.</strong><br>
+    Make sure pages are well-lit, readable, complete, and captured without important working being cut off.
+</div>
+
+<div style="display:flex;gap:12px;flex-wrap:wrap;">
+    <a href="{{ url_for('test_listing') }}" class="btn btn-secondary">← Back to Tests</a>
+    <button onclick="startTest('{{ test.test_id }}')" class="btn btn-accent" style="min-width:180px;">Start Test <span>→</span></button>
 </div>
 
 <script>
     function startTest(testId) {
-        const button = event.target;
+        const button = event.target.closest('button');
         button.disabled = true;
         button.textContent = 'Starting...';
-
-        fetch(`/api/test/${testId}/start`, {
-            method: 'POST'
-        })
+        fetch(`/api/test/${testId}/start`, { method: 'POST' })
             .then(r => r.json())
-            .then(data => {
-                window.location.href = data.redirect_url;
-            })
+            .then(data => { window.location.href = data.redirect_url; })
             .catch(() => {
                 alert('Error starting test');
                 button.disabled = false;
-                button.textContent = 'Start Test';
+                button.innerHTML = 'Start Test <span>→</span>';
             });
     }
 </script>
