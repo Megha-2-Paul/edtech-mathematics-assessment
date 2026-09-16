@@ -54,13 +54,26 @@ COMPETENCIES = [
     ("case_based_application", "Case-based / Situation-based Application"),
 ]
 
-# CBSE Mathematics chapter seeds. These are starter metadata for the teacher dropdown;
-# the tables are editable later as curricula evolve.
+# Board-specific Mathematics chapter seeds. These are starter metadata for teacher
+# dropdowns and ingestion validation; they are intentionally kept separate by board.
 CBSE_MATH_CHAPTERS = {
     10: ["Real Numbers", "Polynomials", "Pair of Linear Equations in Two Variables", "Quadratic Equations", "Arithmetic Progressions", "Triangles", "Coordinate Geometry", "Introduction to Trigonometry", "Some Applications of Trigonometry", "Circles", "Areas Related to Circles", "Surface Areas and Volumes", "Statistics", "Probability"],
     11: ["Sets", "Relations and Functions", "Trigonometric Functions", "Principle of Mathematical Induction", "Complex Numbers and Quadratic Equations", "Linear Inequalities", "Permutations and Combinations", "Binomial Theorem", "Sequences and Series", "Straight Lines", "Conic Sections", "Introduction to Three-dimensional Geometry", "Limits and Derivatives", "Statistics", "Probability"],
     12: ["Relations and Functions", "Inverse Trigonometric Functions", "Matrices", "Determinants", "Continuity and Differentiability", "Applications of Derivatives", "Integrals", "Applications of Integrals", "Differential Equations", "Vector Algebra", "Three-dimensional Geometry", "Linear Programming", "Probability"],
 }
+
+# ICSE Class X syllabus is maintained separately from CBSE. Classes XI-XII are
+# formally ISC rather than ICSE and should receive a separate ISC curriculum when
+# higher-secondary curriculum data is added.
+ICSE_MATH_CHAPTERS = {
+    10: ["Commercial Mathematics", "Algebra", "Geometry", "Mensuration", "Trigonometry", "Statistics", "Probability"],
+}
+
+BOARD_MATH_CHAPTERS = {
+    "CBSE": CBSE_MATH_CHAPTERS,
+    "ICSE": ICSE_MATH_CHAPTERS,
+}
+
 
 def initialize_database():
     with engine.begin() as connection:
@@ -79,8 +92,8 @@ def initialize_database():
                 raise
         for subject_id, (name,) in SUBJECTS.items():
             connection.execute(text("INSERT INTO subjects(subject_id,name,active) VALUES(:id,:name,1) ON DUPLICATE KEY UPDATE name=VALUES(name),active=1"), {"id": subject_id, "name": name})
-        for board in ("CBSE", "ICSE"):
-            for class_level, chapters in CBSE_MATH_CHAPTERS.items():
+        for board, curriculum in BOARD_MATH_CHAPTERS.items():
+            for class_level, chapters in curriculum.items():
                 for order, chapter in enumerate(chapters, 1):
                     connection.execute(text("INSERT INTO chapters(chapter_id,board,class_level,subject_id,chapter_name,sort_order,active) VALUES(:id,:board,:class,:subject,:name,:order,1) ON DUPLICATE KEY UPDATE chapter_name=VALUES(chapter_name),sort_order=VALUES(sort_order),active=1"), {"id": f"{board.lower()}_maths_{class_level}_{order}", "board": board, "class": class_level, "subject": "maths", "name": chapter, "order": order})
         for subject_id, name in (("maths", "Mathematics"), ("physics", "Physics"), ("chemistry", "Chemistry"), ("computer", "Computer")):
