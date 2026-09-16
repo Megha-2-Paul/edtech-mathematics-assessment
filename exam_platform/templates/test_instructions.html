@@ -2,44 +2,59 @@
 {% block title %}{{ test.title }} - Improvia{% endblock %}
 
 {% block content %}
-<div class="page-title-row">
+<div class="test-hero page-title-row">
     <div>
         <span class="badge badge-blue">Class {{ test.class_level }}{% if test.board %} · {{ test.board }}{% endif %}</span>
-        <h1 style="margin-top:10px;">{{ test.title }}</h1>
-        <p>Review the assessment details before you begin.</p>
+        <h1>{{ test.title }}</h1>
+        <p>Review the assessment details and make sure you're ready before starting.</p>
     </div>
 </div>
 
-<div class="grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
-    <div class="stat-card"><div class="stat-value">{{ test.duration_minutes }}</div><div class="stat-label">Minutes</div></div>
-    <div class="stat-card"><div class="stat-value">{{ test.total_marks }}</div><div class="stat-label">Total marks</div></div>
-    <div class="stat-card"><div class="stat-value">{{ total_questions }}</div><div class="stat-label">Questions</div></div>
-    <div class="stat-card"><div class="stat-value" style="color:var(--improvia-coral);">Maths</div><div class="stat-label">Subject</div></div>
+<div class="test-stats">
+    <div class="stat-card test-stat">
+        <div class="stat-value">{{ test.duration_minutes }}</div>
+        <div class="stat-label">Minutes</div>
+    </div>
+    <div class="stat-card test-stat">
+        <div class="stat-value">{{ test.total_marks }}</div>
+        <div class="stat-label">Total marks</div>
+    </div>
+    <div class="stat-card test-stat">
+        <div class="stat-value">{{ total_questions }}</div>
+        <div class="stat-label">Questions</div>
+    </div>
+    <div class="stat-card test-stat">
+        <div class="stat-value accent">Maths</div>
+        <div class="stat-label">Subject</div>
+    </div>
 </div>
 
-<div class="card">
+<div class="card instructions-card">
     <h2>Before you start</h2>
-    <p class="muted" style="margin-bottom:18px;">Treat this like an exam. Your work will be evaluated for both answers and mathematical working.</p>
-    <ol style="padding-left:22px;line-height:1.95;">
+    <p class="muted">Treat this like an exam. Your work may be evaluated for both your answers and your mathematical working.</p>
+    <ol class="instructions-list">
         <li>Answer each question to the best of your ability.</li>
         <li>For MCQs, select exactly one option.</li>
-        <li>For questions requiring handwritten work, solve on paper and upload clear images of your complete solution.</li>
-        <li>You can move between questions using the question navigator.</li>
+        <li>For handwritten questions, solve on paper and upload clear images of your complete solution.</li>
+        <li>Use the question navigator to move between questions.</li>
         <li>The timer shows your remaining time and the test submits automatically when time expires.</li>
-        <li>Answers are saved as you navigate.</li>
-        <li>Before final submission, you will see a summary of answered and unanswered questions.</li>
+        <li>Your answers are saved as you navigate.</li>
+        <li>Before final submission, you'll see a summary of answered and unanswered questions.</li>
         <li>Once submitted, the test cannot be modified.</li>
     </ol>
 </div>
 
-<div class="notice notice-warning" style="margin-bottom:22px;">
-    <strong>Handwritten work matters.</strong><br>
-    Make sure pages are well-lit, readable, complete, and captured without important working being cut off.
+<div class="notice notice-warning handwriting-notice">
+    <div class="handwriting-icon" aria-hidden="true">✎</div>
+    <div>
+        <strong>Handwritten work matters</strong>
+        <span class="muted">Make sure pages are well-lit, readable, complete, and captured without important working being cut off.</span>
+    </div>
 </div>
 
-<div style="display:flex;gap:12px;flex-wrap:wrap;">
+<div class="test-actions">
     <a href="{{ url_for('test_listing') }}" class="btn btn-secondary">← Back to Tests</a>
-    <button onclick="startTest('{{ test.test_id }}')" class="btn btn-accent" style="min-width:180px;">Start Test <span>→</span></button>
+    <button onclick="startTest('{{ test.test_id }}')" class="btn btn-accent">Start Test <span>→</span></button>
 </div>
 
 <script>
