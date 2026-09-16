@@ -1,72 +1,46 @@
 {% extends "base.html" %}
-
-{% block title %}Teacher Dashboard{% endblock %}
-
-{% block custom_styles %}
-<style>
-    .nav {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        margin: 12px 0 20px;
-    }
-
-    .grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-    }
-
-    .stat {
-        font-size: 30px;
-        font-weight: 700;
-    }
-
-    .muted { color: #666; }
-
-    .list {
-        margin-top: 12px;
-        line-height: 2;
-    }
-
-    @media (max-width: 700px) {
-        .grid { grid-template-columns: 1fr; }
-    }
-</style>
-{% endblock %}
+{% block title %}Teacher Dashboard - Improvia{% endblock %}
 
 {% block content %}
+<div class="page-title-row">
+    <div>
+        <span class="badge badge-blue">Teacher workspace</span>
+        <h1 style="margin-top:10px;">Teacher Dashboard</h1>
+        <p>Manage assessments, evaluate submissions, and help students improve.</p>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+    <div class="stat-card"><div class="stat-value">{{ questions|length }}</div><div class="stat-label">Questions in bank</div></div>
+    <div class="stat-card"><div class="stat-value">{{ tests|length }}</div><div class="stat-label">Tests</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--improvia-coral);">→</div><div class="stat-label">Evaluation workspace</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--improvia-success);">✓</div><div class="stat-label">Improvement focused</div></div>
+</div>
+
 <div class="card">
-    <h2>Teacher / Admin</h2>
-    <p class="muted">
-        Manage the question bank, build tests, evaluate submissions, and verify extracted questions.
-    </p>
-
-    <div class="nav">
-        <a class="btn" href="{{ url_for('admin.questions') }}">Question Bank</a>
-        <a class="btn" href="{{ url_for('admin.add_question') }}">+ Add Question</a>
-        <a class="btn" href="{{ url_for('admin.tests') }}">Tests</a>
-        <a class="btn" href="{{ url_for('admin.add_test') }}">+ Create Test</a>
-        <a class="btn" href="{{ url_for('evaluation.submissions') }}">Submissions / Evaluation</a>
-        <a class="btn" href="{{ url_for('extraction_review.dashboard') }}">AI Extraction Review</a>
+    <h2>Quick Actions</h2>
+    <p class="muted">Keep the assessment workflow moving.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px;">
+        <a class="btn btn-primary" href="{{ url_for('admin.questions') }}">Question Bank →</a>
+        <a class="btn btn-accent" href="{{ url_for('admin.add_question') }}">+ Add Question</a>
+        <a class="btn btn-secondary" href="{{ url_for('admin.tests') }}">Tests →</a>
+        <a class="btn btn-primary" href="{{ url_for('admin.add_test') }}">+ Create Test</a>
+        <a class="btn btn-accent" href="{{ url_for('evaluation.submissions') }}">Submissions / Evaluation</a>
+        <a class="btn btn-secondary" href="{{ url_for('extraction_review.dashboard') }}">AI Extraction Review</a>
     </div>
 </div>
 
-<div class="grid">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
     <div class="card">
-        <div class="stat">{{ questions|length }}</div>
-        <div class="muted">Questions in database</div>
-        <div class="list">
-            <a href="{{ url_for('admin.questions') }}">Open question bank →</a>
-        </div>
+        <h3>Question Bank</h3>
+        <p class="muted">Create, review and organise the questions used in assessments.</p>
+        <a href="{{ url_for('admin.questions') }}">Open question bank →</a>
     </div>
-
     <div class="card">
-        <div class="stat">{{ tests|length }}</div>
-        <div class="muted">Tests in database</div>
-        <div class="list">
-            <a href="{{ url_for('admin.tests') }}">Open tests →</a>
-        </div>
+        <h3>Tests</h3>
+        <p class="muted">Build assessments and review their submissions and results.</p>
+        <a href="{{ url_for('admin.tests') }}">Open tests →</a>
     </div>
 </div>
+
 {% endblock %}
