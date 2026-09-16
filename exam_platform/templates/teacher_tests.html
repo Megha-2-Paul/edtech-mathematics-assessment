@@ -1,26 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Tests - Improvia{% endblock %}
 {% block content %}
-<div class="page-title-row">
-    <div><span class="badge badge-blue">Teacher workspace</span><h1 style="margin-top:10px;">Tests</h1><p>Build assessments and review student submissions.</p></div>
+<div class="teacher-hero teacher-hero-row">
+    <div><span class="badge badge-blue">Assessment workspace</span><h1>Tests</h1><p>Build assessments and move completed attempts into evaluation.</p></div>
     <a class="btn btn-accent" href="{{ url_for('admin.add_test') }}">+ Create Test</a>
 </div>
 
-<div class="card">
+<div class="test-management-list">
 {% for t in tests %}
-    <div style="padding:18px 0;border-bottom:1px solid #edf0f3;">
-        <div style="display:flex;justify-content:space-between;gap:15px;align-items:flex-start;flex-wrap:wrap;">
-            <div>
-                <span class="badge badge-blue">{{ t.test_id }}</span>
-                <h2 style="font-size:1.12rem;margin:9px 0 5px;">{{ t.title }}</h2>
-                <p class="muted" style="margin-bottom:6px;">{{ t.subject }} · Class {{ t.class_level }} · {{ t.questions|length }} questions · {{ t.total_marks }} marks · {{ t.duration_minutes }} min</p>
-            </div>
-            {% if t.status == 'active' %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-muted">{{ t.status }}</span>{% endif %}
-        </div>
-        <div style="margin-top:12px;"><a class="btn btn-secondary" href="{{ url_for('evaluation.submissions', test_id=t.test_id) }}">View Submissions / Results →</a></div>
-    </div>
+    <article class="card teacher-test-card">
+        <div class="teacher-test-top"><div><span class="badge badge-blue">{{ t.test_id }}</span><h2>{{ t.title }}</h2><p class="muted">{{ t.subject }} · Class {{ t.class_level }} · {{ t.questions|length }} questions · {{ t.total_marks }} marks · {{ t.duration_minutes }} min</p></div>{% if t.status == 'active' %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-muted">{{ t.status }}</span>{% endif %}</div>
+        <div class="teacher-test-meta"><span><strong>{{ t.questions|length }}</strong> questions</span><span><strong>{{ t.total_marks }}</strong> marks</span><span><strong>{{ t.duration_minutes }}</strong> min</span></div>
+        <div class="teacher-test-actions"><a class="btn btn-primary" href="{{ url_for('evaluation.submissions', test_id=t.test_id) }}">View Submissions / Results →</a></div>
+    </article>
 {% else %}
-    <div class="empty-state"><h3>No tests found</h3><p>Create your first assessment to begin the workflow.</p></div>
+    <div class="card empty-state"><h3>No tests found</h3><p>Create your first assessment to begin the workflow.</p><a class="btn btn-accent" href="{{ url_for('admin.add_test') }}">+ Create Test</a></div>
 {% endfor %}
 </div>
 <a href="{{ url_for('admin.dashboard') }}">← Teacher dashboard</a>
