@@ -1,70 +1,100 @@
 {% extends "base.html" %}
 {% block title %}Performance Report - {{ report.test_title }} - Improvia{% endblock %}
 {% block content %}
-<div class="page-title-row">
+<div class="report-hero">
     <div>
         <span class="badge badge-coral">Personal performance report</span>
-        <h1 style="margin-top:10px;">Mathematics Performance Report</h1>
+        <h1>Mathematics Performance Report</h1>
         <p>{{ report.test_title }} · {{ report.student_name }} · Student ID: {{ report.student_id }}</p>
     </div>
+    {% if not awaiting %}<span class="report-date">{{ report.test_date or 'Assessment' }}</span>{% endif %}
 </div>
 
 {% if awaiting %}
-<div class="card" style="text-align:center;padding:50px 24px;">
-    <div style="font-size:42px;margin-bottom:14px;">⏳</div>
+<div class="card result-waiting">
+    <div class="result-status-icon">⏳</div>
+    <span class="badge badge-blue">Report pending</span>
     <h2>Your report is being prepared</h2>
     <p class="muted">Your submission has been received. The detailed diagnosis will appear after teacher evaluation.</p>
+    <a class="btn btn-secondary" href="{{ url_for('test_listing') }}">Back to Tests</a>
 </div>
 {% else %}
-<div class="grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
-    <div class="stat-card"><div class="stat-label">Your score</div><div class="stat-value">{{ report.diagnosis.score }} / {{ report.diagnosis.total_marks }}</div></div>
-    <div class="stat-card"><div class="stat-label">Percentage</div><div class="stat-value">{{ report.diagnosis.percentage }}%</div></div>
-    <div class="stat-card"><div class="stat-label">Attempt rate</div><div class="stat-value">{{ report.diagnosis.attempt_rate }}%</div></div>
-    <div class="stat-card"><div class="stat-label">Marks lost</div><div class="stat-value" style="color:var(--improvia-coral);">{{ report.diagnosis.marks_lost }}</div></div>
+
+<div class="report-summary-grid">
+    <div class="report-score-card">
+        <span class="result-eyebrow">Score</span>
+        <div class="report-big-score">{{ report.diagnosis.score }}<span>/{{ report.diagnosis.total_marks }}</span></div>
+        <span class="report-score-percent">{{ report.diagnosis.percentage }}%</span>
+    </div>
+    <div class="report-summary-stat"><span>Attempt rate</span><strong>{{ report.diagnosis.attempt_rate }}%</strong><small>{{ report.diagnosis.attempted }} of {{ report.diagnosis.total_questions }} questions</small></div>
+    <div class="report-summary-stat"><span>Accuracy</span><strong>{{ report.diagnosis.accuracy or 0 }}%</strong><small>Among attempted responses</small></div>
+    <div class="report-summary-stat"><span>Marks lost</span><strong>{{ report.diagnosis.marks_lost }}</strong><small>Potential marks to recover</small></div>
 </div>
 
-<div class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
-    <div class="card" style="background:linear-gradient(145deg,#fff,#f1faf8);">
-        <span class="badge badge-success">Strength</span>
-        <h3 style="margin-top:12px;">Strongest areas</h3>
-        {% if report.diagnosis.strengths %}<ul>{% for item in report.diagnosis.strengths %}<li>{{ item.name }} — <strong>{{ item.percentage }}%</strong></li>{% endfor %}</ul>{% else %}<p class="muted">No clear chapter strength crossed the current benchmark.</p>{% endif %}
+<div class="report-focus-grid">
+    <div class="card report-focus-card report-strength-card">
+        <span class="badge badge-success">Strengths</span>
+        <h2>What you're doing well</h2>
+        {% if report.diagnosis.strengths %}
+        <ul class="report-list">{% for item in report.diagnosis.strengths %}<li><strong>{{ item.name }}</strong><span>{{ item.percentage }}%</span></li>{% endfor %}</ul>
+        {% else %}<p class="muted">No chapter crossed the current strength benchmark yet.</p>{% endif %}
     </div>
-    <div class="card" style="background:linear-gradient(145deg,#fff,#fff5f5);">
-        <span class="badge badge-coral">Focus next</span>
-        <h3 style="margin-top:12px;">Priority weaknesses</h3>
-        {% if report.diagnosis.weaknesses %}<ul>{% for item in report.diagnosis.weaknesses %}<li>{{ item.name }} — <strong>{{ item.percentage }}%</strong></li>{% endfor %}</ul>{% else %}<p class="muted">No chapter fell below the current weakness benchmark.</p>{% endif %}
+    <div class="card report-focus-card report-weakness-card">
+        <span class="badge badge-coral">Priority</span>
+        <h2>What to improve</h2>
+        {% if report.diagnosis.weaknesses %}
+        <ul class="report-list">{% for item in report.diagnosis.weaknesses %}<li><strong>{{ item.name }}</strong><span>{{ item.percentage }}%</span></li>{% endfor %}</ul>
+        {% else %}<p class="muted">No chapter fell below the current weakness benchmark.</p>{% endif %}
     </div>
-    <div class="card" style="background:linear-gradient(145deg,#fff,#f3f9fc);">
-        <span class="badge badge-blue">Your patterns</span>
-        <h3 style="margin-top:12px;">Where marks were lost</h3>
-        {% if report.diagnosis.error_counts %}<ul>{% for e in report.diagnosis.error_counts %}<li>{{ e.label }} — <strong>{{ e.count }}</strong></li>{% endfor %}</ul>{% else %}<p class="muted">No teacher-coded errors were recorded.</p>{% endif %}
+</div>
+
+<div class="card report-error-card">
+    <div class="section-heading">
+        <div><span class="badge badge-coral">Error diagnosis</span><h2>Why marks were lost</h2><p class="muted">Teacher-coded patterns from your evaluated responses.</p></div>
+        <strong class="report-lost-mark-label">{{ report.diagnosis.marks_lost }} marks lost</strong>
     </div>
+    {% if report.diagnosis.error_counts %}
+    <div class="report-error-grid">
+        {% for e in report.diagnosis.error_counts %}
+        <div class="report-error-item {% if loop.first %}report-error-primary{% endif %}"><span class="report-error-code">{{ e.code }}</span><div><strong>{{ e.label }}</strong><small>{% if e.count == 1 %}1 occurrence{% else %}{{ e.count }} occurrences{% endif %}</small></div></div>
+        {% endfor %}
+    </div>
+    {% else %}<div class="notice notice-success">No teacher-coded errors were recorded.</div>{% endif %}
 </div>
 
 <div class="card">
-    <h2>Chapter analysis</h2>
-    <p class="muted">Your performance by chapter, based on the evaluated questions.</p>
-    <div class="table-wrap">
-    <table><thead><tr><th>Chapter</th><th>Marks</th><th>Performance</th></tr></thead><tbody>
-    {% for item in report.diagnosis.chapter_analysis %}<tr><td><strong>{{ item.name }}</strong></td><td>{{ item.marks|round(1) }} / {{ item.max_marks|round(1) }}</td><td><span class="badge {% if item.percentage >= 75 %}badge-success{% elif item.percentage < 50 %}badge-coral{% else %}badge-blue{% endif %}">{{ item.percentage }}%</span></td></tr>{% endfor %}
-    </tbody></table>
+    <div class="section-heading">
+        <div><span class="badge badge-blue">Chapter analysis</span><h2>Performance by chapter</h2><p class="muted">This shows where your marks are coming from, not just your overall score.</p></div>
     </div>
-</div>
-
-<div class="card">
-    <h2>Progress</h2>
-    {% if report.diagnosis.previous_attempt_count %}
-        <p>Previous test score: <strong>{{ report.diagnosis.previous_score }}</strong> marks{% if report.diagnosis.score_change is not none %}. Change: <strong>{% if report.diagnosis.score_change >= 0 %}+{% endif %}{{ report.diagnosis.score_change }}</strong> marks.{% endif %}</p>
-        {% if report.diagnosis.recurring_errors %}<div class="notice notice-warning"><strong>Recurring error patterns:</strong> {% for e in report.diagnosis.recurring_errors %}{{ e.label }}{% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}
-    {% else %}
-        <p class="muted">This is your first recorded test. Future reports will show improvement against this baseline.</p>
+    {% if report.diagnosis.chapter_analysis %}
+    <div class="chapter-bars report-chapter-bars">
+        {% for item in report.diagnosis.chapter_analysis|sort(attribute='percentage', reverse=true) %}
+        <div class="chapter-bar-row"><div class="chapter-bar-label"><strong>{{ item.name }}</strong><span>{{ item.marks|round(1) }} / {{ item.max_marks|round(1) }} marks</span></div><div class="chapter-bar-track"><div class="chapter-bar-fill" style="width: {{ [item.percentage, 100]|min }}%;"></div></div><strong class="chapter-bar-percent">{{ item.percentage }}%</strong></div>
+        {% endfor %}
+    </div>
     {% endif %}
 </div>
 
-<div class="card" style="background:linear-gradient(135deg,#fff7f7,#f2f9fc);">
-    <span class="badge badge-coral">Recommended focus</span>
-    <h2 style="margin-top:10px;">What to work on next</h2>
-    <ol style="padding-left:22px;line-height:1.9;">{% for item in report.recommendations %}<li style="margin-bottom:10px;"><strong>{{ item.title }}</strong><br><span class="muted">{{ item.action }}</span></li>{% endfor %}</ol>
+<div class="card">
+    <div class="section-heading"><div><span class="badge badge-blue">Progress</span><h2>Your improvement over time</h2></div></div>
+    {% if report.diagnosis.previous_attempt_count %}
+    <div class="progress-compare report-progress-compare">
+        <div><span>Previous test</span><strong>{{ report.diagnosis.previous_score }}</strong></div><div class="progress-arrow">→</div><div><span>This test</span><strong>{{ report.diagnosis.score }}</strong></div><div><span>Change</span><strong>{% if report.diagnosis.score_change >= 0 %}+{% endif %}{{ report.diagnosis.score_change }} marks</strong></div>
+    </div>
+    {% if report.diagnosis.recurring_errors %}<div class="notice notice-warning"><strong>Recurring patterns:</strong> {% for e in report.diagnosis.recurring_errors %}{{ e.label }}{% if not loop.last %}, {% endif %}{% endfor %}. Focus on these before the next assessment.</div>{% endif %}
+    {% else %}
+    <div class="baseline-panel"><strong>This test establishes your baseline.</strong><span>Future assessments will show changes in score, chapter performance, and recurring errors.</span></div>
+    {% endif %}
 </div>
+
+<div class="card report-recommendation-card">
+    <span class="badge badge-coral">Recommended focus</span>
+    <h2>What to work on next</h2>
+    {% if report.recommendations %}
+    <div class="recommendation-list">{% for item in report.recommendations %}<div class="recommendation-item"><div class="recommendation-number">{{ loop.index }}</div><div><strong>{{ item.title }}</strong><p>{{ item.action }}</p></div></div>{% endfor %}</div>
+    {% endif %}
+</div>
+
+<div class="report-footer-actions"><a class="btn btn-secondary" href="{{ url_for('evaluation.student_result', attempt_id=report.attempt_id) }}">← Back to Result</a><a class="btn btn-primary" href="{{ url_for('test_listing') }}">Back to Tests</a></div>
 {% endif %}
 {% endblock %}
