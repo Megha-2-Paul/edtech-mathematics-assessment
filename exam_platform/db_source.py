@@ -13,6 +13,11 @@ from sqlalchemy import text
 from database import engine
 from .models import AnswerImage, Attempt, ContentBlock, Question, Response, Student, Test
 from .storage import storage as legacy_storage
+from .monitoring_db import ensure_exam_monitoring_schema
+
+
+# Existing databases need the monitoring column before the first SELECT * from tests.
+ensure_exam_monitoring_schema()
 
 
 def _dt(value):
@@ -189,6 +194,82 @@ class DatabaseFirstStorage:
                 r["image_id"]: _image(r)
                 for r in db.execute(text("SELECT * FROM answer_images")).mappings()
             }
+
+    def create_test(self, test: Test):
+        """Persist a test, including its exam monitoring mode and question links."""
+        monitoring_mode = test.monitoring_mode
+        try:
+            from flask import has_request_context, request
+
+            if has_request_context():
+                monitoring_mode = request.form.get(
+                    "monitoring_mode", monitoring_mode
+                )
+        except RuntimeError:
+            pass
+
+        if monitoring_mode not in {"off", "optional", "required"}:
+            monitoring_mode = "off"
+
+        with engine.begin() as db:
+            db.execute(
+                text(
+                    """INSERT INTO tests(
+                        test_id,title,subject,class_level,board,test_date,
+                        duration_minutes,total_marks,test_type,status,
+                        questions_json,monitoring_mode
+                    ) VALUES(
+                        :id,:title,:subject,:class,:board,:date,
+                        :duration,:marks,:type,:status,:questions,:monitoring_mode
+                    )
+                    ON DUPLICATE KEY UPDATE
+                        title=VALUES(title),
+                        status=VALUES(status),
+                        questions_json=VALUES(questions_json),
+                        subject=VALUES(subject),
+                        class_level=VALUES(class_level),
+                        board=VALUES(board),
+                        test_date=VALUES(test_date),
+                        duration_minutes=VALUES(duration_minutes),
+                        total_marks=VALUES(total_marks),
+                        test_type=VALUES(test_type),
+                        monitoring_mode=VALUES(monitoring_mode)"""
+                ),
+                {
+                    "id": test.test_id,
+                    "title": test.title,
+                    "subject": test.subject,
+                    "class": test.class_level,
+                    "board": test.board,
+                    "date": test.test_date,
+                    "duration": test.duration_minutes,
+                    "marks": test.total_marks,
+                    "type": test.test_type,
+                    "status": test.status,
+                    "questions": json.dumps(test.questions),
+                    "monitoring_mode": monitoring_mode,
+                },
+            )
+            db.execute(
+                text("DELETE FROM test_questions WHERE test_id=:id"),
+                {"id": test.test_id},
+            )
+            for i, qid in enumerate(test.questions, 1):
+                question = self.get_question(qid)
+                if question:
+                    db.execute(
+                        text(
+                            "INSERT INTO test_questions(" 
+                            "test_id,question_id,sequence_number,marks) "
+                            "VALUES(:test_id,:question_id,:sequence_number,:marks)"
+                        ),
+                        {
+                            "test_id": test.test_id,
+                            "question_id": qid,
+                            "sequence_number": i,
+                            "marks": question.marks,
+                        },
+                    )
 
     def get_test(self, test_id):
         with engine.connect() as db:
