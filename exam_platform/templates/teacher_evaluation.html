@@ -1,60 +1,62 @@
 {% extends "base.html" %}
 {% block title %}Evaluate {{ attempt.attempt_id }} - Improvia{% endblock %}
 {% block content %}
-<div class="page-title-row">
-    <div><span class="badge badge-coral">Evaluation workspace</span><h1 style="margin-top:10px;">Evaluate Submission</h1><p>{{ test.title }} · {{ attempt.student_id }} · {{ attempt.attempt_id }}</p></div>
+<div class="teacher-hero teacher-hero-row">
+    <div><span class="badge badge-coral">Evaluation workspace</span><h1>Evaluate Submission</h1><p>{{ test.title }} · {{ attempt.student_id }} · {{ attempt.attempt_id }}</p></div>
     <a class="btn btn-secondary" href="{{ url_for('evaluation.submissions') }}">← Back to Submissions</a>
 </div>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}<div class="notice notice-success" style="margin-bottom:16px;">{{ message }}</div>{% endfor %}
+    {% for category, message in messages %}<div class="notice notice-success evaluation-saved">✓ {{ message }}</div>{% endfor %}
 {% endwith %}
+
+<div class="evaluation-summary">
+    <div><span>Student</span><strong>{{ attempt.student_id }}</strong></div>
+    <div><span>Assessment</span><strong>{{ test.title }}</strong></div>
+    <div><span>Questions</span><strong>{{ response_data|length }}</strong></div>
+    <div><span>Current score</span><strong>{{ attempt.score if attempt.score is not none else 'Not calculated' }}</strong></div>
+</div>
+
+<div class="evaluation-instruction"><strong>Evaluation checklist:</strong> review the question and handwritten work → award marks → select applicable error codes → add concise feedback → save once all responses are reviewed.</div>
 
 <form method="post">
 {% for item in response_data %}
     {% set q=item.question %}{% set r=item.response %}
-    <div class="card">
-        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
-            <div><span class="badge badge-blue">Question {{ loop.index }}</span><h2 style="font-size:1.2rem;margin:9px 0 0;">{{ q.question_type|upper }}</h2></div>
+    <section class="card evaluation-question">
+        <div class="evaluation-question-header">
+            <div><span class="badge badge-blue">Question {{ loop.index }}</span><h2>{{ q.question_type|upper }}</h2></div>
             <span class="badge badge-coral">{{ q.marks }} marks</span>
         </div>
 
-        <div style="padding:16px;background:#f7fafc;border:1px solid var(--improvia-border);border-radius:12px;line-height:1.8;">
-            {% for block in q.question_content %}{% if block.type=='text' %}<div>{{ block.value }}</div>{% elif block.type=='image' %}<img src="{{ block.value }}" style="max-width:100%;height:auto;margin:10px 0;border-radius:8px;" alt="Question image">{% endif %}{% endfor %}
+        <div class="evaluation-question-content">
+            {% for block in q.question_content %}{% if block.type=='text' %}<div>{{ block.value }}</div>{% elif block.type=='image' %}<img src="{{ block.value }}" alt="Question image">{% endif %}{% endfor %}
         </div>
 
-        <div style="margin-top:14px;padding:13px 15px;border-radius:10px;background:var(--improvia-light-blue);">
-            <strong>Student final answer:</strong> {{ r.selected_answer if r else 'Not answered' }}
-        </div>
+        <div class="student-answer-panel"><span>Student final answer</span><strong>{{ r.selected_answer if r else 'Not answered' }}</strong></div>
 
-        <div style="margin-top:14px;padding:14px;border:1px solid var(--improvia-border);border-radius:12px;">
-            <strong>Handwritten work</strong>
-            <span class="muted"> · {% if item.handwritten_upload_mode == 'none' %}Not requested{% elif item.handwritten_upload_mode == 'optional' %}Optional{% else %}Required{% endif %}</span>
-            <span class="badge badge-blue" style="margin-left:6px;">{% if item.images %}{{ item.images|length }} page{{ '' if item.images|length == 1 else 's' }}{% else %}Not submitted{% endif %}</span>
+        <div class="handwriting-panel">
+            <div><strong>Handwritten work</strong><span class="muted"> · {% if item.handwritten_upload_mode == 'none' %}Not requested{% elif item.handwritten_upload_mode == 'optional' %}Optional{% else %}Required{% endif %}</span></div>
+            <span class="badge badge-blue">{% if item.images %}{{ item.images|length }} page{{ '' if item.images|length == 1 else 's' }}{% else %}Not submitted{% endif %}</span>
         </div>
 
         {% if item.images %}
-        <div style="margin-top:18px;"><h3>Submitted handwritten pages</h3><div style="display:flex;flex-direction:column;gap:14px;margin-top:10px;">
-            {% for image in item.images %}<div style="padding:10px;background:#fff;border:1px solid var(--improvia-border);border-radius:11px;"><div class="small" style="margin-bottom:8px;font-weight:700;">Page {{ image.page_number }}</div><img src="{{ image.url }}" style="display:block;max-width:100%;width:auto;max-height:900px;border-radius:7px;" alt="Handwritten solution page {{ image.page_number }}"></div>{% endfor %}
-        </div></div>
+        <details class="handwriting-details" open><summary>View submitted handwritten pages</summary><div class="handwritten-pages">
+            {% for image in item.images %}<div class="handwritten-page"><div class="small">Page {{ image.page_number }} · {{ image.name }}</div><img src="{{ image.url }}" alt="Handwritten solution page {{ image.page_number }}"></div>{% endfor %}
+        </div></details>
         {% endif %}
 
         {% if q.question_type=='mcq' %}
-            <div class="notice notice-success" style="margin-top:16px;"><strong>Correct answer:</strong> {{ q.correct_answer }} · <strong>Auto marks:</strong> {{ q.marks if r and r.selected_answer==q.correct_answer else 0 }}</div>
+            <div class="auto-evaluation"><strong>Automatic objective evaluation</strong><span>Correct answer: {{ q.correct_answer }} · Awarded: {{ q.marks if r and r.selected_answer==q.correct_answer else 0 }} / {{ q.marks }}</span></div>
         {% else %}
-            <div style="margin-top:18px;display:grid;gap:14px;">
-                <label>Marks awarded<input type="number" name="marks_{{ q.question_id }}" min="0" max="{{ q.marks }}" step="0.5" value="{{ r.marks_awarded if r and r.marks_awarded is not none else 0 }}"></label>
-                <div><strong style="color:var(--improvia-navy);">Error codes</strong><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">{% for code,label in error_codes %}<label style="display:inline-flex;align-items:center;gap:5px;padding:8px 10px;border:1px solid var(--improvia-border);border-radius:9px;background:#fff;font-weight:500;"><input type="checkbox" name="errors_{{ q.question_id }}" value="{{ code }}" {% if item.errors and code in item.errors|map(attribute='error_code')|list %}checked{% endif %}> {{ code }} {{ label }}</label>{% endfor %}</div></div>
-                <label>Comment<textarea name="comment_{{ q.question_id }}" rows="3" placeholder="Add concise feedback for the student...">{% if item.errors %}{{ item.errors[0].comment or '' }}{% endif %}</textarea></label>
+            <div class="manual-evaluation">
+                <div class="marks-field"><label>Marks awarded<input type="number" name="marks_{{ q.question_id }}" min="0" max="{{ q.marks }}" step="0.5" value="{{ r.marks_awarded if r and r.marks_awarded is not none else 0 }}"></label><span>Max {{ q.marks }} marks</span></div>
+                <div><strong class="field-title">Error diagnosis</strong><p class="small">Select every error pattern that applies. These codes power the student's report.</p><div class="error-code-grid">{% for code,label in error_codes %}<label class="error-code-option"><input type="checkbox" name="errors_{{ q.question_id }}" value="{{ code }}" {% if item.errors and code in item.errors|map(attribute='error_code')|list %}checked{% endif %}><span><strong>{{ code }}</strong> {{ label }}</span></label>{% endfor %}</div></div>
+                <label>Teacher feedback<textarea name="comment_{{ q.question_id }}" rows="3" placeholder="Example: Check the sign change in the second step.">{% if item.errors %}{{ item.errors[0].comment or '' }}{% endif %}</textarea></label>
             </div>
         {% endif %}
-    </div>
+    </section>
 {% endfor %}
 
-<div class="card" style="position:sticky;bottom:12px;z-index:20;display:flex;gap:10px;justify-content:flex-end;align-items:center;box-shadow:0 12px 35px rgba(30,58,95,.16);">
-    <span class="muted" style="margin-right:auto;">Review all questions before saving.</span>
-    <a class="btn btn-secondary" href="{{ url_for('evaluation.submissions') }}">Cancel</a>
-    <button type="submit" class="btn btn-accent">Save Evaluation & Calculate Result →</button>
-</div>
+<div class="evaluation-save-bar"><span><strong>Ready to save?</strong> Make sure every submitted response has been reviewed.</span><div><a class="btn btn-secondary" href="{{ url_for('evaluation.submissions') }}">Cancel</a><button type="submit" class="btn btn-accent">Save Evaluation & Calculate Result →</button></div></div>
 </form>
 {% endblock %}
