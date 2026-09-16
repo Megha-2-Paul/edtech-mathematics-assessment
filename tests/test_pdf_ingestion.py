@@ -86,4 +86,6 @@ def test_pdf_output_can_enter_existing_ingestion_pipeline(tmp_path):
 
     assert len(candidates) == 2
     assert all(candidate.provenance["source_type"] == "pdf" for candidate in candidates)
-    assert all(candidate.status == "review_required" for candidate in candidates)
+    assert candidates[0].status == "review_required"
+    assert candidates[1].status == "validation_pending"
+    assert "correct answer" in candidates[1].validation.errors[0].lower()
