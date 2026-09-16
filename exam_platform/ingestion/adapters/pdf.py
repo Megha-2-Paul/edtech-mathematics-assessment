@@ -54,10 +54,6 @@ class PDFAdapter:
         match = QUESTION_START_RE.match(line)
         if not match:
             return None
-        # Reject bare section-like numbers unless they are followed by a
-        # conventional delimiter. A bare number is accepted only as a question
-        # boundary when the regex captured no suffix and can be followed by text
-        # on the next line.
         number, text = match.group(1), (match.group(2) or "").strip()
         if not text and not re.search(r"\d\s*[\.)\-:]\s*$", line):
             return None
@@ -94,16 +90,13 @@ class PDFAdapter:
     def _page_assets(page: fitz.Page, page_number: int) -> List[Dict[str, Any]]:
         assets: List[Dict[str, Any]] = []
         for image in page.get_images(full=True):
-            xref = image[0]
-            width = image[2]
-            height = image[3]
             assets.append(
                 {
                     "asset_type": "image",
                     "page_number": page_number,
-                    "xref": xref,
-                    "width": width,
-                    "height": height,
+                    "xref": image[0],
+                    "width": image[2],
+                    "height": image[3],
                     "source": "pdf_embedded_image",
                 }
             )
@@ -169,6 +162,11 @@ class PDFAdapter:
             current = None
 
         for page_number, page_text, page_assets in pages:
+            # Attribute each page's embedded images once to the active question.
+            if current is not None:
+                current["assets"].extend(page_assets)
+                current["page_end"] = page_number
+
             lines = self._clean_text(page_text).splitlines()
             for line in lines:
                 start = self._question_start(line)
@@ -186,8 +184,6 @@ class PDFAdapter:
                     }
                 elif current is not None:
                     current["lines"].append(line)
-                    current["page_end"] = page_number
-                    current["assets"].extend(page_assets)
         flush()
         return questions
 
