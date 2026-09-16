@@ -106,6 +106,7 @@ def diagnose_attempt(attempt, test, questions, responses):
         for response in responses
         if response.answer_status == "answered"
     )
+    correct = sum(1 for response in responses if response.is_correct is True)
     evaluated = sum(
         1
         for question in questions
@@ -248,6 +249,7 @@ def diagnose_attempt(attempt, test, questions, responses):
             if questions
             else 0
         ),
+        "accuracy": round(correct / attempted * 100, 2) if attempted else 0,
         "evaluated_responses": evaluated,
         "evaluation_complete": evaluated >= len(questions),
         "error_counts": error_details,
