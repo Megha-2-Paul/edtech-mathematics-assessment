@@ -58,6 +58,7 @@ def test_pdf_adapter_reports_scanned_pdf_as_ocr_required(tmp_path):
 
     assert questions == []
     assert source.metadata["ocr_required"] is True
+    assert source.metadata["ocr_pages"] == [1]
 
 
 def test_pdf_output_can_enter_existing_ingestion_pipeline(tmp_path):
@@ -73,19 +74,14 @@ def test_pdf_output_can_enter_existing_ingestion_pipeline(tmp_path):
         metadata={"board": "CBSE", "class_level": 10, "chapter": "Quadratic Equations"},
     )
     raw_questions = PDFAdapter(source).ingest()
-    for raw in raw_questions:
-        raw.metadata.update(
-            {
-                "board": "CBSE",
-                "class_level": 10,
-                "chapter": "Quadratic Equations",
-            }
-        )
 
     candidates = QuestionIngestionPipeline().prepare(raw_questions, source)
 
     assert len(candidates) == 2
     assert all(candidate.provenance["source_type"] == "pdf" for candidate in candidates)
+    assert candidates[0].question.board == "CBSE"
+    assert candidates[0].question.class_level == 10
+    assert candidates[0].question.chapter == "Quadratic Equations"
     assert candidates[0].status == "review_required"
     assert candidates[1].status == "validation_pending"
     assert "correct answer" in candidates[1].validation.errors[0].lower()
