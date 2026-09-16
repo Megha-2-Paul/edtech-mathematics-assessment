@@ -1,21 +1,55 @@
 {% extends "base.html" %}
-{% block title %}Question Bank{% endblock %}
-{% block custom_styles %}<style>.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:15px 0}.toolbar input,.toolbar select{padding:9px;border:1px solid #ccc;border-radius:4px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;background:#fff}th,td{padding:11px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}.inactive{opacity:.55}.small{font-size:12px;color:#666}.actions{display:flex;gap:6px;flex-wrap:wrap}.actions form{display:inline}.thumb{width:70px;height:50px;object-fit:cover;border:1px solid #ddd;border-radius:4px}</style>{% endblock %}
+{% block title %}Question Bank - Improvia{% endblock %}
+
 {% block content %}
-<div class="card">
-<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><div><h2>Question Bank</h2><p class="small">Questions stored in MySQL.</p></div><a class="btn" href="{{url_for('admin.add_question')}}">+ Add Question</a></div>
-<form class="toolbar" method="get">
-<input name="q" value="{{query}}" placeholder="Search ID, chapter, topic or text">
-<select name="subject"><option value="">All subjects</option>{% for s in subjects %}<option value="{{s}}" {% if subject==s %}selected{% endif %}>{{s}}</option>{% endfor %}</select>
-<select name="type"><option value="">All types</option>{% for value,label in [('mcq','MCQ'),('vsaq','VSAQ'),('saq','SAQ'),('laq','LAQ')] %}<option value="{{value}}" {% if question_type==value %}selected{% endif %}>{{label}}</option>{% endfor %}</select>
-<select name="board"><option value="">All boards</option>{% for b in boards %}<option value="{{b}}" {% if board==b %}selected{% endif %}>{{b}}</option>{% endfor %}</select>
-<select name="class_level"><option value="">All classes</option>{% for n in [10,11,12] %}<option value="{{n}}" {% if class_level==n|string %}selected{% endif %}>Class {{n}}</option>{% endfor %}</select>
-<select name="difficulty"><option value="">All difficulty</option>{% for d in difficulties %}<option value="{{d}}" {% if difficulty==d %}selected{% endif %}>{{d}}</option>{% endfor %}</select>
-<select name="status"><option value="active" {% if status=='active' %}selected{% endif %}>Active</option><option value="inactive" {% if status=='inactive' %}selected{% endif %}>Inactive</option><option value="all" {% if status=='all' %}selected{% endif %}>All status</option></select>
-<button type="submit">Filter</button><a class="btn btn-secondary" href="{{url_for('admin.questions')}}">Clear</a>
-</form>
+<div class="page-title-row">
+    <div>
+        <span class="badge badge-blue">Teacher workspace</span>
+        <h1 style="margin-top:10px;">Question Bank</h1>
+        <p>Search, review and manage the questions stored in MySQL.</p>
+    </div>
+    <a class="btn btn-accent" href="{{ url_for('admin.add_question') }}">+ Add Question</a>
 </div>
-<div class="card table-wrap"><table><thead><tr><th>ID</th><th>Question</th><th>Type / Marks</th><th>Subject / Class</th><th>Chapter</th><th>Competency</th><th>Upload</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-{% for q in questions %}<tr class="{% if q.status!='active' %}inactive{% endif %}"><td>{{q.question_id}}</td><td style="min-width:300px">{% for c in q.question_content %}{% if c.type=='text' %}{{c.value}}{% elif c.type=='image' %}<img class="thumb" src="{{c.value}}" alt="Question image">{% endif %}{% endfor %}<div class="small">Correct final answer: {{q.correct_answer or '—'}}</div></td><td>{{{'mcq':'MCQ','vsaq':'VSAQ','saq':'SAQ','laq':'LAQ'}.get(q.question_type,q.question_type)}}<br>{{q.marks}} mark(s)</td><td>{{q.subject}}<br>Class {{q.class_level or '—'}} / {{q.board or '—'}}</td><td>{{q.chapter or '—'}}<br><span class="small">{{q.topic or ''}}</span></td><td>{{q.competency or '—'}}<br>{{q.difficulty or ''}}</td><td>{{q.handwritten_upload_mode}}</td><td>{{q.status}}</td><td><div class="actions"><a class="btn" href="{{url_for('admin.edit_question',question_id=q.question_id)}}">Edit</a><form method="post" action="{{url_for('admin.duplicate_question',question_id=q.question_id)}}"><button type="submit">Duplicate</button></form>{% if q.status=='active' %}<form method="post" action="{{url_for('admin.delete_question',question_id=q.question_id)}}"><button class="btn-danger" type="submit">Deactivate</button></form>{% else %}<form method="post" action="{{url_for('admin.activate_question',question_id=q.question_id)}}"><button type="submit">Activate</button></form>{% endif %}</div></td></tr>{% else %}<tr><td colspan="9">No questions found.</td></tr>{% endfor %}</tbody></table></div>
-<div><a href="{{url_for('admin.dashboard')}}">← Teacher dashboard</a></div>
+
+<div class="card">
+    <form method="get" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-items:end;">
+        <label>Search<input name="q" value="{{ query }}" placeholder="ID, chapter, topic or text"></label>
+        <label>Subject<select name="subject"><option value="">All subjects</option>{% for s in subjects %}<option value="{{s}}" {% if subject==s %}selected{% endif %}>{{s}}</option>{% endfor %}</select></label>
+        <label>Type<select name="type"><option value="">All types</option>{% for value,label in [('mcq','MCQ'),('vsaq','VSAQ'),('saq','SAQ'),('laq','LAQ')] %}<option value="{{value}}" {% if question_type==value %}selected{% endif %}>{{label}}</option>{% endfor %}</select></label>
+        <label>Board<select name="board"><option value="">All boards</option>{% for b in boards %}<option value="{{b}}" {% if board==b %}selected{% endif %}>{{b}}</option>{% endfor %}</select></label>
+        <label>Class<select name="class_level"><option value="">All classes</option>{% for n in [10,11,12] %}<option value="{{n}}" {% if class_level==n|string %}selected{% endif %}>Class {{n}}</option>{% endfor %}</select></label>
+        <label>Difficulty<select name="difficulty"><option value="">All difficulty</option>{% for d in difficulties %}<option value="{{d}}" {% if difficulty==d %}selected{% endif %}>{{d}}</option>{% endfor %}</select></label>
+        <label>Status<select name="status"><option value="active" {% if status=='active' %}selected{% endif %}>Active</option><option value="inactive" {% if status=='inactive' %}selected{% endif %}>Inactive</option><option value="all" {% if status=='all' %}selected{% endif %}>All status</option></select></label>
+        <div style="display:flex;gap:8px;grid-column:span 2;">
+            <button type="submit" class="btn-primary">Filter</button>
+            <a class="btn btn-ghost" href="{{ url_for('admin.questions') }}">Clear</a>
+        </div>
+    </form>
+</div>
+
+<div class="card table-wrap">
+    <table>
+        <thead><tr><th>ID</th><th>Question</th><th>Type / Marks</th><th>Subject / Class</th><th>Chapter</th><th>Competency</th><th>Upload</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+        {% for q in questions %}
+            <tr style="{% if q.status!='active' %}opacity:.55;{% endif %}">
+                <td><strong>{{ q.question_id }}</strong></td>
+                <td style="min-width:280px;">{% for c in q.question_content %}{% if c.type=='text' %}{{ c.value }}{% elif c.type=='image' %}<img src="{{ c.value }}" alt="Question image" style="width:70px;height:50px;object-fit:cover;border:1px solid var(--improvia-border);border-radius:7px;">{% endif %}{% endfor %}<div class="small" style="margin-top:5px;">Correct final answer: {{ q.correct_answer or '—' }}</div></td>
+                <td>{{ {'mcq':'MCQ','vsaq':'VSAQ','saq':'SAQ','laq':'LAQ'}.get(q.question_type,q.question_type) }}<br><span class="muted">{{ q.marks }} mark(s)</span></td>
+                <td>{{ q.subject }}<br><span class="small">Class {{ q.class_level or '—' }} / {{ q.board or '—' }}</span></td>
+                <td>{{ q.chapter or '—' }}<br><span class="small">{{ q.topic or '' }}</span></td>
+                <td>{{ q.competency or '—' }}<br><span class="small">{{ q.difficulty or '' }}</span></td>
+                <td><span class="badge badge-blue">{{ q.handwritten_upload_mode }}</span></td>
+                <td>{% if q.status=='active' %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-muted">Inactive</span>{% endif %}</td>
+                <td><div style="display:flex;gap:6px;flex-wrap:wrap;min-width:150px;">
+                    <a class="btn btn-ghost" href="{{ url_for('admin.edit_question',question_id=q.question_id) }}">Edit</a>
+                    <form method="post" action="{{ url_for('admin.duplicate_question',question_id=q.question_id) }}"><button type="submit" class="btn-secondary">Duplicate</button></form>
+                    {% if q.status=='active' %}<form method="post" action="{{ url_for('admin.delete_question',question_id=q.question_id) }}"><button class="btn-danger" type="submit">Deactivate</button></form>{% else %}<form method="post" action="{{ url_for('admin.activate_question',question_id=q.question_id) }}"><button type="submit">Activate</button></form>{% endif %}
+                </div></td>
+            </tr>
+        {% else %}<tr><td colspan="9" class="empty-state">No questions found.</td></tr>{% endfor %}
+        </tbody>
+    </table>
+</div>
+<p><a href="{{ url_for('admin.dashboard') }}">← Teacher dashboard</a></p>
 {% endblock %}
