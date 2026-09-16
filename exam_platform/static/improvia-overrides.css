@@ -1,5 +1,6 @@
 /* Improvia visual overrides for the existing exam experience. */
-.exam-page-header { background: rgba(255,255,255,.94) !important; border-bottom-color: var(--improvia-border) !important; }
+body:has(.exam-container) .site-header { display: none !important; }
+.exam-page-header { display: block !important; background: rgba(255,255,255,.94) !important; border-bottom-color: var(--improvia-border) !important; }
 .exam-header-inner { max-width: 1180px; margin: 0 auto; }
 .exam-title { color: var(--improvia-navy); }
 .exam-progress { color: var(--improvia-secondary-text); }
@@ -36,6 +37,7 @@
 .monitoring-stop { background: var(--improvia-slate) !important; }
 .submit-modal { background: rgba(30,58,95,.42) !important; backdrop-filter: blur(3px); }
 .modal-card { border: 1px solid var(--improvia-border); border-radius: var(--improvia-radius) !important; box-shadow: 0 20px 55px rgba(30,58,95,.2) !important; }
+.math-toolbar button { background: #fff !important; color: var(--improvia-navy) !important; border-color: var(--improvia-border) !important; width: auto !important; }
 @media (max-width: 800px) {
     .exam-page-header { margin-left: 0 !important; margin-right: 0 !important; }
     .exam-container { gap: 10px !important; }
