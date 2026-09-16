@@ -2,45 +2,51 @@
 {% block title %}My Tests - Improvia{% endblock %}
 
 {% block content %}
-<div class="page-title-row">
+<div class="student-page-intro page-title-row">
     <div>
         <h1>Available Tests</h1>
-        <p>Practice, identify your weak areas, and improve with every assessment.</p>
+        <p>Practice, identify where marks are being lost, and improve with every assessment.</p>
     </div>
 </div>
 
-<div style="display:grid;gap:16px;">
+<div class="test-list">
     {% for test in tests %}
         {% set status = test_status.get(test.test_id, 'available') %}
-        <div class="card test-card" style="display:flex;justify-content:space-between;gap:24px;align-items:center;">
-            <div style="flex:1;min-width:0;">
-                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:9px;">
+        <article class="card student-test-card{% if status == 'in_progress' %} is-progress{% elif status == 'taken' %} is-complete{% endif %}">
+            <div class="test-card-main">
+                <div class="test-card-badges">
                     <span class="badge badge-blue">{{ test.subject }}</span>
-                    {% if status == 'in_progress' %}<span class="status-badge status-progress">In Progress</span>
-                    {% elif status == 'taken' %}<span class="status-badge status-taken">Completed</span>
-                    {% elif status == 'expired' %}<span class="status-badge status-expired">Expired</span>{% endif %}
+                    {% if status == 'in_progress' %}
+                        <span class="status-badge status-progress">In Progress</span>
+                    {% elif status == 'taken' %}
+                        <span class="status-badge status-taken">Completed</span>
+                    {% elif status == 'expired' %}
+                        <span class="status-badge status-expired">Expired</span>
+                    {% endif %}
                 </div>
-                <h2 style="font-size:1.18rem;margin-bottom:8px;">{{ test.title }}</h2>
-                <div class="muted" style="font-size:.9rem;line-height:1.9;">
+
+                <h2 class="test-card-title">{{ test.title }}</h2>
+
+                <div class="test-card-meta" aria-label="Test details">
                     <span><strong>Class:</strong> {{ test.class_level }}</span>
-                    <span style="margin-left:14px;"><strong>Duration:</strong> {{ test.duration_minutes }} min</span>
-                    <span style="margin-left:14px;"><strong>Total:</strong> {{ test.total_marks }} marks</span>
-                    <span style="margin-left:14px;"><strong>Questions:</strong> {{ test.questions|length }}</span>
+                    <span><strong>Duration:</strong> {{ test.duration_minutes }} min</span>
+                    <span><strong>Total:</strong> {{ test.total_marks }} marks</span>
+                    <span><strong>Questions:</strong> {{ test.questions|length }}</span>
                 </div>
             </div>
 
-            <div style="min-width:150px;">
+            <div class="test-card-action">
                 {% if status == 'taken' %}
-                    <span class="status-badge status-taken" style="width:100%;justify-content:center;">Test Already Taken</span>
+                    <span class="status-badge status-taken">Test Already Taken</span>
                 {% elif status == 'expired' %}
-                    <span class="status-badge status-expired" style="width:100%;justify-content:center;">Test Expired</span>
+                    <span class="status-badge status-expired">Test Expired</span>
                 {% elif status == 'in_progress' %}
-                    <a href="{{ url_for('test_instructions', test_id=test.test_id) }}" class="btn btn-accent" style="width:100%;">Resume Test <span>→</span></a>
+                    <a href="{{ url_for('test_instructions', test_id=test.test_id) }}" class="btn btn-accent">Resume Test <span>→</span></a>
                 {% else %}
-                    <a href="{{ url_for('test_instructions', test_id=test.test_id) }}" class="btn btn-primary" style="width:100%;">Start Test <span>→</span></a>
+                    <a href="{{ url_for('test_instructions', test_id=test.test_id) }}" class="btn btn-primary">View &amp; Start <span>→</span></a>
                 {% endif %}
             </div>
-        </div>
+        </article>
     {% else %}
         <div class="card empty-state">
             <h3>No tests available yet</h3>
