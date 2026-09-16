@@ -10,7 +10,7 @@
     </div>
 </div>
 
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+<div class="grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
     <div class="stat-card"><div class="stat-value">{{ test.duration_minutes }}</div><div class="stat-label">Minutes</div></div>
     <div class="stat-card"><div class="stat-value">{{ test.total_marks }}</div><div class="stat-label">Total marks</div></div>
     <div class="stat-card"><div class="stat-value">{{ total_questions }}</div><div class="stat-label">Questions</div></div>
@@ -43,18 +43,18 @@
 </div>
 
 <script>
-    function startTest(testId) {
-        const button = event.target.closest('button');
-        button.disabled = true;
-        button.textContent = 'Starting...';
-        fetch(`/api/test/${testId}/start`, { method: 'POST' })
-            .then(r => r.json())
-            .then(data => { window.location.href = data.redirect_url; })
-            .catch(() => {
-                alert('Error starting test');
-                button.disabled = false;
-                button.innerHTML = 'Start Test <span>→</span>';
-            });
-    }
+function startTest(testId) {
+    const button = event.target.closest('button');
+    button.disabled = true;
+    button.textContent = 'Starting...';
+    fetch(`/api/test/${testId}/start`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => { window.location.href = data.redirect_url; })
+        .catch(() => {
+            alert('Error starting test');
+            button.disabled = false;
+            button.innerHTML = 'Start Test <span>→</span>';
+        });
+}
 </script>
 {% endblock %}
