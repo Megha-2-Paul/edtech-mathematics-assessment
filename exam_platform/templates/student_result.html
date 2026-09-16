@@ -1,55 +1,145 @@
 {% extends "base.html" %}
 {% block title %}Result - {{ test.title }} - Improvia{% endblock %}
 {% block content %}
-<div class="page-title-row">
+<div class="result-hero">
     <div>
         <span class="badge badge-blue">Assessment result</span>
-        <h1 style="margin-top:10px;">{{ test.title }}</h1>
-        <p>Attempt {{ attempt.attempt_id }} · Your result and evaluation summary.</p>
+        <h1>{{ test.title }}</h1>
+        <p>Attempt {{ attempt.attempt_id }} · Your result, patterns, and next steps.</p>
     </div>
-    {% if diagnosis.evaluation_complete %}<a class="btn btn-secondary" href="{{ url_for('evaluation.student_report', attempt_id=attempt.attempt_id) }}">View Full Report →</a>{% endif %}
+    {% if diagnosis.evaluation_complete %}
+    <a class="btn btn-primary" href="{{ url_for('evaluation.student_report', attempt_id=attempt.attempt_id) }}">View Full Report →</a>
+    {% endif %}
 </div>
 
 {% if not diagnosis.evaluation_complete %}
-<div class="card" style="text-align:center;padding:46px 24px;">
-    <div style="width:62px;height:62px;margin:0 auto 18px;border-radius:50%;background:var(--improvia-light-blue);color:var(--improvia-navy);display:flex;align-items:center;justify-content:center;font-size:28px;">⏳</div>
-    <h2>Evaluation in progress</h2>
-    <p class="muted">Your submission has been received. Marks and detailed feedback will be available after teacher evaluation.</p>
+<div class="card result-waiting">
+    <div class="result-status-icon">⏳</div>
+    <span class="badge badge-blue">Evaluation in progress</span>
+    <h2>Your submission is safe</h2>
+    <p class="muted">Your answers have been submitted. Marks and detailed diagnosis will appear after teacher evaluation.</p>
+    <a class="btn btn-secondary" href="{{ url_for('test_listing') }}">Back to Tests</a>
 </div>
 {% else %}
-<div class="grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
-    <div class="stat-card"><div class="stat-label">Your score</div><div class="stat-value">{{ attempt.score }} / {{ test.total_marks }}</div></div>
-    <div class="stat-card"><div class="stat-label">Percentage</div><div class="stat-value">{{ attempt.percentage }}%</div></div>
-    <div class="stat-card"><div class="stat-label">Attempt rate</div><div class="stat-value">{{ attempt.attempt_rate }}%</div></div>
-    <div class="stat-card"><div class="stat-label">Marks lost</div><div class="stat-value" style="color:var(--improvia-coral);">{{ diagnosis.marks_lost }}</div></div>
-</div>
 
-<div class="card">
-    <div class="page-title-row" style="margin-bottom:14px;"><div><h2>Where marks were lost</h2><p>These patterns help identify what to improve next.</p></div></div>
-    {% if diagnosis.error_counts %}
-        <div style="display:grid;gap:10px;">
-        {% for e in diagnosis.error_counts %}
-            <div style="display:flex;justify-content:space-between;gap:15px;align-items:center;padding:12px 14px;border-radius:10px;background:{% if loop.index == 1 %}var(--improvia-blush){% else %}#f7fafc{% endif %};">
-                <strong>{{ e.label }}</strong><span class="badge badge-coral">{{ e.count }} occurrence(s)</span>
-            </div>
-        {% endfor %}
-        </div>
-    {% else %}<div class="notice notice-success">No teacher-coded errors were recorded.</div>{% endif %}
-</div>
-
-<div class="card">
-    <h2>Question-level review</h2>
-    <p class="muted">See how each response was evaluated.</p>
-    {% for q in questions %}{% set r=response_map.get(q.question_id) %}
-    <div style="padding:16px 0;border-bottom:1px solid #edf0f3;">
-        <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
-            <strong>Q{{ loop.index }}</strong><span class="badge badge-blue">{{ q.marks }} marks</span>
-        </div>
-        <p style="margin:8px 0 5px;">Your final answer: <strong>{{ r.selected_answer if r else 'Not answered' }}</strong></p>
-        <p class="muted" style="margin-bottom:5px;">Marks awarded: <strong style="color:var(--improvia-navy);">{{ r.marks_awarded if r and r.marks_awarded is not none else 0 }} / {{ q.marks }}</strong></p>
-        {% if error_map.get(q.question_id) %}<p class="small"><strong>Feedback:</strong> {% for e in error_map[q.question_id] %}{{ e.error_code }}{% if e.comment %} — {{ e.comment }}{% endif %}{% if not loop.last %}; {% endif %}{% endfor %}</p>{% endif %}
+<div class="result-score-panel">
+    <div class="result-score-main">
+        <span class="result-eyebrow">Your performance</span>
+        <div class="result-score">{{ attempt.score }}<span>/{{ test.total_marks }}</span></div>
+        <div class="result-percent">{{ attempt.percentage }}%</div>
     </div>
-    {% endfor %}
+    <div class="result-score-context">
+        <div class="result-context-item"><span>Attempt rate</span><strong>{{ attempt.attempt_rate }}%</strong></div>
+        <div class="result-context-item"><span>Accuracy</span><strong>{{ attempt.accuracy or 0 }}%</strong></div>
+        <div class="result-context-item"><span>Marks lost</span><strong>{{ diagnosis.marks_lost }}</strong></div>
+        {% if diagnosis.score_change is not none %}
+        <div class="result-context-item"><span>Vs previous</span><strong>{% if diagnosis.score_change >= 0 %}+{% endif %}{{ diagnosis.score_change }} marks</strong></div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="diagnosis-callout">
+    <div class="diagnosis-callout-icon">⌁</div>
+    <div>
+        <span class="badge badge-coral">Your diagnosis</span>
+        <h2>Where should you focus?</h2>
+        {% if diagnosis.weaknesses %}
+        <p>Your current priority areas are <strong>{% for item in diagnosis.weaknesses[:2] %}{{ item.name }}{% if not loop.last %} and {% endif %}{% endfor %}</strong>. The error patterns below explain where marks were lost.</p>
+        {% elif diagnosis.error_counts %}
+        <p>Your chapter performance is broadly balanced. The main opportunities are shown in your error patterns below.</p>
+        {% else %}
+        <p>No major weakness pattern was detected from the evaluated responses. Keep building consistency with the next assessment.</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="diagnosis-grid">
+    <div class="card diagnosis-card">
+        <div class="section-heading">
+            <div><span class="badge badge-coral">Lost marks</span><h2>Why marks were lost</h2></div>
+            <span class="muted small">{{ diagnosis.marks_lost }} marks</span>
+        </div>
+        {% if diagnosis.error_counts %}
+        <div class="error-list">
+            {% for e in diagnosis.error_counts %}
+            <div class="error-row {% if loop.first %}error-row-primary{% endif %}">
+                <div class="error-rank">{{ loop.index }}</div>
+                <div class="error-copy"><strong>{{ e.label }}</strong><span>{{ e.code }}</span></div>
+                <div class="error-count">{{ e.count }}<small>{% if e.count == 1 %}occurrence{% else %}occurrences{% endif %}</small></div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}<div class="notice notice-success">No teacher-coded errors were recorded.</div>{% endif %}
+    </div>
+
+    <div class="card diagnosis-card">
+        <div class="section-heading">
+            <div><span class="badge badge-success">What went well</span><h2>Strongest areas</h2></div>
+        </div>
+        {% if diagnosis.strengths %}
+        <div class="diagnosis-items">
+            {% for item in diagnosis.strengths %}
+            <div class="diagnosis-item"><div><strong>{{ item.name }}</strong><span>{{ item.marks|round(1) }} / {{ item.max_marks|round(1) }} marks</span></div><strong>{{ item.percentage }}%</strong></div>
+            {% endfor %}
+        </div>
+        {% else %}<p class="muted">No chapter crossed the current strength benchmark yet.</p>{% endif %}
+
+        <div class="diagnosis-divider"></div>
+        <span class="badge badge-coral">Focus next</span>
+        {% if diagnosis.weaknesses %}
+        <div class="diagnosis-items">
+            {% for item in diagnosis.weaknesses %}
+            <div class="diagnosis-item"><div><strong>{{ item.name }}</strong><span>{{ item.marks|round(1) }} / {{ item.max_marks|round(1) }} marks</span></div><strong>{{ item.percentage }}%</strong></div>
+            {% endfor %}
+        </div>
+        {% else %}<p class="muted">No chapter fell below the current weakness benchmark.</p>{% endif %}
+    </div>
+</div>
+
+<div class="card chapter-result-card">
+    <div class="section-heading">
+        <div><span class="badge badge-blue">Chapter analysis</span><h2>How you performed by chapter</h2><p class="muted">Based on the marks awarded for evaluated questions.</p></div>
+    </div>
+    {% if diagnosis.chapter_analysis %}
+    <div class="chapter-bars">
+        {% for item in diagnosis.chapter_analysis|sort(attribute='percentage', reverse=true) %}
+        <div class="chapter-bar-row">
+            <div class="chapter-bar-label"><strong>{{ item.name }}</strong><span>{{ item.marks|round(1) }} / {{ item.max_marks|round(1) }}</span></div>
+            <div class="chapter-bar-track"><div class="chapter-bar-fill" style="width: {{ [item.percentage, 100]|min }}%;"></div></div>
+            <strong class="chapter-bar-percent">{{ item.percentage }}%</strong>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}<p class="muted">Chapter data is not available for this assessment.</p>{% endif %}
+</div>
+
+{% if diagnosis.previous_attempt_count %}
+<div class="card progress-result-card">
+    <div class="section-heading">
+        <div><span class="badge badge-blue">Progress</span><h2>Compared with your previous test</h2></div>
+        <span class="progress-change {% if diagnosis.score_change is not none and diagnosis.score_change >= 0 %}progress-positive{% endif %}">{% if diagnosis.score_change is not none and diagnosis.score_change >= 0 %}+{% endif %}{{ diagnosis.score_change or 0 }} marks</span>
+    </div>
+    <div class="progress-compare">
+        <div><span>Previous score</span><strong>{{ diagnosis.previous_score }}</strong></div>
+        <div class="progress-arrow">→</div>
+        <div><span>Current score</span><strong>{{ diagnosis.score }}</strong></div>
+        {% if diagnosis.percentage_change is not none %}<div><span>Percentage change</span><strong>{% if diagnosis.percentage_change >= 0 %}+{% endif %}{{ diagnosis.percentage_change }}%</strong></div>{% endif %}
+    </div>
+    {% if diagnosis.recurring_errors %}
+    <div class="notice notice-warning"><strong>Still recurring:</strong> {% for e in diagnosis.recurring_errors %}{{ e.label }}{% if not loop.last %}, {% endif %}{% endfor %}. These are worth addressing before the next test.</div>
+    {% endif %}
+</div>
+{% else %}
+<div class="card first-test-card">
+    <span class="badge badge-blue">Baseline established</span>
+    <h2>Your first performance baseline</h2>
+    <p class="muted">Future assessments will make it easier to see whether your score, chapter performance, and error patterns are improving.</p>
+</div>
+{% endif %}
+
+<div class="result-actions">
+    <a class="btn btn-primary" href="{{ url_for('evaluation.student_report', attempt_id=attempt.attempt_id) }}">Open Full Performance Report →</a>
+    <a class="btn btn-secondary" href="{{ url_for('test_listing') }}">Back to Tests</a>
 </div>
 {% endif %}
 {% endblock %}
