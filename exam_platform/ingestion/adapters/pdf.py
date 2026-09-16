@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import fitz
 
@@ -17,19 +17,22 @@ from ..models import RawQuestion, SourceDocument, SourceType
 
 
 QUESTION_START_RE = re.compile(
-    r"^\s*(?:question\s*)?(?:q\.?\s*)?(\d{1,3})\s*[\.)\-:]\s+(.*)$",
+    r"^\s*(?:question\s*)?(?:q\.?\s*)?(\d{1,3})\s*[\.)\-:]?(?:\s+(.*))?$",
     re.IGNORECASE,
 )
-MCQ_OPTION_RE = re.compile(r"^\s*\(?([A-Da-d])\)?[\.)]\s+(.*)$")
-MARKS_RE = re.compile(r"(?:\[|\()\s*(\d+(?:\.\d+)?)\s*(?:marks?|m)\s*(?:\]|\))\s*$", re.IGNORECASE)
+MCQ_OPTION_RE = re.compile(r"^\s*\(?([A-Da-d])\)?(?:[\.)]\s+|\s+)(.*)$")
+MARKS_RE = re.compile(
+    r"(?:\[|\()\s*(\d+(?:\.\d+)?)\s*(?:marks?|m)\s*(?:\]|\))\s*$",
+    re.IGNORECASE,
+)
 
 
 class PDFAdapter:
-    """Extract question candidates from text-based PDFs.
+    """Extract question candidates from PDFs with a usable text layer.
 
-    The adapter supports PDFs whose text layer is available. Scanned/image-only
-    PDFs are detected and reported through metadata; OCR is deliberately deferred
-    to a later stage.
+    Scanned/image-only pages are detected and flagged for a future OCR adapter.
+    Embedded raster images are represented as asset metadata; binary extraction
+    is deliberately kept out of the ingestion layer until storage is defined.
     """
 
     source_type = SourceType.PDF.value
@@ -44,15 +47,21 @@ class PDFAdapter:
     @staticmethod
     def _clean_text(text: str) -> str:
         lines = [re.sub(r"[ \t]+", " ", line).strip() for line in text.splitlines()]
-        lines = [line for line in lines if line]
-        return "\n".join(lines)
+        return "\n".join(line for line in lines if line)
 
     @staticmethod
     def _question_start(line: str) -> Optional[Tuple[str, str]]:
         match = QUESTION_START_RE.match(line)
         if not match:
             return None
-        return match.group(1), match.group(2).strip()
+        # Reject bare section-like numbers unless they are followed by a
+        # conventional delimiter. A bare number is accepted only as a question
+        # boundary when the regex captured no suffix and can be followed by text
+        # on the next line.
+        number, text = match.group(1), (match.group(2) or "").strip()
+        if not text and not re.search(r"\d\s*[\.)\-:]\s*$", line):
+            return None
+        return number, text
 
     @staticmethod
     def _extract_options(lines: Sequence[str]) -> Tuple[List[str], List[str]]:
@@ -81,9 +90,28 @@ class PDFAdapter:
         matches = MARKS_RE.findall(text.strip())
         return float(matches[-1]) if matches else None
 
+    @staticmethod
+    def _page_assets(page: fitz.Page, page_number: int) -> List[Dict[str, Any]]:
+        assets: List[Dict[str, Any]] = []
+        for image in page.get_images(full=True):
+            xref = image[0]
+            width = image[2]
+            height = image[3]
+            assets.append(
+                {
+                    "asset_type": "image",
+                    "page_number": page_number,
+                    "xref": xref,
+                    "width": width,
+                    "height": height,
+                    "source": "pdf_embedded_image",
+                }
+            )
+        return assets
+
     def _parse_questions(
         self,
-        pages: Sequence[Tuple[int, str]],
+        pages: Sequence[Tuple[int, str, List[Dict[str, Any]]]],
     ) -> List[RawQuestion]:
         questions: List[RawQuestion] = []
         current: Optional[Dict[str, Any]] = None
@@ -94,7 +122,6 @@ class PDFAdapter:
             if not current:
                 return
             body_lines = list(current["lines"])
-            full_text = "\n".join(body_lines).strip()
             options, remaining = self._extract_options(body_lines)
             full_text = "\n".join(remaining).strip()
             marks = self._extract_marks(full_text)
@@ -105,11 +132,10 @@ class PDFAdapter:
             page_end = current["page_end"]
             question_number = current["number"]
             raw_id = f"{self.source.source_id}-Q{sequence:04d}"
-            source_reference = f"pages {page_start}-{page_end}" if page_end != page_start else f"page {page_start}"
+            source_reference = (
+                f"pages {page_start}-{page_end}" if page_end != page_start else f"page {page_start}"
+            )
 
-            # A conservative confidence score: numbered boundary + text layer +
-            # non-trivial content are strong signals, but no OCR/semantic checks
-            # are performed here.
             confidence = 0.65
             if len(full_text) >= 12:
                 confidence += 0.15
@@ -142,7 +168,7 @@ class PDFAdapter:
             )
             current = None
 
-        for page_number, page_text in pages:
+        for page_number, page_text, page_assets in pages:
             lines = self._clean_text(page_text).splitlines()
             for line in lines:
                 start = self._question_start(line)
@@ -156,11 +182,12 @@ class PDFAdapter:
                         "page_start": page_number,
                         "page_end": page_number,
                         "marks": None,
-                        "assets": [],
+                        "assets": list(page_assets),
                     }
                 elif current is not None:
                     current["lines"].append(line)
                     current["page_end"] = page_number
+                    current["assets"].extend(page_assets)
         flush()
         return questions
 
@@ -174,19 +201,24 @@ class PDFAdapter:
 
         document = fitz.open(path)
         try:
-            pages: List[Tuple[int, str]] = []
+            pages: List[Tuple[int, str, List[Dict[str, Any]]]] = []
             total_text_chars = 0
+            ocr_pages: List[int] = []
             for index, page in enumerate(document, 1):
                 text = page.get_text("text") or ""
-                total_text_chars += len(text.strip())
-                pages.append((index, text))
+                cleaned = text.strip()
+                total_text_chars += len(cleaned)
+                if not cleaned:
+                    ocr_pages.append(index)
+                pages.append((index, text, self._page_assets(page, index)))
 
             self.source.metadata.update(
                 {
                     "page_count": len(document),
                     "text_char_count": total_text_chars,
                     "extraction_method": "pymupdf_text",
-                    "ocr_required": total_text_chars == 0,
+                    "ocr_required": bool(ocr_pages),
+                    "ocr_pages": ocr_pages,
                 }
             )
             if total_text_chars == 0:
