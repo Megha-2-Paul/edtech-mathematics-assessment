@@ -13,7 +13,7 @@
     <header class="site-header">
         <div class="container">
             <div class="header-content">
-                <a class="brand" href="{{ url_for('test_listing') if 'test_listing' in url_for.__globals__.get('current_app', {}).view_functions else '#' }}">
+                <a class="brand" href="{{ url_for('test_listing') }}" aria-label="Improvia home">
                     <span class="brand-mark" aria-hidden="true"></span>
                     <span>
                         <span class="brand-name">Improvia</span>
