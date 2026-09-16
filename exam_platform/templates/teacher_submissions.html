@@ -1,38 +1,38 @@
 {% extends "base.html" %}
 {% block title %}Submissions - Improvia{% endblock %}
-
 {% block content %}
-<div class="page-title-row">
+<div class="teacher-hero teacher-hero-row">
     <div>
         <span class="badge badge-blue">Evaluation workspace</span>
-        <h1 style="margin-top:10px;">{% if selected_test %}{{ selected_test.title }}{% else %}Student Submissions{% endif %}</h1>
-        <p>{% if selected_test %}{{ selected_test.test_id }} · Review submitted attempts for this test.{% else %}Review submitted tests and open an attempt for marking.{% endif %}</p>
+        <h1>{% if selected_test %}{{ selected_test.title }}{% else %}Student Submissions{% endif %}</h1>
+        <p>{% if selected_test %}{{ selected_test.test_id }} · Review submitted attempts and complete their evaluation.{% else %}Review submitted assessments and open an attempt for marking.{% endif %}</p>
     </div>
     {% if selected_test_id %}<a class="btn btn-secondary" href="{{ url_for('evaluation.submissions') }}">All Submissions</a>{% endif %}
 </div>
 
-<div class="card table-wrap">
+<div class="card evaluation-guide">
+    <div><span class="badge badge-coral">Teacher workflow</span><strong>Submission → Evaluation → Diagnosis → Student report</strong><p class="muted">Open a submitted attempt to award marks, code errors and add concise feedback.</p></div>
+</div>
+
+<div class="card table-wrap teacher-table-card">
 {% if submissions %}
-<table>
-    <thead><tr><th>Student</th><th>Test</th><th>Submitted</th><th>Status</th><th>Score</th><th>Action</th></tr></thead>
+<table class="teacher-table">
+    <thead><tr><th>Student</th><th>Assessment</th><th>Submitted</th><th>Status</th><th>Score</th><th>Action</th></tr></thead>
     <tbody>
     {% for s in submissions %}
         <tr>
             <td><strong>{{ s.student_name }}</strong><br><span class="small">{{ s.student_id }}</span></td>
             <td><strong>{{ s.title }}</strong><br><span class="small">{{ s.test_id }}</span></td>
             <td class="small">{{ s.submitted_at or '-' }}</td>
-            <td>{% if s.status == 'evaluated' %}<span class="badge badge-success">Evaluated</span>{% else %}<span class="badge badge-warning">{{ s.status }}</span>{% endif %}</td>
-            <td><strong>{{ s.score if s.score is not none else '-' }}</strong>{% if s.percentage is not none %}<span class="small"> · {{ s.percentage }}%</span>{% endif %}</td>
-            <td><a class="btn btn-accent" href="{{ url_for('evaluation.evaluate', attempt_id=s.attempt_id) }}">Evaluate →</a></td>
+            <td>{% if s.status == 'evaluated' %}<span class="badge badge-success">Evaluated</span>{% else %}<span class="badge badge-warning">Needs evaluation</span>{% endif %}</td>
+            <td><strong>{{ s.score if s.score is not none else '—' }}</strong>{% if s.percentage is not none %}<span class="small"> · {{ s.percentage }}%</span>{% endif %}</td>
+            <td><a class="btn btn-accent" href="{{ url_for('evaluation.evaluate', attempt_id=s.attempt_id) }}">{% if s.score is not none %}Review{% else %}Evaluate{% endif %} →</a></td>
         </tr>
     {% endfor %}
     </tbody>
 </table>
 {% else %}
-<div class="empty-state">
-    <h3>No submitted attempts yet</h3>
-    <p>{% if selected_test %}No students have submitted this test yet.{% else %}Submitted attempts will appear here when students complete an assessment.{% endif %}</p>
-</div>
+<div class="empty-state"><div class="empty-icon">✓</div><h3>No submitted attempts yet</h3><p>{% if selected_test %}No students have submitted this assessment yet.{% else %}Submitted attempts will appear here when students complete an assessment.{% endif %}</p></div>
 {% endif %}
 </div>
 
