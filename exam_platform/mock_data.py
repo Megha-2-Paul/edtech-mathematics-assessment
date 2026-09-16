@@ -20,6 +20,6 @@ def load_mock_data() -> None:
     ]
     for question in questions:
         storage.create_question(question)
-    test = Test("TEST001", "Class 10 Mathematics — Interface Demo", "Mathematics", 10, 45, sum(q.marks for q in questions), [q.question_id for q in questions], "active")
+    test = Test("TEST001", "Class 10 Mathematics — Interface Demo", "Mathematics", 10, 45, sum(q.marks for q in questions), [q.question_id for q in questions], "active", None, None, "weekly", "optional")
     storage.create_test(test)
     storage.create_student(Student("STU001", "Demo Student", "student@example.com", "9876543210"))
