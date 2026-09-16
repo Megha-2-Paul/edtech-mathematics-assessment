@@ -15,7 +15,8 @@
 .section-heading p { margin-bottom: 0; }
 .teacher-action-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; }
 .teacher-action-card { min-height: 82px; display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--improvia-border); border-radius: 12px; background: #fff; color: var(--improvia-text); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
-.teacher-action-card:hover { color: var(--improvia-navy); transform: translateY(-2px); box-shadow: var(--improvia-shadow-hover); border-color: #d3dfe9; }
+.teacher-action-card:hover { color: var(--improvia-navy); transform: translateY(-2px); box-shadow: var(--improvia-shadow); border-color: #d3dfe9; }
+.teacher-action-card:focus-visible { outline: 3px solid rgba(143,189,219,.45); outline-offset: 2px; }
 .teacher-action-card .action-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: var(--improvia-light-blue); color: var(--improvia-navy); font-size: .76rem; font-weight: 800; }
 .teacher-action-card.action-accent .action-icon { background: var(--improvia-blush); color: #b94d58; }
 .teacher-action-card strong, .teacher-action-card small { display: block; }
@@ -88,6 +89,21 @@
 .evaluation-save-bar > div { display: flex; gap: 8px; }
 .evaluation-save-bar .btn { width: auto; }
 
+/* B5 — final student confirmation polish */
+.submission-page { max-width: 720px; margin: 40px auto; }
+.submission-card { padding: 48px 28px; text-align: center; }
+.submission-icon { width: 70px; height: 70px; margin: 0 auto 22px; border-radius: 50%; background: #e4f5f2; color: var(--improvia-success); display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 800; }
+.submission-card h1 { margin: 14px 0 8px; }
+.submission-lead { font-size: 1rem; }
+.submission-summary { margin: 28px 0 18px; padding: 16px 18px; text-align: left; border: 1px solid var(--improvia-border); border-radius: 11px; background: linear-gradient(135deg, #f7fbfd, #fff8f8); }
+.submission-summary strong { color: var(--improvia-navy); font-size: 1.05rem; }
+.submission-summary p { margin: 5px 0 0; }
+.submission-next { padding: 15px 17px; text-align: left; border-left: 4px solid var(--improvia-sky); border-radius: 9px; background: #f7fbfd; }
+.submission-next strong { color: var(--improvia-navy); }
+.submission-next p { margin: 4px 0 0; }
+.submission-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
+.submission-actions .btn { width: auto; }
+
 /* Test management */
 .test-management-list { display: grid; gap: 12px; }
 .teacher-test-card { margin-bottom: 0; }
@@ -120,4 +136,8 @@
     .evaluation-save-bar .btn { width: 100%; }
     .evaluation-question-header, .teacher-test-top { align-items: flex-start; flex-direction: column; }
     .teacher-test-actions .btn { width: 100%; }
+    .submission-page { margin: 20px auto; }
+    .submission-card { padding: 34px 20px; }
+    .submission-actions { flex-direction: column; }
+    .submission-actions .btn { width: 100%; }
 }
