@@ -1,7 +1,7 @@
 """Orchestration for source-agnostic question ingestion."""
 
 import re
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional
 
 from .models import (
     IngestionCandidate,
@@ -77,7 +77,8 @@ class QuestionIngestionPipeline:
 
     @staticmethod
     def normalize(raw: RawQuestion, source: SourceDocument) -> NormalizedQuestion:
-        metadata = dict(raw.metadata)
+        metadata = dict(source.metadata)
+        metadata.update(raw.metadata)
         question_type = str(metadata.get("question_type") or "saq").lower()
         answer_mode = str(
             metadata.get(
