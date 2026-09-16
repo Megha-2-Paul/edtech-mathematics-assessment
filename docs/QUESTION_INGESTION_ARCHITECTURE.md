@@ -32,7 +32,7 @@ Test Builder
 
 ## Supported source contract
 
-The ingestion layer currently defines these source types:
+The ingestion layer defines these source types:
 
 - `manual`
 - `pdf`
@@ -42,7 +42,7 @@ The ingestion layer currently defines these source types:
 - `partner`
 - `original`
 
-Only the manual adapter is implemented in Stage 1. Future adapters must emit the same `RawQuestion` contract rather than writing directly to the production question bank.
+Stage 1 implemented the manual adapter. Stage 2 adds the PDF adapter. Future adapters must emit the same `RawQuestion` contract rather than writing directly to the production question bank.
 
 ## Internal stages
 
@@ -52,7 +52,7 @@ Describes the source itself: source ID, type, name, URL/file path, year, rights 
 
 ### 2. RawQuestion
 
-Represents extractor output before curriculum or production metadata is applied. It may contain raw text, options, answer, marks, assets, source reference, and extraction confidence.
+Represents extractor output before curriculum or production metadata is applied. It may contain raw text, options, answer, marks, assets, source reference, extraction confidence, and extraction metadata.
 
 ### 3. NormalizedQuestion
 
@@ -66,11 +66,55 @@ Curriculum validation and answer verification remain human/review responsibiliti
 
 ### 5. Duplicate detection
 
-Stage 1 performs deterministic fingerprinting using normalized question text, choices, answer, marks, board, and class. Semantic similarity can be added later without changing the adapter contract.
+The pipeline performs deterministic fingerprinting using normalized question text, choices, answer, marks, board, and class. Semantic similarity can be added later without changing the adapter contract.
 
 ### 6. Review
 
 A valid candidate is marked `review_required`; it is **not automatically published**. Duplicate and invalid candidates are kept out of the production bank.
+
+## Stage 2 — PDF adapter
+
+`exam_platform/ingestion/adapters/pdf.py` uses **PyMuPDF** to read the PDF text layer and produce `RawQuestion` objects.
+
+The current extractor:
+
+- accepts a local `.pdf` file through `SourceDocument.file_path`
+- reads each page independently
+- detects common numbered question boundaries such as `1.`, `2)`, `Q3.` and `Question 4:`
+- preserves page start/end references
+- detects simple `(A) ... (D) ...` / `A. ... D. ...` option lines
+- detects simple trailing marks such as `[2 marks]`, `(3 marks)`, or `[1 m]`
+- records extraction method and a conservative extraction confidence
+- records whether the PDF has a text layer
+- flags image-only PDFs as `ocr_required` rather than attempting OCR
+- always sends extracted candidates through the existing normalization/validation/review pipeline
+
+This is deliberately a **text-layer extractor, not an OCR or AI parser**. Real mathematics PDFs often contain equations, multi-column layouts, diagrams, tables, headers/footers, and unusual numbering. Those cases must remain reviewable rather than being silently published.
+
+### Example
+
+```python
+from exam_platform.ingestion.adapters.pdf import extract_pdf_questions
+
+source, raw_questions = extract_pdf_questions(
+    "sample-paper.pdf",
+    source_id="CBSE-2026-SAMPLE",
+    source_year=2026,
+    rights_status="review_required",
+)
+```
+
+Then feed `raw_questions` to `QuestionIngestionPipeline.prepare(...)` after applying known board/class/chapter metadata. The PDF adapter does not guess curriculum classification.
+
+## Assets
+
+Stage 2 records page provenance and exposes the `raw_assets` channel for future PDF asset extraction. It does **not** commit extracted binary images into the repository and does not attempt OCR of image-only pages.
+
+This keeps the repository clean and allows a later storage layer to place question diagrams/images in object storage or the existing `question_assets` workflow after human review.
+
+## Scanned PDFs
+
+If a PDF has no usable text layer, the adapter returns no questions and sets `SourceDocument.metadata["ocr_required"] = True`. This is intentional. OCR should be a separate adapter/service so that OCR uncertainty can be measured independently from normal PDF text extraction.
 
 ## Publication boundary
 
@@ -104,7 +148,6 @@ Future implementation can add:
 
 ```text
 exam_platform/ingestion/adapters/
-    pdf.py
     url.py
     image.py
     api.py
@@ -128,16 +171,20 @@ None of these adapters should need to modify the evaluation, diagnosis, reportin
 
 ### Stage 2
 
-- PDF ingestion
-- question extraction
-- asset extraction
-- candidate review workflow
+- text-layer PDF ingestion
+- numbered question extraction
+- simple MCQ option extraction
+- simple marks extraction
+- page-level provenance
+- scanned-PDF detection / OCR handoff flag
+- ingestion pipeline integration tests
 
 ### Stage 3
 
 - URL/HTML ingestion
 - image/OCR ingestion
 - improved duplicate detection
+- richer PDF layout handling and diagram extraction
 
 ### Future
 

@@ -1,9 +1,4 @@
-"""Source-agnostic question ingestion and review pipeline.
-
-The ingestion layer converts external content (manual entry today, PDF/URL/image/API
-sources later) into the same normalized question representation used by the core
-assessment platform.
-"""
+"""Source-agnostic question ingestion and review pipeline."""
 
 from .models import (
     IngestionStatus,
@@ -14,6 +9,7 @@ from .models import (
     ValidationResult,
 )
 from .pipeline import QuestionIngestionPipeline
+from .review import QuestionReviewService, ReviewDecision
 
 __all__ = [
     "IngestionStatus",
@@ -23,4 +19,6 @@ __all__ = [
     "SourceType",
     "ValidationResult",
     "QuestionIngestionPipeline",
+    "QuestionReviewService",
+    "ReviewDecision",
 ]
