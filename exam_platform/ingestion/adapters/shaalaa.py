@@ -50,9 +50,7 @@ class ShaalaaPageParser:
 
     @staticmethod
     def _clean_question_blocks(blocks: List[str]) -> Tuple[str, Optional[str], bool]:
-        """Combine question blocks and extract source metadata without treating the
-        Shaalaa topic index as question marks.
-        """
+        """Combine question blocks and extract source metadata."""
         question_parts: List[str] = []
         topic: Optional[str] = None
         contains_image = False
@@ -90,13 +88,14 @@ class ShaalaaPageParser:
         pending: List[str] = []
         sequence = 0
         current_topic: Optional[str] = None
+        in_question_list = False
 
         for index, block in enumerate(blocks):
             marker = SHAALAA_TOPIC_MARKER_RE.match(block)
             if marker:
                 text, chapter_from_block, contains_image = cls._clean_question_blocks(pending)
                 topic = chapter_from_block or current_topic or marker.group(2).strip()
-                if len(text) >= 8:
+                if len(text) >= 8 and in_question_list:
                     sequence += 1
                     questions.append(
                         RawQuestion(
@@ -126,9 +125,15 @@ class ShaalaaPageParser:
                 current_topic = marker.group(2).strip()
                 continue
 
-            # Navigation/footer text after the question list should not become a
-            # candidate. We only accumulate content until a topic marker appears.
-            if len(block.strip()) > 0:
+            # The rendered page exposes a standalone "Mathematics" heading just
+            # before the 20-question list. This narrow boundary marker prevents
+            # navigation/footer text from being folded into the first question.
+            if not in_question_list and block.strip().lower() == "mathematics":
+                in_question_list = True
+                pending = []
+                continue
+
+            if in_question_list and block.strip():
                 pending.append(block)
 
         return questions
