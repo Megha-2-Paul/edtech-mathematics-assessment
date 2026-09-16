@@ -1,42 +1,70 @@
 {% extends "base.html" %}
-{% block title %}Performance Report - {{ report.test_title }}{% endblock %}
+{% block title %}Performance Report - {{ report.test_title }} - Improvia{% endblock %}
 {% block content %}
-<div class="card">
-<h2>Mathematics Performance Report</h2>
-<p><strong>{{ report.student_name }}</strong> · Student ID: {{ report.student_id }}</p>
-<p>{{ report.test_title }} · Attempt: {{ report.attempt_id }}</p>
+<div class="page-title-row">
+    <div>
+        <span class="badge badge-coral">Personal performance report</span>
+        <h1 style="margin-top:10px;">Mathematics Performance Report</h1>
+        <p>{{ report.test_title }} · {{ report.student_name }} · Student ID: {{ report.student_id }}</p>
+    </div>
+</div>
+
 {% if awaiting %}
-<div class="notice"><strong>Awaiting teacher evaluation</strong><br>Your submission has been received. The detailed diagnosis will appear after evaluation.</div>
+<div class="card" style="text-align:center;padding:50px 24px;">
+    <div style="font-size:42px;margin-bottom:14px;">⏳</div>
+    <h2>Your report is being prepared</h2>
+    <p class="muted">Your submission has been received. The detailed diagnosis will appear after teacher evaluation.</p>
+</div>
 {% else %}
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0">
-<div class="notice"><strong>Score</strong><br>{{ report.diagnosis.score }} / {{ report.diagnosis.total_marks }}</div>
-<div class="notice"><strong>Percentage</strong><br>{{ report.diagnosis.percentage }}%</div>
-<div class="notice"><strong>Attempt rate</strong><br>{{ report.diagnosis.attempt_rate }}%</div>
-<div class="notice"><strong>Marks lost</strong><br>{{ report.diagnosis.marks_lost }}</div>
+<div class="grid-4" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+    <div class="stat-card"><div class="stat-label">Your score</div><div class="stat-value">{{ report.diagnosis.score }} / {{ report.diagnosis.total_marks }}</div></div>
+    <div class="stat-card"><div class="stat-label">Percentage</div><div class="stat-value">{{ report.diagnosis.percentage }}%</div></div>
+    <div class="stat-card"><div class="stat-label">Attempt rate</div><div class="stat-value">{{ report.diagnosis.attempt_rate }}%</div></div>
+    <div class="stat-card"><div class="stat-label">Marks lost</div><div class="stat-value" style="color:var(--improvia-coral);">{{ report.diagnosis.marks_lost }}</div></div>
 </div>
-<h3>Where marks were lost</h3>
-{% if report.diagnosis.error_counts %}
-<ul>{% for e in report.diagnosis.error_counts %}<li><strong>{{ e.label }}</strong> — {{ e.count }} occurrence(s)</li>{% endfor %}</ul>
-{% else %}<p>No teacher-coded errors were recorded.</p>{% endif %}
 
-<h3>Chapter performance</h3>
-<table style="width:100%;border-collapse:collapse"><tr><th style="text-align:left">Chapter</th><th>Marks</th><th>Performance</th></tr>
-{% for item in report.diagnosis.chapter_analysis %}<tr><td>{{ item.name }}</td><td style="text-align:center">{{ item.marks|round(1) }} / {{ item.max_marks|round(1) }}</td><td style="text-align:center">{{ item.percentage }}%</td></tr>{% endfor %}</table>
+<div class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+    <div class="card" style="background:linear-gradient(145deg,#fff,#f1faf8);">
+        <span class="badge badge-success">Strength</span>
+        <h3 style="margin-top:12px;">Strongest areas</h3>
+        {% if report.diagnosis.strengths %}<ul>{% for item in report.diagnosis.strengths %}<li>{{ item.name }} — <strong>{{ item.percentage }}%</strong></li>{% endfor %}</ul>{% else %}<p class="muted">No clear chapter strength crossed the current benchmark.</p>{% endif %}
+    </div>
+    <div class="card" style="background:linear-gradient(145deg,#fff,#fff5f5);">
+        <span class="badge badge-coral">Focus next</span>
+        <h3 style="margin-top:12px;">Priority weaknesses</h3>
+        {% if report.diagnosis.weaknesses %}<ul>{% for item in report.diagnosis.weaknesses %}<li>{{ item.name }} — <strong>{{ item.percentage }}%</strong></li>{% endfor %}</ul>{% else %}<p class="muted">No chapter fell below the current weakness benchmark.</p>{% endif %}
+    </div>
+    <div class="card" style="background:linear-gradient(145deg,#fff,#f3f9fc);">
+        <span class="badge badge-blue">Your patterns</span>
+        <h3 style="margin-top:12px;">Where marks were lost</h3>
+        {% if report.diagnosis.error_counts %}<ul>{% for e in report.diagnosis.error_counts %}<li>{{ e.label }} — <strong>{{ e.count }}</strong></li>{% endfor %}</ul>{% else %}<p class="muted">No teacher-coded errors were recorded.</p>{% endif %}
+    </div>
+</div>
 
-<h3>Strengths</h3>
-{% if report.diagnosis.strengths %}<ul>{% for item in report.diagnosis.strengths %}<li>{{ item.name }} — {{ item.percentage }}%</li>{% endfor %}</ul>{% else %}<p>No clear chapter strength crossed the current benchmark.</p>{% endif %}
+<div class="card">
+    <h2>Chapter analysis</h2>
+    <p class="muted">Your performance by chapter, based on the evaluated questions.</p>
+    <div class="table-wrap">
+    <table><thead><tr><th>Chapter</th><th>Marks</th><th>Performance</th></tr></thead><tbody>
+    {% for item in report.diagnosis.chapter_analysis %}<tr><td><strong>{{ item.name }}</strong></td><td>{{ item.marks|round(1) }} / {{ item.max_marks|round(1) }}</td><td><span class="badge {% if item.percentage >= 75 %}badge-success{% elif item.percentage < 50 %}badge-coral{% else %}badge-blue{% endif %}">{{ item.percentage }}%</span></td></tr>{% endfor %}
+    </tbody></table>
+    </div>
+</div>
 
-<h3>Priority weaknesses</h3>
-{% if report.diagnosis.weaknesses %}<ul>{% for item in report.diagnosis.weaknesses %}<li>{{ item.name }} — {{ item.percentage }}%</li>{% endfor %}</ul>{% else %}<p>No chapter fell below the current weakness benchmark.</p>{% endif %}
+<div class="card">
+    <h2>Progress</h2>
+    {% if report.diagnosis.previous_attempt_count %}
+        <p>Previous test score: <strong>{{ report.diagnosis.previous_score }}</strong> marks{% if report.diagnosis.score_change is not none %}. Change: <strong>{% if report.diagnosis.score_change >= 0 %}+{% endif %}{{ report.diagnosis.score_change }}</strong> marks.{% endif %}</p>
+        {% if report.diagnosis.recurring_errors %}<div class="notice notice-warning"><strong>Recurring error patterns:</strong> {% for e in report.diagnosis.recurring_errors %}{{ e.label }}{% if not loop.last %}, {% endif %}{% endfor %}</div>{% endif %}
+    {% else %}
+        <p class="muted">This is your first recorded test. Future reports will show improvement against this baseline.</p>
+    {% endif %}
+</div>
 
-{% if report.diagnosis.previous_attempt_count %}
-<h3>Progress</h3>
-<p>Previous test: <strong>{{ report.diagnosis.previous_score }}</strong> marks{% if report.diagnosis.score_change is not none %}. Change: <strong>{% if report.diagnosis.score_change >= 0 %}+{% endif %}{{ report.diagnosis.score_change }}</strong> marks.{% endif %}</p>
-{% if report.diagnosis.recurring_errors %}<p><strong>Recurring error patterns:</strong> {% for e in report.diagnosis.recurring_errors %}{{ e.label }}{% if not loop.last %}, {% endif %}{% endfor %}</p>{% endif %}
-{% else %}<h3>Progress</h3><p>This is the first recorded test, so future reports will show improvement against this baseline.</p>{% endif %}
-
-<h3>What to work on next</h3>
-<ol>{% for item in report.recommendations %}<li style="margin-bottom:10px"><strong>{{ item.title }}</strong><br>{{ item.action }}</li>{% endfor %}</ol>
+<div class="card" style="background:linear-gradient(135deg,#fff7f7,#f2f9fc);">
+    <span class="badge badge-coral">Recommended focus</span>
+    <h2 style="margin-top:10px;">What to work on next</h2>
+    <ol style="padding-left:22px;line-height:1.9;">{% for item in report.recommendations %}<li style="margin-bottom:10px;"><strong>{{ item.title }}</strong><br><span class="muted">{{ item.action }}</span></li>{% endfor %}</ol>
+</div>
 {% endif %}
-</div>
 {% endblock %}
