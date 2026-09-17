@@ -7,13 +7,15 @@ handwritten answer images when CLOUDINARY_URL is configured.
 
 import hmac
 import os
+from datetime import datetime
 from pathlib import Path
+import uuid
 
 from flask import Response, jsonify, request, send_from_directory
-from werkzeug.utils import secure_filename
 from PIL import Image
+from werkzeug.utils import secure_filename
 
-from exam_platform.app import app
+from exam_platform.app import app, ensure_attempt_access
 from exam_platform.db_source import storage
 from exam_platform.media import delete_image as delete_stored_image
 from exam_platform.media import media_url, store_image
@@ -94,24 +96,6 @@ def hosted_uploaded_file(filename):
 
 def hosted_upload_answer_image(attempt_id):
     """Store handwritten answers using persistent cloud media when configured."""
-    from flask import current_app
-    import os as _os
-    import uuid
-    from datetime import datetime
-
-    attempt = storage.get_attempt(attempt_id)
-    if not attempt:
-        return jsonify({"error": "Attempt not found"}), 404
-    if attempt.student_id != request.cookies.get("__improvia_student_id_placeholder__"):
-        # The real session authorization is performed by the original endpoint's
-        # helper below; this branch is intentionally replaced immediately after
-        # the session-aware implementation is defined.
-        pass
-
-    # Delegate session/timer authorization to the original endpoint helper by
-    # importing it from the application module.
-    from exam_platform.app import ensure_attempt_access
-
     attempt, error = ensure_attempt_access(attempt_id)
     if error:
         return error
@@ -136,10 +120,10 @@ def hosted_upload_answer_image(attempt_id):
     if "." not in file.filename or file.filename.rsplit(".", 1)[1].lower() not in allowed_extensions:
         return jsonify({"error": "Only JPG/JPEG/PNG allowed"}), 400
 
-    file.seek(0, _os.SEEK_END)
+    file.seek(0, os.SEEK_END)
     size = file.tell()
     file.seek(0)
-    if size > current_app.config["MAX_IMAGE_SIZE"]:
+    if size > app.config["MAX_IMAGE_SIZE"]:
         return jsonify({"error": "Image exceeds the 10 MB per-file limit"}), 413
 
     try:
@@ -179,8 +163,6 @@ def hosted_upload_answer_image(attempt_id):
 
 
 def hosted_get_question_images(attempt_id, question_id):
-    from exam_platform.app import ensure_attempt_access
-
     attempt, error = ensure_attempt_access(attempt_id)
     if error:
         return error
@@ -200,8 +182,6 @@ def hosted_get_question_images(attempt_id, question_id):
 
 
 def hosted_delete_image(attempt_id, image_id):
-    from exam_platform.app import ensure_attempt_access
-
     attempt, error = ensure_attempt_access(attempt_id)
     if error:
         return error
