@@ -21,7 +21,7 @@ SCHEMA = [
 """CREATE TABLE IF NOT EXISTS student_improvement_areas (id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(32) NOT NULL,area VARCHAR(150) NOT NULL,priority INT NOT NULL DEFAULT 1,recorded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,INDEX idx_area_student(student_id,area)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS plans (plan_id VARCHAR(32) PRIMARY KEY,name VARCHAR(100) NOT NULL,description TEXT,amount_paise INT NOT NULL DEFAULT 0,billing_interval VARCHAR(30) NOT NULL DEFAULT 'one_time',active BOOLEAN NOT NULL DEFAULT TRUE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS subscriptions (subscription_id VARCHAR(40) PRIMARY KEY,student_id VARCHAR(32) NOT NULL,plan_id VARCHAR(32) NOT NULL,start_date DATE NOT NULL,end_date DATE,status VARCHAR(30) NOT NULL,FOREIGN KEY(student_id) REFERENCES students(student_id),FOREIGN KEY(plan_id) REFERENCES plans(plan_id),INDEX idx_subscription_student(student_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
-"""CREATE TABLE IF NOT EXISTS payments (payment_id VARCHAR(40) PRIMARY KEY,student_id VARCHAR(32) NOT NULL,subscription_id VARCHAR(40),billing_period VARCHAR(20),amount_paise INT NOT NULL,currency VARCHAR(10) NOT NULL DEFAULT 'INR',payment_date DATETIME,payment_method VARCHAR(40),transaction_reference VARCHAR(150),status VARCHAR(30) NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(student_id) REFERENCES students(student_id),FOREIGN KEY(subscription_id) REFERENCES subscriptions(subscription_id),INDEX idx_payment_student_period(student_id,billing_period)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS payments (payment_id VARCHAR(40) PRIMARY KEY,student_id VARCHAR(32) NOT NULL,subscription_id VARCHAR(40),billing_period VARCHAR(20),amount_paise INT NOT NULL,currency VARCHAR(10) NOT NULL DEFAULT 'INR',payment_date DATETIME,payment_method VARCHAR(40),transaction_reference VARCHAR(150),status VARCHAR(30) NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_payment_student_period(student_id,billing_period),FOREIGN KEY(student_id) REFERENCES students(student_id),FOREIGN KEY(subscription_id) REFERENCES subscriptions(subscription_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS tests (test_id VARCHAR(40) PRIMARY KEY,title VARCHAR(255) NOT NULL,subject VARCHAR(100) NOT NULL,class_level INT NOT NULL,board VARCHAR(30),test_date DATE,duration_minutes INT NOT NULL,total_marks DECIMAL(10,2) NOT NULL,test_type VARCHAR(50) NOT NULL DEFAULT 'weekly',status VARCHAR(30) NOT NULL,questions_json LONGTEXT NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS questions (question_id VARCHAR(40) PRIMARY KEY,subject VARCHAR(100) NOT NULL DEFAULT 'Mathematics',board VARCHAR(30),class_level INT,chapter VARCHAR(150),topic VARCHAR(150),subtopic VARCHAR(150),question_type VARCHAR(40) NOT NULL,answer_mode VARCHAR(80) NOT NULL,difficulty VARCHAR(50),competency VARCHAR(100),question_content_json LONGTEXT NOT NULL,answer_choices_json LONGTEXT NOT NULL,correct_answer VARCHAR(255),marks DECIMAL(10,2) NOT NULL,handwritten_upload_mode VARCHAR(20) NOT NULL DEFAULT 'none',source VARCHAR(255),source_year INT,status VARCHAR(20) NOT NULL DEFAULT 'active',created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS question_assets (asset_id VARCHAR(50) PRIMARY KEY,question_id VARCHAR(40) NOT NULL,asset_type VARCHAR(30) NOT NULL,original_filename VARCHAR(255),file_path TEXT NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(question_id) REFERENCES questions(question_id) ON DELETE CASCADE,INDEX idx_question_assets(question_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
@@ -36,43 +36,11 @@ SCHEMA = [
 """CREATE TABLE IF NOT EXISTS question_history (student_id VARCHAR(32) NOT NULL,question_id VARCHAR(40) NOT NULL,attempt_count INT NOT NULL DEFAULT 0,correct_count INT NOT NULL DEFAULT 0,last_attempted_at DATETIME,last_correct_at DATETIME,last_marks_awarded DECIMAL(10,2),last_error_summary TEXT,PRIMARY KEY(student_id,question_id),FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,INDEX idx_history_student(student_id,last_attempted_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 ]
 
-SUBJECTS = {
-    "maths": ("Mathematics",),
-    "physics": ("Physics",),
-    "chemistry": ("Chemistry",),
-    "computer": ("Computer",),
-}
-COMPETENCIES = [
-    ("conceptual_understanding", "Conceptual Understanding"),
-    ("procedural_fluency", "Procedural Fluency"),
-    ("application", "Application"),
-    ("problem_solving", "Problem Solving"),
-    ("reasoning", "Reasoning"),
-    ("mathematical_communication", "Mathematical Communication"),
-    ("interpretation", "Interpretation"),
-    ("analysis", "Analysis"),
-    ("case_based_application", "Case-based / Situation-based Application"),
-]
-
-# Board-specific Mathematics chapter seeds. These are starter metadata for teacher
-# dropdowns and ingestion validation; they are intentionally kept separate by board.
-CBSE_MATH_CHAPTERS = {
-    10: ["Real Numbers", "Polynomials", "Pair of Linear Equations in Two Variables", "Quadratic Equations", "Arithmetic Progressions", "Triangles", "Coordinate Geometry", "Introduction to Trigonometry", "Some Applications of Trigonometry", "Circles", "Areas Related to Circles", "Surface Areas and Volumes", "Statistics", "Probability"],
-    11: ["Sets", "Relations and Functions", "Trigonometric Functions", "Principle of Mathematical Induction", "Complex Numbers and Quadratic Equations", "Linear Inequalities", "Permutations and Combinations", "Binomial Theorem", "Sequences and Series", "Straight Lines", "Conic Sections", "Introduction to Three-dimensional Geometry", "Limits and Derivatives", "Statistics", "Probability"],
-    12: ["Relations and Functions", "Inverse Trigonometric Functions", "Matrices", "Determinants", "Continuity and Differentiability", "Applications of Derivatives", "Integrals", "Applications of Integrals", "Differential Equations", "Vector Algebra", "Three-dimensional Geometry", "Linear Programming", "Probability"],
-}
-
-# ICSE Class X syllabus is maintained separately from CBSE. Classes XI-XII are
-# formally ISC rather than ICSE and should receive a separate ISC curriculum when
-# higher-secondary curriculum data is added.
-ICSE_MATH_CHAPTERS = {
-    10: ["Commercial Mathematics", "Algebra", "Geometry", "Mensuration", "Trigonometry", "Statistics", "Probability"],
-}
-
-BOARD_MATH_CHAPTERS = {
-    "CBSE": CBSE_MATH_CHAPTERS,
-    "ICSE": ICSE_MATH_CHAPTERS,
-}
+SUBJECTS = {"maths": ("Mathematics",), "physics": ("Physics",), "chemistry": ("Chemistry",), "computer": ("Computer",)}
+COMPETENCIES = [("conceptual_understanding", "Conceptual Understanding"), ("procedural_fluency", "Procedural Fluency"), ("application", "Application"), ("problem_solving", "Problem Solving"), ("reasoning", "Reasoning"), ("mathematical_communication", "Mathematical Communication"), ("interpretation", "Interpretation"), ("analysis", "Analysis"), ("case_based_application", "Case-based / Situation-based Application")]
+CBSE_MATH_CHAPTERS = {10: ["Real Numbers", "Polynomials", "Pair of Linear Equations in Two Variables", "Quadratic Equations", "Arithmetic Progressions", "Triangles", "Coordinate Geometry", "Introduction to Trigonometry", "Some Applications of Trigonometry", "Circles", "Areas Related to Circles", "Surface Areas and Volumes", "Statistics", "Probability"], 11: ["Sets", "Relations and Functions", "Trigonometric Functions", "Principle of Mathematical Induction", "Complex Numbers and Quadratic Equations", "Linear Inequalities", "Permutations and Combinations", "Binomial Theorem", "Sequences and Series", "Straight Lines", "Conic Sections", "Introduction to Three-dimensional Geometry", "Limits and Derivatives", "Statistics", "Probability"], 12: ["Relations and Functions", "Inverse Trigonometric Functions", "Matrices", "Determinants", "Continuity and Differentiability", "Applications of Derivatives", "Integrals", "Applications of Integrals", "Differential Equations", "Vector Algebra", "Three-dimensional Geometry", "Linear Programming", "Probability"]}
+ICSE_MATH_CHAPTERS = {10: ["Commercial Mathematics", "Algebra", "Geometry", "Mensuration", "Trigonometry", "Statistics", "Probability"]}
+BOARD_MATH_CHAPTERS = {"CBSE": CBSE_MATH_CHAPTERS, "ICSE": ICSE_MATH_CHAPTERS}
 
 
 def initialize_database():
@@ -98,8 +66,12 @@ def initialize_database():
                     existing_id = connection.execute(text("SELECT chapter_id FROM chapters WHERE board=:board AND class_level=:class AND subject_id=:subject AND chapter_name=:name"), {"board": board, "class": class_level, "subject": "maths", "name": chapter}).scalar_one_or_none()
                     if existing_id:
                         connection.execute(text("UPDATE chapters SET sort_order=:order, active=1 WHERE chapter_id=:id"), {"id": existing_id, "order": order})
-                    else:
-                        connection.execute(text("INSERT INTO chapters(chapter_id,board,class_level,subject_id,chapter_name,sort_order,active) VALUES(:id,:board,:class,:subject,:name,:order,1)"), {"id": f"{board.lower()}_maths_{class_level}_{order}", "board": board, "class": class_level, "subject": "maths", "name": chapter, "order": order})
+                        continue
+                    desired_id = f"{board.lower()}_maths_{class_level}_{order}"
+                    id_exists = connection.execute(text("SELECT chapter_id FROM chapters WHERE chapter_id=:id"), {"id": desired_id}).scalar_one_or_none()
+                    if id_exists:
+                        desired_id = f"{board.lower()}_maths_{class_level}_{order}_{chapter.lower().replace(' ', '_')[:30]}"
+                    connection.execute(text("INSERT INTO chapters(chapter_id,board,class_level,subject_id,chapter_name,sort_order,active) VALUES(:id,:board,:class,:subject,:name,:order,1)"), {"id": desired_id, "board": board, "class": class_level, "subject": "maths", "name": chapter, "order": order})
         for subject_id, name in (("maths", "Mathematics"), ("physics", "Physics"), ("chemistry", "Chemistry"), ("computer", "Computer")):
             for order, (cid, cname) in enumerate(COMPETENCIES, 1):
                 connection.execute(text("INSERT INTO competencies(competency_id,subject_id,name,description,sort_order,active) VALUES(:id,:subject,:name,:description,:order,1) ON DUPLICATE KEY UPDATE name=VALUES(name),description=VALUES(description),sort_order=VALUES(sort_order),active=1"), {"id": f"{subject_id}_{cid}", "subject": subject_id, "name": cname, "description": "Controlled assessment competency.", "order": order})
