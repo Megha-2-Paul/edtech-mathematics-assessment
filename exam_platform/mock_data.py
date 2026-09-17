@@ -1,10 +1,35 @@
 import os
-from .models import Test, Question, ContentBlock, Student
+from .models import Test, Question, ContentBlock, Student, AttemptStatus
 from .storage import storage
+
+
+def _enable_testing_retake_mode() -> None:
+    """Allow repeated test runs during local testing without changing production behavior."""
+    if os.getenv("TESTING_MODE", "0") != "1":
+        return
+
+    original_get_attempt = storage.get_student_test_attempt
+
+    def get_test_attempt_for_testing(student_id, test_id):
+        attempt = original_get_attempt(student_id, test_id)
+
+        # Keep an active attempt intact so refresh/resume preserves its timer.
+        # Ignore completed/expired attempts so the same browser can start again.
+        if attempt and attempt.status in {
+            AttemptStatus.SUBMITTED.value,
+            AttemptStatus.EXPIRED.value,
+        }:
+            return None
+
+        return attempt
+
+    storage.get_student_test_attempt = get_test_attempt_for_testing
 
 
 def load_mock_data() -> None:
     """Load demo data only when explicitly enabled for development."""
+    _enable_testing_retake_mode()
+
     if os.getenv("LOAD_DEMO_DATA", "0") != "1":
         return
     questions = [
