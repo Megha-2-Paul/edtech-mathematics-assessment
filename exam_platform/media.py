@@ -2,7 +2,6 @@
 
 import os
 from pathlib import Path
-from urllib.parse import urlparse
 
 CLOUDINARY_ENABLED = bool(os.getenv("CLOUDINARY_URL"))
 
