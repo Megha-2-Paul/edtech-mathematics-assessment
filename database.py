@@ -95,7 +95,11 @@ def initialize_database():
         for board, curriculum in BOARD_MATH_CHAPTERS.items():
             for class_level, chapters in curriculum.items():
                 for order, chapter in enumerate(chapters, 1):
-                    connection.execute(text("INSERT INTO chapters(chapter_id,board,class_level,subject_id,chapter_name,sort_order,active) VALUES(:id,:board,:class,:subject,:name,:order,1) ON DUPLICATE KEY UPDATE chapter_name=VALUES(chapter_name),sort_order=VALUES(sort_order),active=1"), {"id": f"{board.lower()}_maths_{class_level}_{order}", "board": board, "class": class_level, "subject": "maths", "name": chapter, "order": order})
+                    existing_id = connection.execute(text("SELECT chapter_id FROM chapters WHERE board=:board AND class_level=:class AND subject_id=:subject AND chapter_name=:name"), {"board": board, "class": class_level, "subject": "maths", "name": chapter}).scalar_one_or_none()
+                    if existing_id:
+                        connection.execute(text("UPDATE chapters SET sort_order=:order, active=1 WHERE chapter_id=:id"), {"id": existing_id, "order": order})
+                    else:
+                        connection.execute(text("INSERT INTO chapters(chapter_id,board,class_level,subject_id,chapter_name,sort_order,active) VALUES(:id,:board,:class,:subject,:name,:order,1)"), {"id": f"{board.lower()}_maths_{class_level}_{order}", "board": board, "class": class_level, "subject": "maths", "name": chapter, "order": order})
         for subject_id, name in (("maths", "Mathematics"), ("physics", "Physics"), ("chemistry", "Chemistry"), ("computer", "Computer")):
             for order, (cid, cname) in enumerate(COMPETENCIES, 1):
                 connection.execute(text("INSERT INTO competencies(competency_id,subject_id,name,description,sort_order,active) VALUES(:id,:subject,:name,:description,:order,1) ON DUPLICATE KEY UPDATE name=VALUES(name),description=VALUES(description),sort_order=VALUES(sort_order),active=1"), {"id": f"{subject_id}_{cid}", "subject": subject_id, "name": cname, "description": "Controlled assessment competency.", "order": order})
