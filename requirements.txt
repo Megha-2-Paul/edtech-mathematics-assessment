@@ -6,3 +6,6 @@ PyMySQL==1.1.2
 python-dotenv==1.1.1
 pypdf==6.0.0
 PyMuPDF==1.26.4
+Pillow==11.3.0
+cloudinary==1.44.1
+gunicorn==23.0.0
