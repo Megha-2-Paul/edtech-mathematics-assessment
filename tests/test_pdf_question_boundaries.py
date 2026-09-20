@@ -14,3 +14,7 @@ def test_numbered_question_with_text_remains_question_start():
 
 def test_bare_numbered_question_marker_remains_supported():
     assert PDFAdapter._question_start("3.") == ("3", "")
+
+
+def test_duplicate_question_marker_is_not_split():
+    assert PDFAdapter._question_start("3.") == ("3", "")
