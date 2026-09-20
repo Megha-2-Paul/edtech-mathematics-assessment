@@ -10,7 +10,7 @@
   <div class="topbar"><div><h2>Review Q{{ values.source_question_number }}</h2><div class="meta">{{ filename }} · source page(s) {{ values.source_pages|join(', ') if values.source_pages else values.source_page }} · item {{ position }} of {{ total }} · <strong>{{ review.status }}</strong></div></div><div class="navlinks">{% if previous_url %}<a class="btn" href="{{ previous_url }}">← Previous</a>{% endif %}{% if next_url %}<a class="btn" href="{{ next_url }}">Next →</a>{% endif %}<a class="btn" href="{{ url_for('extraction_review.dashboard') }}">Inbox</a></div></div>
   <div class="workspace">
     <section class="panel">
-      {% if source_is_pdf %}
+      {% if source_is_pdf is not defined or source_is_pdf %}
       <h3>Original PDF source</h3><div class="source-caption">{{ source_pdf }}</div>
       {% if source_page_urls %}<div class="source-pages">{% for page in source_page_urls %}<div class="source-page-card"><h4>PDF page {{ page.number }}</h4><img class="source-img" src="{{ page.url }}" alt="Original source page {{ page.number }}"></div>{% endfor %}</div>{% endif %}
       {% else %}
