@@ -236,6 +236,46 @@ def _dashboard_view():
 _legacy_item_view = None
 
 
+def _json_only_item_view(item_id, path, data, source_question, review, values):
+    """Render a JSON-only review item without requiring a local source PDF."""
+    ids = []
+    for inbox_path in _legacy._extraction_files():
+        try:
+            inbox_data = _legacy._load_json(inbox_path)
+        except ValueError:
+            continue
+        ids += [f"{inbox_path.stem}:{i}" for i, x in enumerate(inbox_data["questions"]) if isinstance(x, dict)]
+    pos = ids.index(item_id) if item_id in ids else 0
+    pages = values.get("source_pages") or []
+    source_name = str(
+        data.get("source_name")
+        or (data.get("source") or {}).get("name") if isinstance(data.get("source"), dict) else ""
+        or data.get("name")
+        or values.get("source")
+        or path.name
+    )
+    return _LEGACY_RENDER_TEMPLATE(
+        "extraction_review_item.html",
+        item_id=item_id,
+        filename=path.name,
+        data=data,
+        question=source_question,
+        values=values,
+        review=review,
+        missing_inferred_fields=[],
+        stored_assets=[],
+        source_pdf=source_name,
+        source_is_pdf=False,
+        page_number=pages[0] if pages else None,
+        source_page_urls=[],
+        question_crop_url=None,
+        previous_url=url_for("extraction_review.item", item_id=ids[pos - 1]) if pos > 0 else None,
+        next_url=url_for("extraction_review.item", item_id=ids[pos + 1]) if pos + 1 < len(ids) else None,
+        position=pos + 1,
+        total=len(ids),
+    )
+
+
 def _asset_refresh_view(item_id):
     """Refresh approved visuals; OR children are refreshed against their own part."""
     try:
@@ -267,11 +307,16 @@ def _asset_refresh_view(item_id):
                         persist_source_visuals(_legacy._source_pdf(data, source_question), int(pages[0]), source_number, qid)
     except Exception:
         pass
-    rendered = _legacy_item_view(item_id)
+    path, data, source_question = _legacy._find_item(item_id)
+    review = _legacy._load_review(item_id)
+    values = _legacy._review_form_values(source_question, data, review)
+    source_pdf_name = str(data.get("source_pdf") or data.get("source_paper") or source_question.get("source_pdf") or "").strip()
+    source_pdf_path = _legacy.SOURCE_DIR / Path(source_pdf_name).name if source_pdf_name else None
+    if not source_pdf_path or not source_pdf_path.exists():
+        rendered = _json_only_item_view(item_id, path, data, source_question, review, values)
+    else:
+        rendered = _legacy_item_view(item_id)
     try:
-        _path, data, source_question = _legacy._find_item(item_id)
-        review = _legacy._load_review(item_id)
-        values = _legacy._review_form_values(source_question, data, review)
         rendered = _inject_student_preview(rendered, item_id, source_question, data, values, review)
     except Exception:
         pass
