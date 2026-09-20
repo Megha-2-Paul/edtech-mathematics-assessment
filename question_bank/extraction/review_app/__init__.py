@@ -247,9 +247,10 @@ def _json_only_item_view(item_id, path, data, source_question, review, values):
         ids += [f"{inbox_path.stem}:{i}" for i, x in enumerate(inbox_data["questions"]) if isinstance(x, dict)]
     pos = ids.index(item_id) if item_id in ids else 0
     pages = values.get("source_pages") or []
+    source_meta = data.get("source") if isinstance(data.get("source"), dict) else {}
     source_name = str(
         data.get("source_name")
-        or (data.get("source") or {}).get("name") if isinstance(data.get("source"), dict) else ""
+        or source_meta.get("name")
         or data.get("name")
         or values.get("source")
         or path.name
