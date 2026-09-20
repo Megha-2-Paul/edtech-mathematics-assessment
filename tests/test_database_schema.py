@@ -26,7 +26,7 @@ EXPECTED_TABLES = {
 class DatabaseSchemaTests(unittest.TestCase):
     def test_schema_creates_all_core_tables(self):
         db = sqlite3.connect(":memory:")
-        db.executescript(SCHEMA)
+        db.executescript("\n".join(SCHEMA))
         tables = {
             row[0]
             for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")
