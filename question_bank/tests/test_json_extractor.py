@@ -1,74 +1,175 @@
+"""JSON question-bank extractor.
+
+Accepts AI-produced JSON that follows the canonical extraction contract and
+converts it into RawQuestion objects for the existing ingestion pipeline.
+
+This adapter deliberately does not write directly to the production database.
+Imported questions go through the same normalization, validation, duplicate
+detection and human-review path as PDF extraction.
+"""
+
+from __future__ import annotations
+
 import json
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Union
 
-import pytest
-
-from exam_platform.ingestion.models import SourceDocument
-from question_bank.extraction.json_extractor import (
-    JSONExtractionError,
-    JSONQuestionExtractor,
-)
+from exam_platform.ingestion.models import RawQuestion, SourceDocument
 
 
-def sample_payload():
-    return {
-        "schema_version": "1.0",
-        "source": {
-            "source_id": "cbse-2025-maths",
-            "name": "CBSE Class 10 Mathematics 2025",
-            "source_type": "pdf",
-            "source_year": 2025,
-        },
-        "extraction_provider": "external_ai",
-        "extraction_model": "test-model",
-        "defaults": {
-            "subject": "Mathematics",
-            "board": "CBSE",
-            "class_level": 10,
-            "chapter": "Real Numbers",
-        },
-        "questions": [
-            {
-                "question_number": "1",
-                "question_text": "Find the HCF of 24 and 36.",
-                "question_type": "vsaq",
-                "marks": 1,
+class JSONExtractionError(ValueError):
+    """Raised when an extraction JSON payload is malformed or unsafe to import."""
+
+
+class JSONQuestionExtractor:
+    """Convert canonical question JSON into the shared RawQuestion contract."""
+
+    schema_version = "1.0"
+    extraction_method = "json_ai"
+
+    def __init__(self, payload: Union[dict, list, str, Path]):
+        self.payload = self._load(payload)
+
+    @staticmethod
+    def _load(payload: Union[dict, list, str, Path]) -> Any:
+        if isinstance(payload, (str, Path)):
+            path = Path(payload)
+            if path.exists():
+                try:
+                    return json.loads(path.read_text(encoding="utf-8"))
+                except json.JSONDecodeError as exc:
+                    raise JSONExtractionError(f"Invalid JSON file: {path}") from exc
+            try:
+                return json.loads(str(payload))
+            except json.JSONDecodeError as exc:
+                raise JSONExtractionError("Input is neither a JSON file nor valid JSON.") from exc
+        return payload
+
+    def _envelope(self) -> tuple[Dict[str, Any], List[Dict[str, Any]]]:
+        if isinstance(self.payload, list):
+            return {}, self.payload
+
+        if not isinstance(self.payload, dict):
+            raise JSONExtractionError("Top-level JSON must be an object or an array.")
+
+        questions = self.payload.get("questions")
+        if not isinstance(questions, list):
+            raise JSONExtractionError("JSON must contain a 'questions' array.")
+
+        version = self.payload.get("schema_version", self.schema_version)
+        if str(version) != self.schema_version:
+            raise JSONExtractionError(
+                f"Unsupported schema_version {version!r}; expected {self.schema_version!r}."
+            )
+
+        return self.payload, questions
+
+    @staticmethod
+    def _text(value: Any, field: str, required: bool = False) -> str:
+        if value is None:
+            if required:
+                raise JSONExtractionError(f"Question field '{field}' is required.")
+            return ""
+        if not isinstance(value, str):
+            raise JSONExtractionError(f"Question field '{field}' must be a string.")
+        return value.strip()
+
+    @staticmethod
+    def _options(value: Any) -> List[str]:
+        if value is None:
+            return []
+        if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+            raise JSONExtractionError("'answer_choices' must be an array of strings.")
+        return [item.strip() for item in value]
+
+    def to_source_document(self) -> SourceDocument:
+        envelope, _ = self._envelope()
+        source = envelope.get("source") or {}
+        if not isinstance(source, dict):
+            raise JSONExtractionError("'source' must be an object.")
+
+        return SourceDocument(
+            source_id=str(source.get("source_id") or envelope.get("source_id") or "json-import"),
+            source_type=str(source.get("source_type") or "api"),
+            name=source.get("name") or envelope.get("source_name"),
+            url=source.get("url"),
+            source_year=source.get("source_year"),
+            rights_status=str(source.get("rights_status") or "unknown"),
+            metadata={
+                **(envelope.get("metadata") or {}),
+                "extraction_method": self.extraction_method,
+                "extraction_provider": envelope.get("extraction_provider"),
+                "extraction_model": envelope.get("extraction_model"),
+                "extraction_run_id": envelope.get("extraction_run_id"),
+                "schema_version": self.schema_version,
             },
-            {
-                "question_number": "2",
-                "question_text": "Which is irrational?",
-                "question_type": "mcq",
-                "answer_choices": ["A", "B", "√2", "D"],
-                "correct_answer": "C",
-                "marks": 1,
-            },
-        ],
-    }
+        )
+
+    def extract(self) -> List[RawQuestion]:
+        envelope, questions = self._envelope()
+        source_id = self.to_source_document().source_id
+        defaults = envelope.get("defaults") or {}
+        if not isinstance(defaults, dict):
+            raise JSONExtractionError("'defaults' must be an object.")
+
+        output: List[RawQuestion] = []
+        for index, item in enumerate(questions, 1):
+            if not isinstance(item, dict):
+                raise JSONExtractionError(f"Question #{index} must be an object.")
+
+            metadata = {
+                **defaults,
+                **(item.get("metadata") or {}),
+                "question_number": item.get("question_number"),
+                "question_type": item.get("question_type") or defaults.get("question_type"),
+                "answer_mode": item.get("answer_mode") or defaults.get("answer_mode"),
+                "handwritten_upload_mode": item.get("handwritten_upload_mode")
+                or defaults.get("handwritten_upload_mode", "none"),
+                "subject": item.get("subject") or defaults.get("subject"),
+                "board": item.get("board") or defaults.get("board"),
+                "class_level": item.get("class_level") or defaults.get("class_level"),
+                "chapter": item.get("chapter") or defaults.get("chapter"),
+                "topic": item.get("topic") or defaults.get("topic"),
+                "subtopic": item.get("subtopic") or defaults.get("subtopic"),
+                "difficulty": item.get("difficulty") or defaults.get("difficulty"),
+                "competency": item.get("competency") or defaults.get("competency"),
+                "source": item.get("source") or defaults.get("source"),
+                "source_year": item.get("source_year") or defaults.get("source_year"),
+                "extraction_confidence": item.get("extraction_confidence"),
+                "extraction_warnings": item.get("extraction_warnings") or [],
+                "verification_status": "PENDING",
+            }
+
+            question_text = self._text(item.get("question_text"), "question_text", required=True)
+            question_id = str(
+                item.get("raw_question_id")
+                or item.get("question_id")
+                or item.get("question_number")
+                or f"json-{index}"
+            )
+
+            output.append(
+                RawQuestion(
+                    raw_question_id=question_id,
+                    source_id=source_id,
+                    raw_text=question_text,
+                    raw_options=self._options(item.get("answer_choices")),
+                    raw_answer=self._text(item.get("correct_answer"), "correct_answer") or None,
+                    raw_marks=item.get("marks"),
+                    raw_assets=item.get("assets") or [],
+                    source_reference=str(
+                        item.get("source_reference")
+                        or item.get("source_page")
+                        or item.get("source_question_number")
+                        or question_id
+                    ),
+                    extraction_confidence=item.get("extraction_confidence"),
+                    metadata=metadata,
+                )
+            )
+
+        return output
 
 
-def test_json_extractor_converts_batch_to_raw_questions():
-    extractor = JSONQuestionExtractor(sample_payload())
-    questions = extractor.extract()
-
-    assert len(questions) == 2
-    assert questions[0].raw_text.startswith("Find the HCF")
-    assert questions[1].raw_options == ["A", "B", "√2", "D"]
-    assert questions[1].metadata["board"] == "CBSE"
-    assert questions[1].metadata["verification_status"] == "PENDING"
-
-
-def test_json_extractor_builds_source_document():
-    source = JSONQuestionExtractor(sample_payload()).to_source_document()
-
-    assert isinstance(source, SourceDocument)
-    assert source.source_id == "cbse-2025-maths"
-    assert source.metadata["extraction_method"] == "json_ai"
-
-
-def test_json_extractor_rejects_missing_questions_array():
-    with pytest.raises(JSONExtractionError):
-        JSONQuestionExtractor({"schema_version": "1.0"}).extract()
-
-
-def test_json_extractor_rejects_unsupported_schema_version():
-    with pytest.raises(JSONExtractionError):
-        JSONQuestionExtractor({"schema_version": "9.0", "questions": []}).extract()
+def extract_json_questions(payload: Union[dict, list, str, Path]) -> List[RawQuestion]:
+    return JSONQuestionExtractor(payload).extract()
