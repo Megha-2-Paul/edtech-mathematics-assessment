@@ -87,12 +87,21 @@ class QuestionIngestionPipeline:
             )
         )
 
+        normalized_choices = []
+        for choice in raw.raw_options:
+            if isinstance(choice, dict):
+                label = str(choice.get("label") or "").strip()
+                text = str(choice.get("text") or choice.get("value") or "").strip()
+                normalized_choices.append(f"{label}) {text}" if label else text)
+            else:
+                normalized_choices.append(str(choice))
+
         return NormalizedQuestion(
             raw_question_id=raw.raw_question_id,
             question_type=question_type,
             answer_mode=answer_mode,
             question_text=raw.raw_text,
-            answer_choices=list(raw.raw_options),
+            answer_choices=normalized_choices,
             correct_answer=raw.raw_answer,
             marks=float(raw.raw_marks or 1),
             handwritten_upload_mode=str(metadata.get("handwritten_upload_mode", "none")),
