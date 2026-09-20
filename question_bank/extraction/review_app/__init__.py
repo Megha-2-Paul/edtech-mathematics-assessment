@@ -408,8 +408,8 @@ def _json_review_view(item_id):
         return ("Explicit rights/licensing confirmation is required before approval.", 400)
     try:
         _candidate_from_form(candidate, request.form)
-        from exam_platform.ingestion.validators import validate_normalized_question
-        validation = validate_normalized_question(candidate.question)
+        from exam_platform.ingestion.validators import validate_question
+        validation = validate_question(candidate.question)
         candidate.validation = validation
         if not validation.is_valid:
             return ("Cannot approve: " + "; ".join(validation.errors), 400)
