@@ -371,7 +371,7 @@ _legacy._save_review = _persistent_save_review
 from flask import flash, render_template
 from werkzeug.utils import secure_filename
 from question_bank.extraction.ai_json_bulk_import import AIJSONBulkImporter, ApprovedQuestionPublisher
-from question_bank.extraction.review_persistence import get_item as _persistent_get_item, list_items as _persistent_list_items, save_batch as _persistent_save_batch, save_review as _persistent_save_review
+from question_bank.extraction.review_persistence import get_item as _persistent_get_item, list_items as _persistent_list_items, save_batch as _persistent_save_batch, save_review as _db_save_review
 
 _JSON_MAX_BYTES = 5 * 1024 * 1024
 
@@ -395,7 +395,7 @@ def _persistent_load_review(item_id):
 
 def _persistent_save_review(item_id, status, note="", question_id=None, question_snapshot=None, human_verified_values=None):
     if _persistent_get_item(item_id):
-        _persistent_save_review(item_id, status, note, question_id, question_snapshot, human_verified_values)
+        _db_save_review(item_id, status, note, question_id, question_snapshot, human_verified_values)
         return
     _legacy_save_review(item_id, status, note, question_id, question_snapshot, human_verified_values)
 
