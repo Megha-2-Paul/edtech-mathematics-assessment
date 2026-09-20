@@ -314,6 +314,129 @@ from question_bank.extraction.or_question_routes import register_or_question_rev
 _legacy_register = register_extraction_review
 
 
+from flask import flash, render_template
+from werkzeug.utils import secure_filename
+from question_bank.extraction.ai_json_bulk_import import AIJSONBulkImporter, ApprovedQuestionPublisher
+
+_JSON_MAX_BYTES = 5 * 1024 * 1024
+
+def _json_upload_view():
+    if request.method == "GET":
+        return render_template("extraction_json_upload.html")
+    upload = request.files.get("json_file")
+    if not upload or not upload.filename:
+        return render_template("extraction_json_upload.html", error="Select a JSON file.")
+    filename = secure_filename(upload.filename)
+    if not filename.lower().endswith(".json"):
+        return render_template("extraction_json_upload.html", error="Only .json files are accepted.")
+    payload_bytes = upload.read(_JSON_MAX_BYTES + 1)
+    if len(payload_bytes) > _JSON_MAX_BYTES:
+        return render_template("extraction_json_upload.html", error="JSON file is too large. Maximum size is 5 MB.")
+    try:
+        payload = json.loads(payload_bytes.decode("utf-8-sig"))
+        result = AIJSONBulkImporter().prepare(payload)
+    except Exception as exc:
+        return render_template("extraction_json_upload.html", error=f"Import validation failed: {exc}")
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    target = _legacy.INBOX_DIR / f"{stamp}_{_legacy._safe_id(Path(filename).stem)}.json"
+    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return render_template(
+        "extraction_json_upload.html",
+        success=True,
+        filename=target.name,
+        summary={
+            "total": result.total,
+            "review_required": result.review_required,
+            "duplicates": result.duplicates,
+            "validation_pending": result.validation_pending,
+            "invalid": result.invalid,
+        },
+    )
+
+def _candidate_from_form(candidate, form):
+    q = candidate.question
+    q.question_text = form.get("question_text", "").strip()
+    q.question_type = form.get("question_type", q.question_type).strip().lower()
+    q.answer_mode = form.get("answer_mode", q.answer_mode).strip()
+    q.handwritten_upload_mode = form.get("handwritten_upload_mode", q.handwritten_upload_mode).strip().lower()
+    q.subject = form.get("subject", q.subject).strip()
+    q.board = form.get("board", q.board).strip()
+    q.class_level = int(form.get("class_level", q.class_level))
+    q.chapter = form.get("chapter", "").strip() or None
+    q.topic = form.get("topic", "").strip() or None
+    q.subtopic = form.get("subtopic", "").strip() or None
+    q.difficulty = form.get("difficulty", "").strip() or None
+    q.competency = form.get("competency", "").strip() or None
+    q.correct_answer = form.get("correct_answer", "").strip() or None
+    q.source = form.get("source", q.source).strip() or None
+    year = form.get("source_year", "").strip()
+    q.source_year = int(year) if year else None
+    q.marks = float(form.get("marks", q.marks))
+    for name, target in (("answer_choices", "answer_choices"), ("question_parts", "question_parts"), ("assets", "assets")):
+        raw = form.get(name, "[]")
+        try:
+            value = json.loads(raw) if raw.strip() else []
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{name} must contain valid JSON.") from exc
+        if target == "answer_choices":
+            q.answer_choices = value
+        else:
+            q.metadata[target] = value
+    return candidate
+
+def _json_review_view(item_id):
+    path, data, source_question = _legacy._find_item(item_id)
+    try:
+        index = int(item_id.rsplit(":", 1)[1])
+    except (ValueError, IndexError):
+        return ("Invalid review item.", 400)
+    result = AIJSONBulkImporter().prepare(data)
+    if index >= len(result.candidates):
+        return ("Review candidate not found.", 404)
+    candidate = result.candidates[index]
+    status = request.form.get("status", "NEEDS_REVIEW").upper()
+    note = request.form.get("note", "").strip()
+    if status == "REJECTED":
+        _legacy._save_review(item_id, "REJECTED", note, question_snapshot=source_question)
+        return redirect(url_for("extraction_review.item", item_id=item_id))
+    if status == "NEEDS_REVIEW":
+        _legacy._save_review(item_id, "NEEDS_REVIEW", note, question_snapshot=source_question)
+        return redirect(url_for("extraction_review.item", item_id=item_id))
+    if status != "APPROVED":
+        return ("Invalid review status.", 400)
+    if not request.form.get("rights_confirmed"):
+        return ("Explicit rights/licensing confirmation is required before approval.", 400)
+    try:
+        _candidate_from_form(candidate, request.form)
+        from exam_platform.ingestion.validators import validate_normalized_question
+        validation = validate_normalized_question(candidate.question)
+        candidate.validation = validation
+        if not validation.is_valid:
+            return ("Cannot approve: " + "; ".join(validation.errors), 400)
+        reviewer = request.form.get("reviewer", "").strip()
+        question_id = _legacy._next_question_id()
+        question, decision = ApprovedQuestionPublisher(_legacy.storage).approve_and_publish(
+            candidate, reviewer=reviewer, question_id=question_id,
+            rights_confirmed=True, note=note,
+        )
+    except (ValueError, TypeError) as exc:
+        return (f"Cannot approve question: {exc}", 400)
+    _legacy._save_review(
+        item_id, "APPROVED", note or f"Imported as {question.question_id}",
+        question.question_id, question_snapshot=source_question,
+        human_verified_values=request.form.to_dict(flat=True),
+    )
+    return redirect(url_for("extraction_review.item", item_id=item_id))
+
+def _register_json_routes(app):
+    app.add_url_rule(
+        "/teacher/extraction-review/json-upload",
+        endpoint="extraction_review.json_upload",
+        view_func=_json_upload_view,
+        methods=["GET", "POST"],
+    )
+    app.view_functions["extraction_review.review"] = _json_review_view
+
 def register_extraction_review(app):
     _legacy_register(app)
     global _legacy_item_view
