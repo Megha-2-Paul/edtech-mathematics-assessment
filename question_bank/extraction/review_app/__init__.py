@@ -4,6 +4,7 @@ from __future__ import annotations
 import html
 import importlib.util
 import re
+import uuid
 from pathlib import Path
 
 import fitz
@@ -366,13 +367,44 @@ for _name in dir(_legacy):
 from question_bank.extraction.or_question_routes import register_or_question_review  # noqa: E402
 
 _legacy_register = register_extraction_review
+_legacy_find_item = _legacy._find_item
+_legacy_load_review = _legacy._load_review
+_legacy_save_review = _legacy._save_review
+_legacy._find_item = _persistent_find_item
+_legacy._load_review = _persistent_load_review
+_legacy._save_review = _persistent_save_review
 
 
 from flask import flash, render_template
 from werkzeug.utils import secure_filename
 from question_bank.extraction.ai_json_bulk_import import AIJSONBulkImporter, ApprovedQuestionPublisher
+from question_bank.extraction.review_persistence import get_item as _persistent_get_item, list_items as _persistent_list_items, save_batch as _persistent_save_batch, save_review as _persistent_save_review
 
 _JSON_MAX_BYTES = 5 * 1024 * 1024
+
+def _persistent_find_item(item_id):
+    """Resolve persisted review items even when Render's local filesystem was replaced."""
+    stored = _persistent_get_item(item_id)
+    if stored:
+        path = _legacy.INBOX_DIR / str(stored["filename"])
+        return path, stored["payload"], stored["question"]
+    return _legacy_find_item(item_id)
+
+def _persistent_load_review(item_id):
+    stored = _persistent_get_item(item_id)
+    if stored:
+        result = {"status": stored.get("status", "PENDING"), "updated_at": stored.get("updated_at"), "note": stored.get("note", "")}
+        if stored.get("question_id"): result["question_id"] = stored["question_id"]
+        if stored.get("extraction_snapshot_json") is not None: result["extraction_snapshot"] = stored["extraction_snapshot_json"]
+        if stored.get("human_verified_values_json") is not None: result["human_verified_values"] = stored["human_verified_values_json"]
+        return result
+    return _legacy_load_review(item_id)
+
+def _persistent_save_review(item_id, status, note="", question_id=None, question_snapshot=None, human_verified_values=None):
+    if _persistent_get_item(item_id):
+        _persistent_save_review(item_id, status, note, question_id, question_snapshot, human_verified_values)
+        return
+    _legacy_save_review(item_id, status, note, question_id, question_snapshot, human_verified_values)
 
 def _json_upload_view():
     if request.method == "GET":
@@ -392,8 +424,10 @@ def _json_upload_view():
     except Exception as exc:
         return render_template("extraction_json_upload.html", error=f"Import validation failed: {exc}")
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    target = _legacy.INBOX_DIR / f"{stamp}_{_legacy._safe_id(Path(filename).stem)}.json"
+    batch_id = f"{stamp}_{uuid.uuid4().hex[:12]}"
+    target = _legacy.INBOX_DIR / f"{batch_id}_{_legacy._safe_id(Path(filename).stem)}.json"
     target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    _persistent_save_batch(batch_id=batch_id, filename=target.name, payload=payload)
     return render_template(
         "extraction_json_upload.html",
         success=True,
