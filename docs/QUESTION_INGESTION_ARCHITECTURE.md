@@ -253,3 +253,47 @@ None of these adapters should need to modify the evaluation, diagnosis, reportin
 - LLM/Vision fallback for extraction cases that deterministic engines cannot reliably parse
 
 AI must assist the review process rather than silently publish unverified questions.
+
+
+## Stage 2.2 — External-AI JSON bulk ingestion
+
+External AI is treated as an extraction/transcription layer, not a trusted production question source.
+
+```text
+External AI JSON
+      ↓
+AIJSONQuestionExtractor
+      ↓
+RawQuestion
+      ↓
+QuestionIngestionPipeline
+      ↓
+Normalization → Validation → Duplicate Detection
+      ↓
+Bulk review result
+      ↓
+Human approval + rights confirmation
+      ↓
+Existing Question model / questions table
+```
+
+The implementation in `question_bank/extraction/ai_json_bulk_import.py` provides:
+
+- `AIJSONBulkImporter.prepare(...)` for batch preparation and review counts.
+- `candidate_to_question(...)` to map an approved normalized candidate to the existing `Question` model.
+- `ApprovedQuestionPublisher` to enforce explicit reviewer and rights confirmation before persistence.
+
+Import itself never writes to the production question bank. This keeps external-AI extraction failures out of live assessment content.
+
+### Intended admin flow
+
+1. Upload one JSON file.
+2. Show a batch summary such as total / review / duplicate / invalid.
+3. Open the review queue.
+4. Verify or edit text, marks, type, chapter, answer, assets and provenance.
+5. Approve or reject individual questions.
+6. Require rights/licensing confirmation before publication.
+7. Publish approved questions through the existing question-bank storage.
+8. Show the final batch result.
+
+The ingestion service is intentionally independent of the admin UI so the same path can later support an admin page, CLI, API, or background job.
