@@ -26,9 +26,13 @@ def _make_text_pdf(path: Path) -> None:
 
 def _make_image_only_pdf(path: Path) -> None:
     document = fitz.open()
-    document.new_page()
+    page = document.new_page()
+    pixmap = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 300, 120), 0)
+    pixmap.clear_with(255)
+    page.insert_image(fitz.Rect(20, 20, 280, 100), pixmap=pixmap)
     document.save(path)
     document.close()
+    pixmap = None
 
 
 def test_markitdown_extracts_text_from_text_pdf(tmp_path):
@@ -60,7 +64,11 @@ def test_pdf_router_hands_image_only_pdf_to_future_ocr(tmp_path):
     pdf_path = tmp_path / "scan.pdf"
     _make_image_only_pdf(pdf_path)
 
+    inspection = inspect_pdf(pdf_path)
     route = route_pdf(pdf_path)
 
+    assert inspection.page_count == 1
+    assert inspection.text_pages == 0
+    assert inspection.image_pages == 1
     assert route.strategy == ExtractionStrategy.OCR
     assert route.reason == "no_usable_text_layer"
