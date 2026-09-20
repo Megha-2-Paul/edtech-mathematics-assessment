@@ -51,11 +51,22 @@ class PDFAdapter:
 
     @staticmethod
     def _question_start(line: str) -> Optional[Tuple[str, str]]:
+        """Return a top-level question marker from a cleaned text line.
+
+        PDF text extraction can split ordinary numeric content into a line that
+        looks like a question marker, e.g. ``3. 4.`` at the end of a question.
+        A marker whose remainder is only another numeric marker is therefore
+        treated as continuation text, not as a new question.
+        """
         match = QUESTION_START_RE.match(line)
         if not match:
             return None
         number, text = match.group(1), (match.group(2) or "").strip()
-        if not text and not re.search(r"\d\s*[\.)\-:]\s*$", line):
+
+        if text and re.fullmatch(r"\d{1,3}\s*[.)\-:]", text):
+            return None
+
+        if not text and not re.search(r"\d\s*[.)\-:]\s*$", line):
             return None
         return number, text
 
