@@ -188,7 +188,15 @@ def _source_preview_html(item_id, source_question, data, values):
         return _or_preview_html(values, item_id, source_question, data)
     text = html.escape(str(values.get("question_text") or ""))
     choices = values.get("answer_choices") or []
-    choices_html = '<div class="student-preview-choices">' + "".join(f'<div>{html.escape(str(choice))}</div>' for choice in choices) + '</div>' if choices else ""
+    formatted_choices = []
+    for choice in choices:
+        if isinstance(choice, dict):
+            label = str(choice.get("label") or "").strip()
+            value = str(choice.get("text") or choice.get("value") or "").strip()
+            formatted_choices.append(f"{label}) {value}" if label else value)
+        else:
+            formatted_choices.append(str(choice))
+    choices_html = '<div class="student-preview-choices">' + "".join(f'<div>{html.escape(choice)}</div>' for choice in formatted_choices) + '</div>' if formatted_choices else ""
     path = _student_preview_visual_path(item_id, source_question, data)
     image_html = ""
     if path:
