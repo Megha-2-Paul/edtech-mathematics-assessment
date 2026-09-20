@@ -334,7 +334,7 @@ def _json_upload_view():
         return render_template("extraction_json_upload.html", error="JSON file is too large. Maximum size is 5 MB.")
     try:
         payload = json.loads(payload_bytes.decode("utf-8-sig"))
-        result = AIJSONBulkImporter().prepare(payload)
+        result = AIJSONBulkImporter(existing_questions=_legacy.storage.questions.values()).prepare(payload)
     except Exception as exc:
         return render_template("extraction_json_upload.html", error=f"Import validation failed: {exc}")
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -390,7 +390,7 @@ def _json_review_view(item_id):
         index = int(item_id.rsplit(":", 1)[1])
     except (ValueError, IndexError):
         return ("Invalid review item.", 400)
-    result = AIJSONBulkImporter().prepare(data)
+    result = AIJSONBulkImporter(existing_questions=_legacy.storage.questions.values()).prepare(data)
     if index >= len(result.candidates):
         return ("Review candidate not found.", 404)
     candidate = result.candidates[index]
