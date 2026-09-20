@@ -182,9 +182,17 @@ class PDFAdapter:
             for line in lines:
                 start = self._question_start(line)
                 if start:
+                    number, first_line = start
+                    if (
+                        current is not None
+                        and number == str(current["number"])
+                        and any(text.strip() for text in current["lines"])
+                    ):
+                        current["lines"].append(line)
+                        continue
+
                     flush()
                     sequence += 1
-                    number, first_line = start
                     current = {
                         "number": number,
                         "lines": [first_line] if first_line else [],
