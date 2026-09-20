@@ -1,14 +1,8 @@
 import sys
 from pathlib import Path
-import json
 import requests
-from datetime import datetime
-import io
 
 sys.path.insert(0, str(Path(__file__).parent))
-
-# Force UTF-8 output
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 BASE_URL = "http://localhost:5000"
 
@@ -108,29 +102,28 @@ def test_confirmation_page(attempt_id):
 def run_all_tests():
     """Run all tests"""
     print("\n=== EXAM PLATFORM TEST SUITE ===\n")
-    
+
     try:
         test_homepage()
         test_test_listing()
         test_instructions()
-        
-        # Test the full exam flow
+
         attempt_id = test_start_test()
-        
+
         questions = test_get_questions(attempt_id)
-        
+
         test_save_mcq_response(attempt_id)
         test_save_subjective_response(attempt_id)
-        
+
         test_submission_preview(attempt_id)
-        
+
         test_submit_attempt(attempt_id)
-        
+
         test_confirmation_page(attempt_id)
-        
+
         print("\n=== ALL TESTS PASSED ===\n")
         return True
-    
+
     except Exception as e:
         print(f"\n[FAIL] Test failed: {e}\n")
         import traceback

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Question Bank AI Extraction Contract",
+  "type": "object",
+  "required": ["schema_version", "questions"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "source": {"type": "object"},
+    "extraction_provider": {"type": ["string", "null"]},
+    "extraction_model": {"type": ["string", "null"]},
+    "extraction_run_id": {"type": ["string", "null"]},
+    "defaults": {"type": "object"},
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["question_text"],
+        "properties": {
+          "question_number": {"type": ["string", "number", "null"]},
+          "question_text": {"type": "string", "minLength": 1},
+          "question_parts": {"type": "array"},
+          "answer_choices": {"type": "array", "items": {"type": "string"}},
+          "correct_answer": {"type": ["string", "null"]},
+          "marks": {"type": ["number", "integer", "null"]},
+          "question_type": {"enum": ["mcq", "vsaq", "saq", "laq"]},
+          "answer_mode": {"type": ["string", "null"]},
+          "handwritten_upload_mode": {"enum": ["none", "optional", "required"]},
+          "subject": {"type": ["string", "null"]},
+          "board": {"enum": ["CBSE", "ICSE", "ISC", null]},
+          "class_level": {"type": ["integer", "null"]},
+          "chapter": {"type": ["string", "null"]},
+          "topic": {"type": ["string", "null"]},
+          "subtopic": {"type": ["string", "null"]},
+          "difficulty": {"type": ["string", "null"]},
+          "competency": {"type": ["string", "null"]},
+          "source_page": {"type": ["integer", "null"]},
+          "source_pages": {"type": "array", "items": {"type": "integer"}},
+          "assets": {"type": "array"},
+          "extraction_confidence": {"type": ["number", "null"]},
+          "extraction_warnings": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

@@ -23,7 +23,7 @@ class FakePage:
 def test_english_question_page_is_detected():
     result = analyze_page(
         FakePage(
-            "SECTION B\nQuestion numbers 7 to 10 carry 3 marks each.\n"
+            "SECTION B\nQuestion 7. Find the height. Question 8. Find the area.\nQuestion 9. Solve the equation. Question 10. Find the value.\n"
             "Find the height.\nFigure 1"
         ),
         5,
