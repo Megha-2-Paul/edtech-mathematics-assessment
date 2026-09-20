@@ -27,7 +27,7 @@
         <a class="teacher-action-card action-blue" href="{{ url_for('admin.tests') }}"><span class="action-icon">T</span><span><strong>Assessments</strong><small>View and manage tests</small></span><b>→</b></a>
         <a class="teacher-action-card action-accent" href="{{ url_for('admin.add_test') }}"><span class="action-icon">+</span><span><strong>Create Test</strong><small>Assemble an assessment</small></span><b>→</b></a>
         <a class="teacher-action-card action-primary" href="{{ url_for('evaluation.submissions') }}"><span class="action-icon">✓</span><span><strong>Submissions</strong><small>Mark and diagnose attempts</small></span><b>→</b></a>
-        <a class="teacher-action-card action-blue" href="{{ url_for('extraction_review.dashboard') }}"><span class="action-icon">AI</span><span><strong>Extraction Review</strong><small>Review imported questions</small></span><b>→</b></a>
+        <a class="teacher-action-card action-blue" href="{{ url_for('extraction_review.dashboard') }}"><span class="action-icon">AI</span><span><strong>Extraction Review</strong><small>Review imported questions</small></span><b>→</b></a><a class="teacher-action-card action-primary" href="{{ url_for('extraction_review.json_upload') }}"><span class="action-icon">↑</span><span><strong>Import AI JSON</strong><small>Bulk-load extracted questions</small></span><b>→</b></a>
     </div>
 </div>
 

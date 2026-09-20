@@ -106,6 +106,55 @@ source, raw_questions = extract_pdf_questions(
 
 Then feed `raw_questions` to `QuestionIngestionPipeline.prepare(...)` after applying known board/class/chapter metadata. The PDF adapter does not guess curriculum classification.
 
+## MarkItDown extraction layer
+
+MarkItDown is now installed as a **separate document-preprocessing engine** for text-dominant PDFs. The implementation lives in:
+
+```text
+question_bank/extraction/
+    markitdown_extractor.py
+    extraction_router.py
+```
+
+The router inspects a PDF before extraction and currently selects:
+
+```text
+Text-dominant PDF
+    → MarkItDown
+
+Mixed / visually complex PDF
+    → existing PyMuPDF/layout extraction
+
+Image-only PDF
+    → OCR handoff (future adapter)
+```
+
+The MarkItDown adapter returns Markdown/text only. It does **not** replace PyMuPDF page geometry, question cropping, or visual-asset extraction. This is intentional: the original PDF remains the source of truth and the existing visual extraction layer remains responsible for page-level provenance.
+
+The first routing implementation is deliberately conservative. It does not call an LLM, perform OCR, or publish questions automatically.
+
+### Why this is separate
+
+MarkItDown is designed to convert documents into Markdown for text analysis and supports PDF through its optional `pdf` dependency. The application therefore treats it as one extraction engine rather than as the question parser itself.
+
+Question parsing, normalization, validation, duplicate detection, and human approval remain application responsibilities.
+
+### Next integration step
+
+Before replacing the existing PDF parser, benchmark MarkItDown output against the current PyMuPDF extractor on representative CBSE/ICSE mathematics PDFs. The benchmark should compare:
+
+- question boundary preservation
+- mathematical text preservation
+- MCQ option preservation
+- marks preservation
+- headers/footers
+- multi-column ordering
+- tables
+- diagrams/assets
+- page provenance
+
+Only after that benchmark should MarkItDown become the primary text source for the relevant PDF route.
+
 ## Assets
 
 Stage 2 records page provenance and exposes the `raw_assets` channel for future PDF asset extraction. It does **not** commit extracted binary images into the repository and does not attempt OCR of image-only pages.
@@ -179,6 +228,15 @@ None of these adapters should need to modify the evaluation, diagnosis, reportin
 - scanned-PDF detection / OCR handoff flag
 - ingestion pipeline integration tests
 
+### Stage 2.1 — MarkItDown preprocessing
+
+- MarkItDown PDF dependency
+- isolated MarkItDown PDF extractor
+- PDF inspection/routing layer
+- text-dominant PDF routing to MarkItDown
+- tests for text-based and image-only routing
+- benchmark before replacing the existing PyMuPDF question parser
+
 ### Stage 3
 
 - URL/HTML ingestion
@@ -192,5 +250,50 @@ None of these adapters should need to modify the evaluation, diagnosis, reportin
 - answer verification assistance
 - semantic duplicate detection
 - confidence-based review routing
+- LLM/Vision fallback for extraction cases that deterministic engines cannot reliably parse
 
 AI must assist the review process rather than silently publish unverified questions.
+
+
+## Stage 2.2 — External-AI JSON bulk ingestion
+
+External AI is treated as an extraction/transcription layer, not a trusted production question source.
+
+```text
+External AI JSON
+      ↓
+AIJSONQuestionExtractor
+      ↓
+RawQuestion
+      ↓
+QuestionIngestionPipeline
+      ↓
+Normalization → Validation → Duplicate Detection
+      ↓
+Bulk review result
+      ↓
+Human approval + rights confirmation
+      ↓
+Existing Question model / questions table
+```
+
+The implementation in `question_bank/extraction/ai_json_bulk_import.py` provides:
+
+- `AIJSONBulkImporter.prepare(...)` for batch preparation and review counts.
+- `candidate_to_question(...)` to map an approved normalized candidate to the existing `Question` model.
+- `ApprovedQuestionPublisher` to enforce explicit reviewer and rights confirmation before persistence.
+
+Import itself never writes to the production question bank. This keeps external-AI extraction failures out of live assessment content.
+
+### Intended admin flow
+
+1. Upload one JSON file.
+2. Show a batch summary such as total / review / duplicate / invalid.
+3. Open the review queue.
+4. Verify or edit text, marks, type, chapter, answer, assets and provenance.
+5. Approve or reject individual questions.
+6. Require rights/licensing confirmation before publication.
+7. Publish approved questions through the existing question-bank storage.
+8. Show the final batch result.
+
+The ingestion service is intentionally independent of the admin UI so the same path can later support an admin page, CLI, API, or background job.

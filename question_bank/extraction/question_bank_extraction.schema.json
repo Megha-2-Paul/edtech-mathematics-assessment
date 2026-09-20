@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Improvia External-AI Question Extraction Contract",
+  "type": "object",
+  "required": ["schema_version", "questions"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "source": {
+      "type": "object",
+      "properties": {
+        "source_id": {"type": ["string", "null"]},
+        "name": {"type": ["string", "null"]},
+        "source_type": {"type": ["string", "null"]},
+        "url": {"type": ["string", "null"]},
+        "source_year": {"type": ["integer", "null"]},
+        "rights_status": {"type": ["string", "null"]}
+      },
+      "additionalProperties": true
+    },
+    "extraction_provider": {"type": ["string", "null"]},
+    "extraction_model": {"type": ["string", "null"]},
+    "extraction_run_id": {"type": ["string", "null"]},
+    "metadata": {"type": "object"},
+    "defaults": {"type": "object"},
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["question_text"],
+        "properties": {
+          "question_number": {"type": ["string", "number", "null"]},
+          "question_text": {"type": "string", "minLength": 1},
+          "question_parts": {"type": "array"},
+          "answer_choices": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {"type": "string"},
+                {
+                  "type": "object",
+                  "required": ["label", "text"],
+                  "properties": {
+                    "label": {"type": "string"},
+                    "text": {"type": "string"}
+                  },
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "correct_answer": {"type": ["string", "null"]},
+          "marks": {"type": ["number", "null"]},
+          "question_type": {"enum": ["mcq", "vsaq", "saq", "laq", null]},
+          "answer_mode": {"type": ["string", "null"]},
+          "handwritten_upload_mode": {
+            "enum": ["none", "optional", "required", null]
+          },
+          "subject": {"type": ["string", "null"]},
+          "board": {"enum": ["CBSE", "ICSE", "ISC", null]},
+          "class_level": {"type": ["integer", "null"]},
+          "chapter": {"type": ["string", "null"]},
+          "topic": {"type": ["string", "null"]},
+          "subtopic": {"type": ["string", "null"]},
+          "difficulty": {"type": ["string", "null"]},
+          "competency": {"type": ["string", "null"]},
+          "source_page": {"type": ["integer", "null"]},
+          "source_pages": {
+            "type": "array",
+            "items": {"type": "integer"}
+          },
+          "source_question_number": {"type": ["string", "null"]},
+          "source_occurrence_id": {"type": ["string", "null"]},
+          "source_reference": {"type": ["string", "null"]},
+          "diagram_reference": {"type": ["string", "null"]},
+          "assets": {"type": "array"},
+          "extraction_confidence": {
+            "type": ["number", "null"],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "extraction_warnings": {
+            "type": "array",
+            "items": {"type": "string"}
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

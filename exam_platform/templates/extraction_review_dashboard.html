@@ -7,7 +7,7 @@
 {% endblock %}
 {% block content %}
 <div class="review-wrap">
-  <div class="card"><h2>AI Extraction Review</h2><p class="muted">Review AI-extracted questions against the original PDF before anything enters the canonical question bank.</p></div>
+  <div class="card"><h2>AI Extraction Review</h2><p class="muted">Review AI-extracted questions against the original PDF before anything enters the canonical question bank.</p><p><a class="review-btn" href="{{ url_for('extraction_review.json_upload') }}">+ Import External-AI JSON</a></p></div>
   <div class="stats">
     <div class="stat"><strong>{{ stats.PENDING }}</strong><span>Pending</span><div class="stat-buttons"><button class="stat-btn" data-status="PENDING">View pending</button></div></div>
     <div class="stat"><strong>{{ stats.NEEDS_REVIEW }}</strong><span>Needs review</span><div class="stat-buttons"><button class="stat-btn" data-status="NEEDS_REVIEW">View needs review</button></div></div>
@@ -20,7 +20,7 @@
       <table class="review-table"><thead><tr><th>Paper</th><th>Question</th><th>Class</th><th>Board</th><th>Year</th><th>Chapter</th><th>Topic</th><th>Page</th><th>Marks</th><th>Type</th><th>Difficulty</th><th>Status</th><th>Action</th></tr></thead>
       <tbody id="rows">{% for item in items %}<tr data-status="{{ item.status }}" data-search="{{ (item.file ~ ' ' ~ item.question_number ~ ' ' ~ (item.chapter or '') ~ ' ' ~ (item.topic or '') ~ ' ' ~ (item.board or '') ~ ' ' ~ (item.class_level or '') ~ ' ' ~ (item.source_year or ''))|lower }}"><td>{{ item.file }}</td><td><strong>Q{{ item.question_number }}</strong></td><td>{{ item.class_level or '—' }}</td><td>{{ item.board or '—' }}</td><td>{{ item.source_year or '—' }}</td><td>{{ item.chapter or '—' }}</td><td>{{ item.topic or '—' }}</td><td>{{ item.page_number }}</td><td>{{ item.marks or '—' }}</td><td>{{ item.question_type or '—' }}</td><td>{{ item.difficulty or '—' }}</td><td><span class="badge {% if item.status == 'APPROVED' %}approved{% elif item.status == 'REJECTED' %}rejected{% elif item.status == 'NEEDS_REVIEW' %}needs{% else %}pending{% endif %}">{{ item.status }}</span></td><td><a class="review-btn" href="{{ url_for('extraction_review.item', item_id=item.item_id) }}">Review →</a></td></tr>{% endfor %}</tbody></table>
     </div>
-    {% if not items %}<p class="muted">No extraction JSON files found yet. Put provider outputs in <code>extraction_inbox</code>.</p>{% endif %}
+    {% if not items %}<p class="muted">No extraction JSON files found yet. Import an external-AI JSON file above.</p>{% endif %}
   </div>
 </div>
 <script>
