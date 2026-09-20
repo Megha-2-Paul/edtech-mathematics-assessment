@@ -217,43 +217,36 @@ def _inject_student_preview(rendered, item_id, source_question, data, values, re
 
 def _dashboard_view():
     items = []
-    for p in _legacy._extraction_files():
-        try:
-            data = _legacy._load_json(p)
-        except ValueError:
-            continue
-        source_pdf = str(data.get("source_pdf") or data.get("source_paper") or "")
-        for index, q in enumerate(data["questions"]):
-            if not isinstance(q, dict):
-                continue
-            item_id = f"{p.stem}:{index}"
-            review = _legacy._load_review(item_id)
-            values = _source_review_form_values(q, data, review)
-            ids = _canonical_question_ids(review)
-            canonical = storage.get_question(ids[0]) if ids else None
-            if canonical:
-                for name in ("class_level", "board", "chapter", "topic", "difficulty", "source_year", "marks", "question_type"):
-                    if hasattr(canonical, name):
-                        values[name] = getattr(canonical, name)
-            source_year = values.get("source_year") or _legacy._source_year(source_pdf)
-            items.append({"item_id": item_id, "file": p.name, "source_pdf": source_pdf, "index": index, "question_number": str(values.get("source_question_number") or index + 1), "page_number": values.get("source_page") or 1, "marks": values.get("marks"), "question_type": values.get("question_type") or "", "status": review.get("status", "PENDING"), "chapter_missing": not str(values.get("chapter") or "").strip(), "class_level": values.get("class_level"), "board": values.get("board"), "source_year": source_year, "chapter": values.get("chapter"), "topic": values.get("topic"), "difficulty": values.get("difficulty")})
+    for stored in _persistent_list_items():
+        q = stored.get("question") or {}
+        data = stored.get("payload") or {}
+        review = _persistent_load_review(stored["item_id"])
+        values = _source_review_form_values(q, data, review)
+        ids = _canonical_question_ids(review)
+        canonical = storage.get_question(ids[0]) if ids else None
+        if canonical:
+            for name in ("class_level", "board", "chapter", "topic", "difficulty", "source_year", "marks", "question_type"):
+                if hasattr(canonical, name): values[name] = getattr(canonical, name)
+        source_year = values.get("source_year") or _legacy._source_year(str(data.get("source_pdf") or data.get("source_paper") or ""))
+        items.append({
+            "item_id": stored["item_id"], "file": stored["filename"],
+            "source_pdf": str(data.get("source_pdf") or data.get("source_paper") or ""),
+            "index": stored["question_index"],
+            "question_number": str(values.get("source_question_number") or stored["question_index"] + 1),
+            "page_number": values.get("source_page") or 1, "marks": values.get("marks"),
+            "question_type": values.get("question_type") or "", "status": review.get("status", "PENDING"),
+            "chapter_missing": not str(values.get("chapter") or "").strip(),
+            "class_level": values.get("class_level"), "board": values.get("board"),
+            "source_year": source_year, "chapter": values.get("chapter"),
+            "topic": values.get("topic"), "difficulty": values.get("difficulty")
+        })
     stats = {s: sum(x["status"] == s for x in items) for s in ("PENDING", "APPROVED", "REJECTED", "NEEDS_REVIEW")}
     stats["CHAPTER_REVIEW"] = sum(x["chapter_missing"] and x["status"] not in {"APPROVED", "REJECTED"} for x in items)
     return _LEGACY_RENDER_TEMPLATE("extraction_review_dashboard.html", items=items, stats=stats)
 
-
-_legacy_item_view = None
-
-
 def _json_only_item_view(item_id, path, data, source_question, review, values):
     """Render a JSON-only review item without requiring a local source PDF."""
-    ids = []
-    for inbox_path in _legacy._extraction_files():
-        try:
-            inbox_data = _legacy._load_json(inbox_path)
-        except ValueError:
-            continue
-        ids += [f"{inbox_path.stem}:{i}" for i, x in enumerate(inbox_data["questions"]) if isinstance(x, dict)]
+    ids = [str(x["item_id"]) for x in _persistent_list_items()]
     pos = ids.index(item_id) if item_id in ids else 0
     pages = values.get("source_pages") or []
     source_meta = data.get("source") if isinstance(data.get("source"), dict) else {}
