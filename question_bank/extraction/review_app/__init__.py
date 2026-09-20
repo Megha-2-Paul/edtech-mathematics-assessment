@@ -447,3 +447,4 @@ def register_extraction_review(app):
     app.add_url_rule("/teacher/extraction-review/<path:item_id>/student-preview-visual", endpoint="extraction_review.student_preview_visual", view_func=_student_preview_visual)
     app.add_url_rule("/teacher/extraction-review/<path:item_id>/student-preview-asset/<asset_id>", endpoint="extraction_review.student_preview_asset", view_func=_student_preview_asset)
     register_or_question_review(app)
+    _register_json_routes(app)
