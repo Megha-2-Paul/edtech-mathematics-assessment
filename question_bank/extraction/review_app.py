@@ -160,7 +160,7 @@ def review(item_id):
         if not o["question_text"].strip():return jsonify({"error":"Question text cannot be empty"}),400
         if not o["chapter"].strip():return jsonify({"error":"Chapter must be verified before approval."}),400
         if o["question_type"].strip().lower()=="mcq" and not o["correct_answer"].strip():return jsonify({"error":"Correct answer must be verified before approving an MCQ."}),400
-        try:qobj=_question_from_extraction(q,data,o);storage.create_question(qobj)
+        try:qobj=_question_from_extraction(q,data,o);storage.create_question(qobj, sync_to_secondary=True)
         except ValueError as e:return jsonify({"error":str(e)}),400
         try:persist_source_visuals(_source_pdf(data,q),int(_normalise_pages(q)[0]),str(_field(q,"source_question_number","question_number","number",default="")),qobj.question_id)
         except Exception as e:note=f"{note + ' ' if note else ''}Visual asset persistence warning: {e}"
