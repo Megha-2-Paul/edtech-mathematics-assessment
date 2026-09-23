@@ -86,7 +86,7 @@ def _split_and_approve(item_id: str):
         })
 
         qobj = _question_from_extraction(source_question, data, child)
-        storage.create_question(qobj)
+        storage.create_question(qobj, sync_to_secondary=True)
         created_ids.append(qobj.question_id)
         labels.append(f"{source_number}({identifier}) → {qobj.question_id}")
 
