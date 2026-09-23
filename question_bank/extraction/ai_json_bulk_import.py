@@ -78,5 +78,5 @@ class ApprovedQuestionPublisher:
             candidate, reviewer=reviewer, rights_confirmed=rights_confirmed, note=note
         )
         question = candidate_to_question(candidate, question_id=question_id)
-        self.storage.create_question(question)
+        self.storage.create_question(question, sync_to_secondary=True)
         return question, decision
