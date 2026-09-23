@@ -5,6 +5,7 @@ from typing import List
 from sqlalchemy import text
 from database import engine, initialize_database
 from .models import Test, Question, Student, Attempt, Response, AnswerImage, ContentBlock
+from .question_bank_sync import sync_question_to_secondary
 
 initialize_database()
 
@@ -50,8 +51,12 @@ class MySQLStorage:
 
     def get_test(self,test_id): return self.tests.get(test_id)
 
-    def create_question(self,q: Question):
+    def create_question(self,q: Question, *, sync_to_secondary: bool = False):
         p=self._question_row(q)
+        if sync_to_secondary:
+            # Write the secondary database first. If it fails, do not publish
+            # locally and create a misleading split-brain question bank.
+            sync_question_to_secondary(p)
         with engine.begin() as db:
             db.execute(text("""INSERT INTO questions(question_id,subject,board,class_level,chapter,topic,subtopic,question_type,answer_mode,difficulty,competency,question_content_json,answer_choices_json,correct_answer,marks,handwritten_upload_mode,source,source_year,status) VALUES(:id,:subject,:board,:class,:chapter,:topic,:subtopic,:type,:mode,:difficulty,:competency,:content,:choices,:correct,:marks,:upload,:source,:year,:status) ON DUPLICATE KEY UPDATE question_content_json=VALUES(question_content_json),answer_choices_json=VALUES(answer_choices_json),correct_answer=VALUES(correct_answer),marks=VALUES(marks),handwritten_upload_mode=VALUES(handwritten_upload_mode),chapter=VALUES(chapter),topic=VALUES(topic),subtopic=VALUES(subtopic),difficulty=VALUES(difficulty),competency=VALUES(competency),subject=VALUES(subject),board=VALUES(board),class_level=VALUES(class_level),answer_mode=VALUES(answer_mode),question_type=VALUES(question_type),source=VALUES(source),source_year=VALUES(source_year),status=VALUES(status)"""),p)
         self.questions[q.question_id]=q
