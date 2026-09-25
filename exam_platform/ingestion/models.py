@@ -11,6 +11,7 @@ class SourceType(str, Enum):
     URL = "url"
     IMAGE = "image"
     API = "api"
+    AI_JSON = "ai_json"
     PARTNER = "partner"
     ORIGINAL = "original"
 
