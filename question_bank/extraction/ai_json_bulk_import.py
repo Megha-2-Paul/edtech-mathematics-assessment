@@ -5,7 +5,7 @@ from typing import Iterable, Optional
 from exam_platform.ingestion.models import IngestionCandidate, IngestionStatus
 from exam_platform.ingestion.pipeline import QuestionIngestionPipeline
 from exam_platform.ingestion.review import QuestionReviewService, ReviewDecision
-from exam_platform.models import ContentBlock, Question
+from exam_platform.models import Question\nfrom exam_platform.ingestion.canonical import build_question_from_candidate, solution_payload
 from question_bank.extraction.ai_json_extractor import AIJSONQuestionExtractor
 
 @dataclass
@@ -41,30 +41,7 @@ class AIJSONBulkImporter:
         return result
 
 def candidate_to_question(candidate: IngestionCandidate, *, question_id: str) -> Question:
-    q = candidate.question
-    choices = []
-    for choice in q.answer_choices:
-        if isinstance(choice, dict):
-            label = str(choice.get("label") or "").strip()
-            value = str(choice.get("text") or "").strip()
-            choices.append(f"{label}) {value}" if label else value)
-        else:
-            choices.append(str(choice))
-    blocks = [ContentBlock("text", q.question_text)]
-    for part in q.metadata.get("question_parts") or []:
-        if isinstance(part, dict):
-            value = str(part.get("part_text") or part.get("text") or "").strip()
-            if value:
-                blocks.append(ContentBlock("text", value, metadata={"question_part": part}))
-    return Question(
-        question_id=question_id, question_type=q.question_type, answer_mode=q.answer_mode,
-        question_content=blocks, answer_choices=choices, correct_answer=q.correct_answer,
-        marks=q.marks, handwritten_upload_mode=q.handwritten_upload_mode,
-        subject=q.subject, board=q.board, class_level=q.class_level,
-        chapter=q.chapter, topic=q.topic, subtopic=q.subtopic,
-        difficulty=q.difficulty, competency=q.competency, source=q.source,
-        source_year=q.source_year, status="active",
-    )
+    return build_question_from_candidate(candidate, question_id=question_id)
 
 class ApprovedQuestionPublisher:
     """Publish only after explicit human approval and rights confirmation."""
