@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 import fitz
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, send_file, url_for
-from exam_platform.models import ContentBlock, Question
+from exam_platform.models import Question\nfrom exam_platform.ingestion.models import NormalizedQuestion\nfrom exam_platform.ingestion.canonical import build_question
 from exam_platform.storage import storage
 from question_bank.extraction.extraction_contract import ALLOWED_QUESTION_TYPES, ALLOWED_UPLOAD_MODES, INFERRED_FIELDS_REQUIRE_HUMAN_VERIFICATION
 from question_bank.extraction.question_cropper import extract_page_questions
@@ -60,23 +60,63 @@ def _parse_json_field(raw,label,default):
 def _next_question_id():
     nums=[int(x[1:]) for x in storage.questions if x.startswith("Q") and x[1:].isdigit()];return f"Q{max(nums,default=0)+1:04d}"
 def _question_from_extraction(q,data,o):
-    source_pdf=str(data.get("source_pdf") or data.get("source_paper") or q.get("source_pdf") or "");qt=str(o.get("question_type") or "saq").lower();upload=str(o.get("handwritten_upload_mode") or "none").lower()
-    if qt not in ALLOWED_QUESTION_TYPES:raise ValueError("Invalid question type")
-    if upload not in ALLOWED_UPLOAD_MODES:raise ValueError("Invalid handwritten upload mode")
-    try:marks=float(o.get("marks") or 0);cls=int(o.get("class_level") or 12)
-    except (TypeError,ValueError) as e:raise ValueError("Marks and class must be valid numbers") from e
-    if marks<0:raise ValueError("Marks cannot be negative")
-    content=[ContentBlock("text",str(o.get("question_text") or "").strip())]
-    for part in _normalise_list(o.get("question_parts")):
-        if isinstance(part,dict):
-            t=str(part.get("part_text") or part.get("text") or "").strip()
-            if t:content.append(ContentBlock("text",t,metadata={"question_part":part}))
-    ref=str(o.get("diagram_reference") or "").strip()
-    if ref:content.append(ContentBlock("image",ref,metadata={"source_reference":ref}))
-    for a in _normalise_list(o.get("assets")):
-        ref=str(a.get("asset_id") or a.get("reference") or a.get("name") or "").strip() if isinstance(a,dict) else str(a).strip()
-        if ref:content.append(ContentBlock("image",ref,metadata={"source_asset_reference":ref}))
-    return Question(question_id=_next_question_id(),question_type=qt,answer_mode=str(o.get("answer_mode") or "manual_written_answer").strip(),question_content=content,answer_choices=[str(x) for x in _normalise_list(o.get("answer_choices"))],correct_answer=o.get("correct_answer") or None,marks=marks,handwritten_upload_mode=upload,subject=str(o.get("subject") or "Mathematics").strip(),board=str(o.get("board") or "CBSE").strip(),class_level=cls,chapter=str(o.get("chapter") or "").strip() or None,topic=str(o.get("topic") or "").strip() or None,subtopic=str(o.get("subtopic") or "").strip() or None,difficulty=str(o.get("difficulty") or "").strip() or None,competency=str(o.get("competency") or "").strip() or None,source=source_pdf or None,source_year=o.get("source_year") or _source_year(source_pdf),status="active")
+    source_pdf=str(data.get("source_pdf") or data.get("source_paper") or q.get("source_pdf") or "")
+    qt=str(o.get("question_type") or "saq").strip().lower()
+    upload=str(o.get("handwritten_upload_mode") or "none").strip().lower()
+    if qt not in ALLOWED_QUESTION_TYPES:
+        raise ValueError("Invalid question type")
+    if upload not in ALLOWED_UPLOAD_MODES:
+        raise ValueError("Invalid handwritten upload mode")
+    try:
+        marks=float(o.get("marks") or 0)
+        cls=int(o.get("class_level") or 12)
+    except (TypeError,ValueError) as e:
+        raise ValueError("Marks and class must be valid numbers") from e
+    if marks < 0:
+        raise ValueError("Marks cannot be negative")
+
+    source = data.get("source") or {}
+    source_type = str(source.get("source_type") or "ai_json") if isinstance(source, dict) else "ai_json"
+    normalized = NormalizedQuestion(
+        raw_question_id=str(_field(q,"source_question_number","question_number","number",default="reviewed")),
+        question_type=qt,
+        answer_mode=str(o.get("answer_mode") or "manual_written_answer").strip(),
+        question_text=str(o.get("question_text") or "").strip(),
+        answer_choices=[str(x) for x in _normalise_list(o.get("answer_choices"))],
+        correct_answer=o.get("correct_answer") or None,
+        marks=marks,
+        handwritten_upload_mode=upload,
+        subject=str(o.get("subject") or "Mathematics").strip(),
+        board=str(o.get("board") or "CBSE").strip(),
+        class_level=cls,
+        chapter=str(o.get("chapter") or "").strip() or None,
+        topic=str(o.get("topic") or "").strip() or None,
+        subtopic=str(o.get("subtopic") or "").strip() or None,
+        difficulty=str(o.get("difficulty") or "").strip() or None,
+        competency=str(o.get("competency") or "").strip() or None,
+        source=str(o.get("source") or source_pdf or "").strip() or None,
+        source_year=o.get("source_year") or _source_year(source_pdf),
+        source_type=source_type,
+        assets=_normalise_list(o.get("assets")),
+        metadata={
+            "question_parts": _normalise_list(o.get("question_parts")),
+            "diagram_reference": o.get("diagram_reference"),
+            "source_pdf": source_pdf,
+            "source_page": _field(q,"source_page","page_number","page"),
+            "source_pages": _normalise_pages(q),
+            "source_question_number": _field(q,"source_question_number","question_number","number"),
+            "source_occurrence_id": _field(q,"source_occurrence_id"),
+            "extraction_provider": _field(q,"extraction_provider",default=data.get("extraction_provider")),
+            "extraction_model": _field(q,"extraction_model",default=data.get("extraction_model")),
+            "extraction_run_id": _field(q,"extraction_run_id",default=data.get("extraction_run_id")),
+            "extraction_confidence": _field(q,"extraction_confidence",default=data.get("extraction_confidence")),
+            "extraction_warnings": _field(q,"extraction_warnings",default=data.get("extraction_warnings",[])),
+            "solution": q.get("solution"),
+            "marking_scheme": q.get("marking_scheme"),
+        },
+    )
+    return build_question(normalized, question_id=_next_question_id(), verification_status="VERIFIED")
+
 def _review_form_values(q,data,review):
     source_pdf=str(data.get("source_pdf") or data.get("source_paper") or q.get("source_pdf") or "");v={n:_field(q,n) for n in ("answer_mode","handwritten_upload_mode","subject","board","class_level","chapter","topic","subtopic","difficulty","competency","source_year","correct_answer","diagram_reference")}
     v.update(question_text=_question_text(q),answer_choices=_field(q,"answer_choices","options",default=[]),question_parts=_field(q,"question_parts",default=[]),source=_field(q,"source",default=source_pdf),source_pdf=source_pdf,source_page=_field(q,"source_page","page_number","page"),source_pages=_normalise_pages(q),source_question_number=_field(q,"source_question_number","question_number","number"),source_occurrence_id=_field(q,"source_occurrence_id"),assets=_field(q,"assets",default=[]),extraction_provider=_field(q,"extraction_provider",default=data.get("extraction_provider")),extraction_model=_field(q,"extraction_model",default=data.get("extraction_model")),extraction_run_id=_field(q,"extraction_run_id",default=data.get("extraction_run_id")),extraction_confidence=_field(q,"extraction_confidence",default=data.get("extraction_confidence")),extraction_warnings=_field(q,"extraction_warnings",default=data.get("extraction_warnings",[])),question_type=str(_field(q,"question_type","type",default="saq")).lower())
