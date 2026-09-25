@@ -80,6 +80,12 @@ class Test:
 
 @dataclass
 class Question:
+    """Canonical published question used by the assessment/test engine.
+
+    Ingestion-specific provenance and review state live in the question-bank
+    provenance/review tables. Only stable production fields belong here.
+    """
+
     question_id: str
     question_type: str
     answer_mode: str
@@ -99,18 +105,38 @@ class Question:
     source: Optional[str] = None
     source_year: Optional[int] = None
     status: str = "active"
+    source_type: str = "manual"
+    verification_status: str = "VERIFIED"
+    canonical_question_id: Optional[str] = None
+
+    ALLOWED_QUESTION_TYPES = {"mcq", "vsaq", "saq", "laq"}
+    ALLOWED_VERIFICATION_STATUSES = {"PENDING", "VERIFIED", "REJECTED"}
 
     def __post_init__(self):
         if self.question_type == "subjective":
             self.question_type = "saq"
-        if self.question_type not in {"mcq", "vsaq", "saq", "laq"}:
-            self.question_type = "mcq"
-        if self.handwritten_upload_mode not in {
-            m.value for m in HandwrittenUploadMode
-        }:
-            self.handwritten_upload_mode = HandwrittenUploadMode.NONE.value
+        self.question_type = str(self.question_type or "").strip().lower()
+        if self.question_type not in self.ALLOWED_QUESTION_TYPES:
+            raise ValueError(
+                f"Unsupported question type: {self.question_type!r}. "
+                f"Expected one of {sorted(self.ALLOWED_QUESTION_TYPES)}."
+            )
+        self.handwritten_upload_mode = str(self.handwritten_upload_mode or "none").lower()
+        if self.handwritten_upload_mode not in {m.value for m in HandwrittenUploadMode}:
+            raise ValueError(
+                f"Unsupported handwritten_upload_mode: {self.handwritten_upload_mode!r}."
+            )
+        self.status = str(self.status or "active").lower()
         if self.status not in {"active", "inactive"}:
-            self.status = "active"
+            raise ValueError(f"Unsupported question status: {self.status!r}.")
+        self.verification_status = str(self.verification_status or "VERIFIED").upper()
+        if self.verification_status not in self.ALLOWED_VERIFICATION_STATUSES:
+            raise ValueError(
+                f"Unsupported verification_status: {self.verification_status!r}."
+            )
+        self.source_type = str(self.source_type or "manual").lower()
+        if not self.canonical_question_id:
+            self.canonical_question_id = self.question_id
 
     @property
     def requires_handwritten_upload(self):
@@ -138,6 +164,9 @@ class Question:
             "source": self.source,
             "source_year": self.source_year,
             "status": self.status,
+            "source_type": self.source_type,
+            "verification_status": self.verification_status,
+            "canonical_question_id": self.canonical_question_id,
         }
 
 
