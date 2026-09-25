@@ -200,7 +200,8 @@ def review(item_id):
         if not o["question_text"].strip():return jsonify({"error":"Question text cannot be empty"}),400
         if not o["chapter"].strip():return jsonify({"error":"Chapter must be verified before approval."}),400
         if o["question_type"].strip().lower()=="mcq" and not o["correct_answer"].strip():return jsonify({"error":"Correct answer must be verified before approving an MCQ."}),400
-        try:\n            qobj=_question_from_extraction(q,data,o)\n            storage.create_question(qobj)\n            if q.get("solution") is not None or q.get("marking_scheme") is not None:\n                storage.create_question_solution(qobj.question_id,q.get("solution"),q.get("marking_scheme"),verified=True,source_type=qobj.source_type)\n        except ValueError as e:return jsonify({"error":str(e)}),400
+        try:
+            qobj=_question_from_extraction(q,data,o)\n            storage.create_question(qobj)\n            if q.get("solution") is not None or q.get("marking_scheme") is not None:\n                storage.create_question_solution(qobj.question_id,q.get("solution"),q.get("marking_scheme"),verified=True,source_type=qobj.source_type)\n        except ValueError as e:return jsonify({"error":str(e)}),400
         try:persist_source_visuals(_source_pdf(data,q),int(_normalise_pages(q)[0]),str(_field(q,"source_question_number","question_number","number",default="")),qobj.question_id)
         except Exception as e:note=f"{note + ' ' if note else ''}Visual asset persistence warning: {e}"
         _save_review(item_id,"APPROVED",note or f"Imported as {qobj.question_id}",qobj.question_id,question_snapshot=q,human_verified_values=o)
