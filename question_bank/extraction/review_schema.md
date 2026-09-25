@@ -26,6 +26,9 @@ Each `questions[]` item should contain:
 | `difficulty` | `questions.difficulty` | Recommended |
 | `competency` | `questions.competency` | Recommended |
 | `source` / `source_pdf` | `questions.source` plus source-paper provenance | Yes |
+| `source_type` | `questions.source_type`; normalized source adapter type such as `pdf`, `ai_json`, `manual` | Yes |
+| `verification_status` | `questions.verification_status`; publication verification state | Yes |
+| `solution` / `marking_scheme` | `question_solutions`; preserved separately from the core question row | If supplied by source |
 | `source_year` | `questions.source_year` | Recommended |
 | `diagram_reference` / `assets` | `question_assets` + content image blocks when actual files are available | If source contains visual material |
 

@@ -73,6 +73,7 @@ class QuestionIngestionPipeline:
             competency=getattr(question, "competency", None),
             source=getattr(question, "source", None),
             source_year=getattr(question, "source_year", None),
+            source_type=getattr(question, "source_type", "manual"),
         )
 
     @staticmethod
@@ -115,6 +116,7 @@ class QuestionIngestionPipeline:
             competency=metadata.get("competency"),
             source=source.name or source.url or source.source_id,
             source_year=source.source_year,
+            source_type=source.source_type,
             assets=list(raw.raw_assets),
             metadata=metadata,
         )

@@ -11,6 +11,7 @@ class SourceType(str, Enum):
     URL = "url"
     IMAGE = "image"
     API = "api"
+    AI_JSON = "ai_json"
     PARTNER = "partner"
     ORIGINAL = "original"
 
@@ -42,7 +43,7 @@ class SourceDocument:
 
 @dataclass
 class RawQuestion:
-    """Extractor output before it is mapped to the production Question model."""
+    """Extractor output before it is mapped to the canonical pre-publication model."""
 
     raw_question_id: str
     source_id: str
@@ -78,6 +79,7 @@ class NormalizedQuestion:
     competency: Optional[str] = None
     source: Optional[str] = None
     source_year: Optional[int] = None
+    source_type: str = SourceType.MANUAL.value
     assets: List[Dict[str, Any]] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
 

@@ -25,7 +25,7 @@ class MySQLStorage:
                 self.tests[r['test_id']] = Test(r['test_id'],r['title'],r['subject'],r['class_level'],r['duration_minutes'],r['total_marks'],json.loads(r['questions_json']),r['status'],r['board'],str(r['test_date']) if r['test_date'] else None,r['test_type'])
             for r in db.execute(text("SELECT * FROM questions")).mappings():
                 blocks=[ContentBlock(**x) for x in json.loads(r['question_content_json'])]
-                self.questions[r['question_id']] = Question(r['question_id'],r['question_type'],r['answer_mode'],blocks,json.loads(r['answer_choices_json']),r['correct_answer'],r['marks'],r['handwritten_upload_mode'],r['subject'],r['board'],r['class_level'],r['chapter'],r['topic'],r['subtopic'],r['difficulty'],r['competency'],r['source'],r['source_year'],r.get('status','active'))
+                self.questions[r['question_id']] = Question(r['question_id'],r['question_type'],r['answer_mode'],blocks,json.loads(r['answer_choices_json']),r['correct_answer'],r['marks'],r['handwritten_upload_mode'],r['subject'],r['board'],r['class_level'],r['chapter'],r['topic'],r['subtopic'],r['difficulty'],r['competency'],r['source'],r['source_year'],r.get('status','active'),r.get('source_type','manual'),r.get('verification_status','VERIFIED'),r.get('canonical_question_id') or r['question_id'])
             for r in db.execute(text("SELECT * FROM students")).mappings():
                 self.students[r['student_id']] = Student(r['student_id'],r['name'],r['email'],r['phone'],r['city'],r['role'],r['class_level'],r['board'],r['school'],str(r['registration_date']) if r['registration_date'] else None,r['registration_source'],r['status'])
             for r in db.execute(text("SELECT * FROM attempts")).mappings():
@@ -37,7 +37,7 @@ class MySQLStorage:
 
     def _question_row(self, q):
         content=json.dumps([{'type':c.type,'value':c.value,'asset_id':c.asset_id,'metadata':c.metadata} for c in q.question_content],ensure_ascii=False)
-        return {'id':q.question_id,'subject':q.subject,'board':q.board,'class':q.class_level,'chapter':q.chapter,'topic':q.topic,'subtopic':q.subtopic,'type':q.question_type,'mode':q.answer_mode,'difficulty':q.difficulty,'competency':q.competency,'content':content,'choices':json.dumps(q.answer_choices,ensure_ascii=False),'correct':q.correct_answer,'marks':q.marks,'upload':q.handwritten_upload_mode,'source':q.source,'year':q.source_year,'status':q.status}
+        return {'id':q.question_id,'subject':q.subject,'board':q.board,'class':q.class_level,'chapter':q.chapter,'topic':q.topic,'subtopic':q.subtopic,'type':q.question_type,'mode':q.answer_mode,'difficulty':q.difficulty,'competency':q.competency,'content':content,'choices':json.dumps(q.answer_choices,ensure_ascii=False),'correct':q.correct_answer,'marks':q.marks,'upload':q.handwritten_upload_mode,'source':q.source,'year':q.source_year,'status':q.status,'source_type':q.source_type,'verification_status':q.verification_status,'canonical_question_id':q.canonical_question_id or q.question_id}
 
     def create_test(self,test: Test):
         with engine.begin() as db:
@@ -53,10 +53,18 @@ class MySQLStorage:
     def create_question(self,q: Question):
         p=self._question_row(q)
         with engine.begin() as db:
-            db.execute(text("""INSERT INTO questions(question_id,subject,board,class_level,chapter,topic,subtopic,question_type,answer_mode,difficulty,competency,question_content_json,answer_choices_json,correct_answer,marks,handwritten_upload_mode,source,source_year,status) VALUES(:id,:subject,:board,:class,:chapter,:topic,:subtopic,:type,:mode,:difficulty,:competency,:content,:choices,:correct,:marks,:upload,:source,:year,:status) ON DUPLICATE KEY UPDATE question_content_json=VALUES(question_content_json),answer_choices_json=VALUES(answer_choices_json),correct_answer=VALUES(correct_answer),marks=VALUES(marks),handwritten_upload_mode=VALUES(handwritten_upload_mode),chapter=VALUES(chapter),topic=VALUES(topic),subtopic=VALUES(subtopic),difficulty=VALUES(difficulty),competency=VALUES(competency),subject=VALUES(subject),board=VALUES(board),class_level=VALUES(class_level),answer_mode=VALUES(answer_mode),question_type=VALUES(question_type),source=VALUES(source),source_year=VALUES(source_year),status=VALUES(status)"""),p)
+            db.execute(text("""INSERT INTO questions(question_id,subject,board,class_level,chapter,topic,subtopic,question_type,answer_mode,difficulty,competency,question_content_json,answer_choices_json,correct_answer,marks,handwritten_upload_mode,source,source_year,status,source_type,verification_status,canonical_question_id) VALUES(:id,:subject,:board,:class,:chapter,:topic,:subtopic,:type,:mode,:difficulty,:competency,:content,:choices,:correct,:marks,:upload,:source,:year,:status,:source_type,:verification_status,:canonical_question_id) ON DUPLICATE KEY UPDATE question_content_json=VALUES(question_content_json),answer_choices_json=VALUES(answer_choices_json),correct_answer=VALUES(correct_answer),marks=VALUES(marks),handwritten_upload_mode=VALUES(handwritten_upload_mode),chapter=VALUES(chapter),topic=VALUES(topic),subtopic=VALUES(subtopic),difficulty=VALUES(difficulty),competency=VALUES(competency),subject=VALUES(subject),board=VALUES(board),class_level=VALUES(class_level),answer_mode=VALUES(answer_mode),question_type=VALUES(question_type),source=VALUES(source),source_year=VALUES(source_year),status=VALUES(status),source_type=VALUES(source_type),verification_status=VALUES(verification_status),canonical_question_id=VALUES(canonical_question_id)"""),p)
         self.questions[q.question_id]=q
 
     def get_question(self,qid): return self.questions.get(qid)
+
+    def create_question_solution(self, question_id, solution=None, marking_scheme=None, *, verified=False, source_type="extracted", version=1):
+        with engine.begin() as db:
+            db.execute(text("""INSERT INTO question_solutions(question_id,solution_content,marking_scheme,version,verified,source_type) VALUES(:question,:solution,:scheme,:version,:verified,:source_type) ON DUPLICATE KEY UPDATE solution_content=VALUES(solution_content),marking_scheme=VALUES(marking_scheme),version=VALUES(version),verified=VALUES(verified),source_type=VALUES(source_type),updated_at=CURRENT_TIMESTAMP"""), {'question':question_id,'solution':solution,'scheme':marking_scheme,'version':version,'verified':1 if verified else 0,'source_type':source_type})
+
+    def get_question_solution(self, question_id):
+        with engine.connect() as db:
+            return db.execute(text("SELECT * FROM question_solutions WHERE question_id=:question ORDER BY version DESC LIMIT 1"), {'question':question_id}).mappings().first()
     def get_questions(self,qids: List[str]): return [self.questions[x] for x in qids if x in self.questions]
 
     def delete_question(self,qid):
