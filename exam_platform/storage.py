@@ -5,6 +5,7 @@ from typing import List
 from sqlalchemy import text
 from database import engine, initialize_database
 from .models import Test, Question, Student, Attempt, Response, AnswerImage, ContentBlock
+from .question_sync import sync_question_payload, sync_question_solution, deactivate_question, is_sync_configured
 
 initialize_database()
 
@@ -55,12 +56,16 @@ class MySQLStorage:
         with engine.begin() as db:
             db.execute(text("""INSERT INTO questions(question_id,subject,board,class_level,chapter,topic,subtopic,question_type,answer_mode,difficulty,competency,question_content_json,answer_choices_json,correct_answer,marks,handwritten_upload_mode,source,source_year,status,source_type,verification_status,canonical_question_id) VALUES(:id,:subject,:board,:class,:chapter,:topic,:subtopic,:type,:mode,:difficulty,:competency,:content,:choices,:correct,:marks,:upload,:source,:year,:status,:source_type,:verification_status,:canonical_question_id) ON DUPLICATE KEY UPDATE question_content_json=VALUES(question_content_json),answer_choices_json=VALUES(answer_choices_json),correct_answer=VALUES(correct_answer),marks=VALUES(marks),handwritten_upload_mode=VALUES(handwritten_upload_mode),chapter=VALUES(chapter),topic=VALUES(topic),subtopic=VALUES(subtopic),difficulty=VALUES(difficulty),competency=VALUES(competency),subject=VALUES(subject),board=VALUES(board),class_level=VALUES(class_level),answer_mode=VALUES(answer_mode),question_type=VALUES(question_type),source=VALUES(source),source_year=VALUES(source_year),status=VALUES(status),source_type=VALUES(source_type),verification_status=VALUES(verification_status),canonical_question_id=VALUES(canonical_question_id)"""),p)
         self.questions[q.question_id]=q
+        if is_sync_configured():
+            sync_question_payload(p)
 
     def get_question(self,qid): return self.questions.get(qid)
 
     def create_question_solution(self, question_id, solution=None, marking_scheme=None, *, verified=False, source_type="extracted", version=1):
         with engine.begin() as db:
             db.execute(text("""INSERT INTO question_solutions(question_id,solution_content,marking_scheme,version,verified,source_type) VALUES(:question,:solution,:scheme,:version,:verified,:source_type) ON DUPLICATE KEY UPDATE solution_content=VALUES(solution_content),marking_scheme=VALUES(marking_scheme),version=VALUES(version),verified=VALUES(verified),source_type=VALUES(source_type),updated_at=CURRENT_TIMESTAMP"""), {'question':question_id,'solution':solution,'scheme':marking_scheme,'version':version,'verified':1 if verified else 0,'source_type':source_type})
+        if is_sync_configured():
+            sync_question_solution(question_id, solution, marking_scheme, verified=verified, source_type=source_type, version=version)
 
     def get_question_solution(self, question_id):
         with engine.connect() as db:
@@ -69,6 +74,7 @@ class MySQLStorage:
 
     def delete_question(self,qid):
         with engine.begin() as db: db.execute(text("UPDATE questions SET status='inactive' WHERE question_id=:id"), {'id': qid})
+        if is_sync_configured(): deactivate_question(qid)
         if qid in self.questions: self.questions[qid].status = 'inactive'
 
     def activate_question(self,qid):
