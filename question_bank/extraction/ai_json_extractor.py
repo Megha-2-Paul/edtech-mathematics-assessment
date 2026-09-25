@@ -203,7 +203,12 @@ class AIJSONQuestionExtractor:
                 "source_question_number": item.get("source_question_number")
                 or question_number,
                 "source_occurrence_id": item.get("source_occurrence_id"),
-                "source": source,\n                "source_label": source.get("label") or source.get("name"),\n                "source_details": source,\n                "solution": item.get("solution"),\n                "marking_scheme": item.get("marking_scheme"),\n                "syllabus_status": item.get("syllabus_status"),
+                "source": source,
+                "source_label": source.get("label") or source.get("name"),
+                "source_details": source,
+                "solution": item.get("solution"),
+                "marking_scheme": item.get("marking_scheme"),
+                "syllabus_status": item.get("syllabus_status"),
                 "assets": item.get("assets") or [],
                 "diagram_reference": item.get("diagram_reference"),
                 "extraction_confidence": item.get("extraction_confidence"),
