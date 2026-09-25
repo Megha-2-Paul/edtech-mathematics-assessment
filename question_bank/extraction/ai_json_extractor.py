@@ -123,7 +123,7 @@ class AIJSONQuestionExtractor:
             source_type=str(source.get("source_type") or "ai_json"),
             name=source.get("name") or envelope.get("source_name"),
             url=source.get("url"),
-            source_year=source.get("source_year"),
+            source_year=source.get("source_year") or source.get("year"),
             rights_status=str(source.get("rights_status") or "unknown"),
             metadata={
                 **metadata,
@@ -164,7 +164,7 @@ class AIJSONQuestionExtractor:
 
             question_number = item.get("question_number")
             question_text = self._text(
-                item.get("question_text"), "question_text", required=True
+                item.get("question_text") or item.get("text") or item.get("question"), "question_text", required=True
             )
 
             # Source numbering is provenance, not a canonical database ID.
