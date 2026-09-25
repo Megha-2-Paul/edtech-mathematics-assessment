@@ -5,7 +5,8 @@ from typing import Iterable, Optional
 from exam_platform.ingestion.models import IngestionCandidate, IngestionStatus
 from exam_platform.ingestion.pipeline import QuestionIngestionPipeline
 from exam_platform.ingestion.review import QuestionReviewService, ReviewDecision
-from exam_platform.models import Question\nfrom exam_platform.ingestion.canonical import build_question_from_candidate, solution_payload
+from exam_platform.models import Question
+from exam_platform.ingestion.canonical import build_question_from_candidate, solution_payload
 from question_bank.extraction.ai_json_extractor import AIJSONQuestionExtractor
 
 @dataclass
