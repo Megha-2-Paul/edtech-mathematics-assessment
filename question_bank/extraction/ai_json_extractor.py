@@ -120,7 +120,7 @@ class AIJSONQuestionExtractor:
                 or envelope.get("source_id")
                 or "ai-json-import"
             ),
-            source_type=str(source.get("source_type") or "api"),
+            source_type=str(source.get("source_type") or "ai_json"),
             name=source.get("name") or envelope.get("source_name"),
             url=source.get("url"),
             source_year=source.get("source_year"),
@@ -150,7 +150,7 @@ class AIJSONQuestionExtractor:
                     f"Question #{index} must be an object."
                 )
 
-            source = item.get("source") or {}
+            source = item.get("source") or item.get("source_details") or {}
             if not isinstance(source, dict):
                 raise AIJSONExtractionError(
                     f"Question #{index} field 'source' must be an object."
@@ -175,7 +175,9 @@ class AIJSONQuestionExtractor:
                 "question_number": question_number,
                 "question_parts": item.get("question_parts") or item.get("parts") or [],
                 "question_type": item.get("question_type")
+                or item.get("type")
                 or defaults.get("question_type"),
+                "original_question_type": item.get("question_type") or item.get("type"),
                 "answer_mode": item.get("answer_mode")
                 or defaults.get("answer_mode"),
                 "handwritten_upload_mode": item.get("handwritten_upload_mode")
@@ -183,6 +185,7 @@ class AIJSONQuestionExtractor:
                 "subject": item.get("subject") or defaults.get("subject"),
                 "board": item.get("board") or defaults.get("board"),
                 "class_level": item.get("class_level")
+                or item.get("class")
                 or defaults.get("class_level"),
                 "chapter": item.get("chapter") or defaults.get("chapter"),
                 "topic": item.get("topic") or defaults.get("topic"),
@@ -200,7 +203,7 @@ class AIJSONQuestionExtractor:
                 "source_question_number": item.get("source_question_number")
                 or question_number,
                 "source_occurrence_id": item.get("source_occurrence_id"),
-                "source": source,
+                "source": source,\n                "source_label": source.get("label") or source.get("name"),\n                "source_details": source,\n                "solution": item.get("solution"),\n                "marking_scheme": item.get("marking_scheme"),\n                "syllabus_status": item.get("syllabus_status"),
                 "assets": item.get("assets") or [],
                 "diagram_reference": item.get("diagram_reference"),
                 "extraction_confidence": item.get("extraction_confidence"),
@@ -214,7 +217,7 @@ class AIJSONQuestionExtractor:
                     raw_question_id=raw_question_id,
                     source_id=source_id,
                     raw_text=question_text,
-                    raw_options=self._options(item.get("answer_choices")),
+                    raw_options=self._options(item.get("answer_choices") if item.get("answer_choices") is not None else item.get("options")),
                     raw_answer=self._text(
                         item.get("correct_answer"), "correct_answer"
                     )
