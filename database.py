@@ -55,6 +55,17 @@ def initialize_database():
         except Exception as exc:
             if "Duplicate column" not in str(exc) and "1060" not in str(exc):
                 raise
+        for statement in (
+            "ALTER TABLE questions ADD COLUMN source_type VARCHAR(20) NOT NULL DEFAULT 'manual'",
+            "ALTER TABLE questions ADD COLUMN verification_status VARCHAR(30) NOT NULL DEFAULT 'VERIFIED'",
+            "ALTER TABLE questions ADD COLUMN canonical_question_id VARCHAR(40) NULL",
+        ):
+            try:
+                connection.execute(text(statement))
+            except Exception as exc:
+                if "Duplicate column" not in str(exc) and "1060" not in str(exc):
+                    raise
+
         try:
             connection.execute(text("ALTER TABLE students MODIFY COLUMN email VARCHAR(255) NULL"))
             connection.execute(text("UPDATE students SET email=NULL WHERE email=''"))
