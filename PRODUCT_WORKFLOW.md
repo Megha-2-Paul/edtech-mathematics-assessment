@@ -128,42 +128,58 @@ The initial product should sell a **diagnostic assessment + useful report**, not
 
 ## Stage B — Registration
 
-Student submits:
+### Current controlled-launch process
 
-- Name
-- Phone
-- Email
-- Class
-- Board
-- School (optional)
-
-System creates a permanent `Student_ID`.
-
-Example:
+Registration is intentionally separated from the examination experience.
 
 ```text
-STU000123
+Google Form
+      ↓
+Google Sheets
+      ↓
+Manual review / confirmation
+      ↓
+Create or reuse permanent Student_ID
+      ↓
+Aiven MySQL
+      ↓
+Assessment access
 ```
 
-### n8n registration workflow
+Google Sheets can remain the raw registration/validation store during the pilot. It should not become a continuously synchronized production database.
+
+The existing production `students` table already contains the core fields required for enrollment, so no schema change is currently required.
+
+### Student identity rule
+
+The enrollment process must not create a new Student_ID every time a returning student starts an assessment. It should identify an existing student using the approved registration identity and reuse the permanent Student_ID.
+
+The current storage layer is keyed by Student_ID and does not itself perform the required email/phone identity matching before creation. That matching should therefore be implemented explicitly in the registration/enrollment flow.
+
+### Future automated registration workflow
+
+After the manual pilot is validated, the process can be automated:
 
 ```text
-Registration webhook
+Registration row / webhook
         |
         v
 Validate registration
         |
         v
-Create/update student in MySQL
+Create or reuse student in Aiven
+        |
+        v
+Confirm write / idempotency
         |
         v
 Generate/confirm Student ID
         |
         v
-Send welcome WhatsApp
+Grant assessment access
         |
         v
-Send confirmation email
+Send WhatsApp / email confirmation
 ```
 
 ---
@@ -805,15 +821,29 @@ n8n is the **orchestrator**, not the assessment engine.
 
 # 24. MVP production architecture
 
-The first production version should be:
+The current deployment uses managed Aiven MySQL as the production database:
 
 ```text
 Student
   |
   v
-Flask web application
+Flask web application on Render
   |
-  +---- MySQL
+  +---- Aiven MySQL (DATABASE_URL)
+  |
+  +---- Secure object storage for answer images/reports
+  |
+  +---- n8n webhooks
+           |
+           +---- Python analysis service
+           |
+           +---- Email
+           |
+           +---- WhatsApp
+```
+
+Local MySQL is retained for development/testing. It is not a second production source of truth.
+
   |
   +---- Secure object storage for answer images/reports
   |

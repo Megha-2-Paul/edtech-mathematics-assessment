@@ -23,6 +23,35 @@ This is not intended to be a generic mock-test marketplace. The product loop is:
 - MySQL as the persistent source of truth
 - Student result and performance-report views
 - Cumulative question/performance history foundation
+- Production deployment on Render using Aiven MySQL as the primary database
+
+## Current environment architecture
+
+Development and production are intentionally separated:
+
+```text
+LOCAL DEVELOPMENT
+Your PC
+  ↓
+Local MySQL
+  ↓
+Code/tests/data development
+
+PRODUCTION
+Render
+  ↓
+DATABASE_URL
+  ↓
+Aiven MySQL
+  ↓
+Students / Tests / Questions / Attempts / Responses / Evaluations / History
+```
+
+The production application does **not** currently require local-MySQL ↔ Aiven synchronization.
+
+The repository also contains an optional question-bank sync layer controlled by `QUESTION_BANK_SYNC_DATABASE_URL`. This is a separate primary-to-secondary question-bank mechanism; it is not the student-registration architecture and is currently not configured in the Render environment.
+
+See `PRODUCTION_ARCHITECTURE.md` for the verified production topology and the planned registration/enrollment flow.
 
 ## Architecture
 
@@ -31,7 +60,7 @@ Student Website
       ↓
  Flask / API
       ↓
- MySQL
+ Aiven MySQL (production source of truth)
       ↓
  Evaluation / Analytics / Diagnosis
       ↓
@@ -68,6 +97,7 @@ Planned orchestration and communication can use n8n, Python reporting/analytics,
 ├── .env.example
 ├── .gitignore
 ├── PRODUCT_WORKFLOW.md
+├── PRODUCTION_ARCHITECTURE.md
 ├── PRODUCT_STRATEGY.md
 ├── EXAM_PLATFORM_REPORT.md
 ├── PLATFORM_VERIFICATION.md
@@ -109,11 +139,35 @@ The initial evaluation codes are:
 
 These codes may evolve as real student data is collected.
 
+## Registration status
+
+The current prototype can create a temporary session-based student/Guest Student record when an exam flow is exercised without a registered student.
+
+For the controlled launch, registration should instead follow:
+
+```text
+Google Form
+   ↓
+Google Sheets
+   ↓
+Confirm eligible student
+   ↓
+Create/reuse permanent Student_ID
+   ↓
+Aiven MySQL
+   ↓
+Assessment access
+```
+
+Google Sheets is intended to hold the raw registration and validation/customer-research responses. It should not become the production database or a continuously synchronized second source of truth.
+
+No database schema change is currently required for this registration plan.
+
 ## Current development stage
 
-The platform is at the **pre-functional-testing MVP stage**.
+The platform is at the **controlled functional-testing / pre-public-launch stage**.
 
-The next step is to run the application locally with MySQL and test the complete flow end to end. Until that test is completed, production readiness must not be assumed.
+The next priority is to validate the complete assessment → evaluation → diagnosis → report loop with real users before adding AI grading or large-scale platform features.
 
 ## Before public launch
 
