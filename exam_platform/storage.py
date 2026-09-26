@@ -28,7 +28,7 @@ class MySQLStorage:
                 blocks=[ContentBlock(**x) for x in json.loads(r['question_content_json'])]
                 self.questions[r['question_id']] = Question(r['question_id'],r['question_type'],r['answer_mode'],blocks,json.loads(r['answer_choices_json']),r['correct_answer'],r['marks'],r['handwritten_upload_mode'],r['subject'],r['board'],r['class_level'],r['chapter'],r['topic'],r['subtopic'],r['difficulty'],r['competency'],r['source'],r['source_year'],r.get('status','active'),r.get('source_type','manual'),r.get('verification_status','VERIFIED'),r.get('canonical_question_id') or r['question_id'])
             for r in db.execute(text("SELECT * FROM students")).mappings():
-                self.students[r['student_id']] = Student(r['student_id'],r['name'],r['email'],r['phone'],r['city'],r['role'],r['class_level'],r['board'],r['school'],str(r['registration_date']) if r['registration_date'] else None,r['registration_source'],r['status'])
+                self.students[r['student_id']] = Student(r['student_id'],r['name'],r['email'],r['phone'],r['city'],r['role'],r['class_level'],r['board'],r['school'],str(r['registration_date']) if r['registration_date'] else None,r['registration_source'],r['status'],r.get('subject'))
             for r in db.execute(text("SELECT * FROM attempts")).mappings():
                 self.attempts[r['attempt_id']] = Attempt(r['attempt_id'],r['student_id'],r['test_id'],self._dt(r['started_at']),self._dt(r['submitted_at']),r['status'],r['score'],r['percentage'],r['attempt_rate'],r['accuracy'],r['time_taken_seconds'])
             for r in db.execute(text("SELECT * FROM responses")).mappings():
@@ -41,6 +41,27 @@ class MySQLStorage:
         return {'id':q.question_id,'subject':q.subject,'board':q.board,'class':q.class_level,'chapter':q.chapter,'topic':q.topic,'subtopic':q.subtopic,'type':q.question_type,'mode':q.answer_mode,'difficulty':q.difficulty,'competency':q.competency,'content':content,'choices':json.dumps(q.answer_choices,ensure_ascii=False),'correct':q.correct_answer,'marks':q.marks,'upload':q.handwritten_upload_mode,'source':q.source,'year':q.source_year,'status':q.status,'source_type':q.source_type,'verification_status':q.verification_status,'canonical_question_id':q.canonical_question_id or q.question_id}
 
     def create_test(self,test: Test):
+        # Published assessments must not mix Mathematics and Applied Mathematics.
+        for qid in test.questions:
+            question = self.questions.get(qid)
+            if not question:
+                continue
+            if question.subject != test.subject:
+                raise ValueError(
+                    f"Question {qid} has subject {question.subject!r}, "
+                    f"but test {test.test_id} is {test.subject!r}."
+                )
+            if test.board and question.board and question.board != test.board:
+                raise ValueError(
+                    f"Question {qid} has board {question.board!r}, "
+                    f"but test {test.test_id} is {test.board!r}."
+                )
+            if test.class_level and question.class_level and question.class_level != test.class_level:
+                raise ValueError(
+                    f"Question {qid} has class {question.class_level}, "
+                    f"but test {test.test_id} is class {test.class_level}."
+                )
+
         with engine.begin() as db:
             db.execute(text("""INSERT INTO tests(test_id,title,subject,class_level,board,test_date,duration_minutes,total_marks,test_type,status,questions_json) VALUES(:id,:title,:subject,:class,:board,:date,:duration,:marks,:type,:status,:questions) ON DUPLICATE KEY UPDATE title=VALUES(title),status=VALUES(status),questions_json=VALUES(questions_json),subject=VALUES(subject),class_level=VALUES(class_level),board=VALUES(board),test_date=VALUES(test_date),duration_minutes=VALUES(duration_minutes),total_marks=VALUES(total_marks),test_type=VALUES(test_type)"""),{'id':test.test_id,'title':test.title,'subject':test.subject,'class':test.class_level,'board':test.board,'date':test.test_date,'duration':test.duration_minutes,'marks':test.total_marks,'type':test.test_type,'status':test.status,'questions':json.dumps(test.questions)})
             db.execute(text("DELETE FROM test_questions WHERE test_id=:id"),{'id':test.test_id})
@@ -107,15 +128,24 @@ class MySQLStorage:
         email = s.email.strip() if isinstance(s.email, str) and s.email.strip() else None
         with engine.begin() as db:
             existing = db.execute(text("SELECT student_id FROM students WHERE student_id=:id"), {'id':s.student_id}).scalar_one_or_none()
-            params={'id':s.student_id,'name':s.name,'email':email,'phone':s.phone,'city':s.city,'role':s.role,'class':s.class_level,'board':s.board,'school':s.school,'reg':s.registration_date,'source':s.registration_source,'status':s.status}
+            params={'id':s.student_id,'name':s.name,'email':email,'phone':s.phone,'city':s.city,'role':s.role,'class':s.class_level,'board':s.board,'subject':s.subject,'school':s.school,'reg':s.registration_date,'source':s.registration_source,'status':s.status}
             if existing:
-                db.execute(text("""UPDATE students SET name=:name,email=:email,phone=:phone,city=:city,role=:role,class_level=:class,board=:board,school=:school,registration_date=:reg,registration_source=:source,status=:status WHERE student_id=:id"""), params)
+                db.execute(text("""UPDATE students SET name=:name,email=:email,phone=:phone,city=:city,role=:role,class_level=:class,board=:board,subject=:subject,school=:school,registration_date=:reg,registration_source=:source,status=:status WHERE student_id=:id"""), params)
             else:
-                db.execute(text("""INSERT INTO students(student_id,name,email,phone,city,role,class_level,board,school,registration_date,registration_source,status) VALUES(:id,:name,:email,:phone,:city,:role,:class,:board,:school,:reg,:source,:status)"""), params)
+                db.execute(text("""INSERT INTO students(student_id,name,email,phone,city,role,class_level,board,subject,school,registration_date,registration_source,status) VALUES(:id,:name,:email,:phone,:city,:role,:class,:board,:subject,:school,:reg,:source,:status)"""), params)
         s.email = email
         self.students[s.student_id]=s
 
     def get_student(self,sid): return self.students.get(sid)
+
+    def register_student(self, student: Student):
+        """Persist a reviewed registration, including board/class/subject eligibility data."""
+        if student.subject not in {"Mathematics", "Applied Mathematics"}:
+            raise ValueError("Student subject must be 'Mathematics' or 'Applied Mathematics'.")
+        if student.class_level is None or student.board not in {"CBSE", "ICSE"}:
+            raise ValueError("Registered students require a valid class level and board.")
+        self.create_student(student)
+        return student
 
     def create_attempt(self,a: Attempt):
         with engine.begin() as db: db.execute(text("INSERT INTO attempts(attempt_id,student_id,test_id,started_at,submitted_at,status,score,percentage,attempt_rate,accuracy,time_taken_seconds) VALUES(:id,:student,:test,:started,:submitted,:status,:score,:percentage,:rate,:accuracy,:time)"),{'id':a.attempt_id,'student':a.student_id,'test':a.test_id,'started':a.started_at,'submitted':a.submitted_at,'status':a.status,'score':a.score,'percentage':a.percentage,'rate':a.attempt_rate,'accuracy':a.accuracy,'time':a.time_taken_seconds})

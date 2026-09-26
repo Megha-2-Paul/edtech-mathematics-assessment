@@ -50,6 +50,8 @@ class Student:
     registration_date: Optional[str] = None
     registration_source: Optional[str] = None
     status: str = "active"
+    # Mathematics track captured during registration. Kept optional for legacy/guest records.
+    subject: Optional[str] = None
 
     def to_dict(self):
         return asdict(self)

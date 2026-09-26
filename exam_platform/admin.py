@@ -17,7 +17,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/teacher")
 QUESTION_ASSET_DIR = Path(__file__).parent.parent / "uploads" / "question_assets"
 QUESTION_ASSET_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
-SUBJECTS = ["Mathematics", "Physics", "Chemistry", "Computer"]
+SUBJECTS = ["Mathematics", "Applied Mathematics", "Physics", "Chemistry", "Computer"]
 BOARDS = ["CBSE", "ICSE"]
 QUESTION_TYPES = [
     ("mcq", "MCQ"),
@@ -489,20 +489,41 @@ def add_test():
             )
 
         test_id = _next_test_id()
+        subject = _form_value("subject", "Mathematics") or "Mathematics"
+        class_level = int(request.form.get("class_level", "10"))
+        board = _form_value("board") or None
+        status = _form_value("status", "active") or "active"
+
+        if subject not in {"Mathematics", "Applied Mathematics"}:
+            flash("Student assessments must use Mathematics or Applied Mathematics.", "error")
+            return render_template("teacher_test_form.html", questions=storage.get_all_questions(), form=request.form)
+
+        if status == "active" and not board:
+            flash("Active student assessments must specify CBSE or ICSE.", "error")
+            return render_template("teacher_test_form.html", questions=storage.get_all_questions(), form=request.form)
+
         test = Test(
             test_id=test_id,
             title=_form_value("title") or test_id,
-            subject=_form_value("subject", "Mathematics") or "Mathematics",
-            class_level=int(request.form.get("class_level", "10")),
+            subject=subject,
+            class_level=class_level,
             duration_minutes=int(request.form.get("duration_minutes", "60")),
             total_marks=sum(storage.questions[qid].marks for qid in selected),
             questions=selected,
-            status=_form_value("status", "active") or "active",
-            board=_form_value("board") or None,
+            status=status,
+            board=board,
             test_date=request.form.get("test_date") or None,
             test_type=_form_value("test_type", "weekly") or "weekly",
         )
-        storage.create_test(test)
+        try:
+            storage.create_test(test)
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return render_template(
+                "teacher_test_form.html",
+                questions=storage.get_all_questions(),
+                form=request.form,
+            )
         flash(
             f"Test {test_id} created with {len(selected)} questions.",
             "success",

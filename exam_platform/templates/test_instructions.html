@@ -24,7 +24,7 @@
         <div class="stat-label">Questions</div>
     </div>
     <div class="stat-card test-stat">
-        <div class="stat-value accent">Maths</div>
+        <div class="stat-value accent">{{ test.subject }}</div>
         <div class="stat-label">Subject</div>
     </div>
 </div>
@@ -63,10 +63,15 @@ function startTest(testId) {
     button.disabled = true;
     button.textContent = 'Starting...';
     fetch(`/api/test/${testId}/start`, { method: 'POST' })
-        .then(r => r.json())
-        .then(data => { window.location.href = data.redirect_url; })
-        .catch(() => {
-            alert('Error starting test');
+        .then(async response => {
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Unable to start this assessment');
+            }
+            window.location.href = data.redirect_url;
+        })
+        .catch(error => {
+            alert(error.message || 'Error starting test');
             button.disabled = false;
             button.innerHTML = 'Start Test <span>→</span>';
         });

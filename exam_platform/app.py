@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from exam_platform.admin import register_admin
 from exam_platform.db_source import storage
 from exam_platform.mock_data import load_mock_data
+from exam_platform.eligibility import is_test_eligible
 from exam_platform.models import (
     AnswerImage,
     AnswerStatus,
@@ -122,7 +123,9 @@ def index():
 @app.route("/tests")
 def test_listing():
     student_id = get_or_create_student_id()
-    tests = storage.get_all_tests()
+    student = storage.get_student(student_id)
+    all_tests = storage.get_all_tests()
+    tests = [test for test in all_tests if is_test_eligible(student, test)]
     test_status = {}
 
     for test in tests:
@@ -157,6 +160,10 @@ def test_instructions(test_id):
         return "Test not found", 404
 
     student_id = get_or_create_student_id()
+    student = storage.get_student(student_id)
+    if not is_test_eligible(student, test):
+        return "You are not eligible for this assessment.", 403
+
     existing = storage.get_student_test_attempt(student_id, test_id)
 
     if existing and existing.status == AttemptStatus.SUBMITTED.value:
@@ -190,6 +197,9 @@ def start_test(test_id):
 
     student_id = get_or_create_student_id()
     ensure_student_record(student_id)
+    student = storage.get_student(student_id)
+    if not is_test_eligible(student, test):
+        return jsonify({"error": "You are not eligible for this assessment"}), 403
     existing = storage.get_student_test_attempt(student_id, test_id)
 
     if existing:
