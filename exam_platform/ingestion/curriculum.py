@@ -36,13 +36,11 @@ def normalize_label(value: Any) -> str:
 
 
 def canonical_subject_id(value: Any) -> str | None:
-    key = normalize_label(value)
-    return SUBJECT_ALIASES.get(key)
+    return SUBJECT_ALIASES.get(normalize_label(value))
 
 
 def canonical_board(value: Any) -> str | None:
-    key = normalize_label(value)
-    return BOARD_ALIASES.get(key)
+    return BOARD_ALIASES.get(normalize_label(value))
 
 
 @dataclass(frozen=True)
@@ -67,14 +65,18 @@ class CanonicalTaxonomyResolver:
 
     def __init__(
         self,
-        taxonomy_path: str | Path = "canonical_math_taxonomy_2026_27.json",
+        taxonomy_path: str | Path | None = None,
         *,
         taxonomy_data: Mapping[str, Any] | None = None,
     ):
         if taxonomy_data is not None:
             self.data = dict(taxonomy_data)
         else:
-            path = Path(taxonomy_path)
+            path = (
+                Path(taxonomy_path)
+                if taxonomy_path is not None
+                else Path(__file__).resolve().parents[2] / "canonical_math_taxonomy_2026_27.json"
+            )
             self.data = json.loads(path.read_text(encoding="utf-8"))
 
         self._chapters = {
