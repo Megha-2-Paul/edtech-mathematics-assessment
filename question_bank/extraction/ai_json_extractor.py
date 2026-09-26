@@ -3,6 +3,7 @@ from typing import Any
 
 from exam_platform.ingestion.models import RawQuestion, SourceDocument
 from question_bank.extraction.extraction_contract import FIELD_ALIASES, EXTRACTION_SCHEMA_VERSION
+from question_bank.extraction.normalization import normalize_chapter, normalize_mcq_answer, normalize_question_type
 
 
 class AIJSONExtractionError(ValueError):
@@ -187,24 +188,41 @@ class AIJSONQuestionExtractor:
             if source_pages is None:
                 source_pages = [source_page] if isinstance(source_page, int) else []
 
-            question_type = self._first(item, "question_type", defaults.get("question_type"))
+            original_question_type = self._first(item, "question_type", defaults.get("question_type"))
+            question_type, type_normalization = normalize_question_type(original_question_type)
             question_parts = self._first(
                 item, "question_parts", defaults.get("question_parts")
             ) or []
+
+            original_chapter = item.get("chapter") or defaults.get("chapter")
+            normalized_chapter, chapter_normalization = normalize_chapter(
+                original_chapter, item.get("topic") or defaults.get("topic")
+            )
+            raw_options = self._options(self._first(item, "answer_choices"))
+            normalized_answer = self._text(item.get("correct_answer"), "correct_answer") or None
+            if question_type == "mcq":
+                normalized_answer, answer_normalization = normalize_mcq_answer(
+                    normalized_answer, raw_options
+                )
+            else:
+                answer_normalization = "not_applicable"
 
             metadata = {
                 **defaults,
                 "question_number": question_number,
                 "question_parts": question_parts,
                 "question_type": question_type,
-                "original_question_type": self._first(item, "question_type"),
+                "original_question_type": original_question_type,
+                "question_type_normalization": type_normalization,
+                "answer_normalization": answer_normalization,
+                "chapter_normalization": chapter_normalization,
                 "answer_mode": item.get("answer_mode") or defaults.get("answer_mode"),
                 "handwritten_upload_mode": item.get("handwritten_upload_mode")
                 or defaults.get("handwritten_upload_mode", "none"),
                 "subject": item.get("subject") or defaults.get("subject"),
                 "board": item.get("board") or defaults.get("board"),
                 "class_level": self._first(item, "class_level", defaults.get("class_level")),
-                "chapter": item.get("chapter") or defaults.get("chapter"),
+                "chapter": normalized_chapter,
                 "topic": item.get("topic") or defaults.get("topic"),
                 "subtopic": item.get("subtopic") or defaults.get("subtopic"),
                 "difficulty": item.get("difficulty") or defaults.get("difficulty"),
@@ -234,8 +252,8 @@ class AIJSONQuestionExtractor:
                     raw_question_id=raw_question_id,
                     source_id=source_id,
                     raw_text=question_text,
-                    raw_options=self._options(self._first(item, "answer_choices")),
-                    raw_answer=self._text(item.get("correct_answer"), "correct_answer") or None,
+                    raw_options=raw_options,
+                    raw_answer=normalized_answer,
                     raw_marks=item.get("marks"),
                     raw_assets=item.get("assets") or [],
                     source_reference=str(
