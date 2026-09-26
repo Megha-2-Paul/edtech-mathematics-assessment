@@ -40,6 +40,9 @@ class QuestionIngestionPipeline:
 
     Publishing is intentionally explicit. The pipeline does not automatically insert
     a candidate into the production questions table.
+
+    Curriculum resolution is opt-in so legacy/manual/PDF ingestion remains backward
+    compatible until the canonical taxonomy source is validated.
     """
 
     def __init__(
@@ -49,7 +52,7 @@ class QuestionIngestionPipeline:
         taxonomy_resolver: Optional[CanonicalTaxonomyResolver] = None,
     ):
         self.existing_fingerprints: Dict[str, str] = {}
-        self.taxonomy_resolver = taxonomy_resolver or CanonicalTaxonomyResolver()
+        self.taxonomy_resolver = taxonomy_resolver
         for question in existing_questions or []:
             normalized = self._from_existing_question(question)
             self.existing_fingerprints[question_fingerprint(normalized)] = question.question_id
@@ -131,32 +134,33 @@ class QuestionIngestionPipeline:
         raw_questions: Iterable[RawQuestion],
         source: SourceDocument,
     ) -> List[IngestionCandidate]:
-        """Normalize, resolve curriculum, validate and flag deterministic duplicates."""
+        """Normalize, optionally resolve curriculum, validate and flag duplicates."""
         candidates = []
         seen_in_batch: Dict[str, str] = {}
 
         for raw in raw_questions:
             normalized = self.normalize(raw, source)
 
-            mapping = self.taxonomy_resolver.resolve(
-                subject=normalized.subject,
-                board=normalized.board,
-                class_level=normalized.class_level,
-                chapter=normalized.chapter,
-            )
-            normalized.metadata.update(
-                {
-                    "curriculum_mapping_status": mapping.status,
-                    "original_chapter": mapping.original_chapter,
-                    "canonical_chapter_id": mapping.canonical_chapter_id,
-                    "canonical_chapter_name": mapping.canonical_chapter_name,
-                    "syllabus_unit_id": mapping.syllabus_unit_id,
-                    "syllabus_unit_name": mapping.syllabus_unit_name,
-                    "curriculum_mapping_reason": mapping.reason,
-                    "curriculum_mapping_candidates": list(mapping.candidates),
-                    "taxonomy_version": self.taxonomy_resolver.data.get("taxonomy_version"),
-                }
-            )
+            if self.taxonomy_resolver is not None:
+                mapping = self.taxonomy_resolver.resolve(
+                    subject=normalized.subject,
+                    board=normalized.board,
+                    class_level=normalized.class_level,
+                    chapter=normalized.chapter,
+                )
+                normalized.metadata.update(
+                    {
+                        "curriculum_mapping_status": mapping.status,
+                        "original_chapter": mapping.original_chapter,
+                        "canonical_chapter_id": mapping.canonical_chapter_id,
+                        "canonical_chapter_name": mapping.canonical_chapter_name,
+                        "syllabus_unit_id": mapping.syllabus_unit_id,
+                        "syllabus_unit_name": mapping.syllabus_unit_name,
+                        "curriculum_mapping_reason": mapping.reason,
+                        "curriculum_mapping_candidates": list(mapping.candidates),
+                        "taxonomy_version": self.taxonomy_resolver.data.get("taxonomy_version"),
+                    }
+                )
 
             validation = validate_question(normalized)
             fingerprint = question_fingerprint(normalized)
@@ -191,10 +195,15 @@ class QuestionIngestionPipeline:
     @staticmethod
     def publishable(candidate: IngestionCandidate) -> bool:
         """Return whether a candidate is eligible for explicit human approval."""
+        mapping_status = candidate.question.metadata.get("curriculum_mapping_status")
+        mapping_ok = (
+            mapping_status is None
+            or mapping_status == CanonicalTaxonomyResolver.MATCHED
+        )
         return (
             candidate.status == IngestionStatus.REVIEW_REQUIRED.value
             and candidate.validation is not None
             and candidate.validation.is_valid
             and not candidate.duplicate_of
-            and candidate.question.metadata.get("curriculum_mapping_status") == CanonicalTaxonomyResolver.MATCHED
+            and mapping_ok
         )
