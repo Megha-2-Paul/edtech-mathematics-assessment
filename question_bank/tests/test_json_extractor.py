@@ -127,7 +127,7 @@ def test_json_extractor_rejects_unsupported_schema_version():
     with pytest.raises(AIJSONExtractionError):
         AIJSONQuestionExtractor(
             {"schema_version": "9.0", "questions": []}
-        )
+        ).extract()
 
 
 def test_json_extractor_does_not_use_source_question_number_as_database_id():
