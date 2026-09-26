@@ -229,7 +229,7 @@ def dashboard():
             if not isinstance(q,dict):continue
             rid=f"{p.stem}:{i}";r=_load_review(rid);items.append({"item_id":rid,"file":p.name,"source_pdf":str(d.get("source_pdf") or d.get("source_paper") or ""),"index":i,"question_number":str(_field(q,"question_number","number",default=i+1)),"page_number":_field(q,"source_page","page_number","page",default=1),"marks":q.get("marks"),"question_type":q.get("question_type") or q.get("type") or "","status":r.get("status","PENDING"),"chapter_missing":not str(q.get("chapter") or "").strip()})
     stats={s:sum(x["status"]==s for x in items) for s in ("PENDING","APPROVED","REJECTED","NEEDS_REVIEW")};stats["CHAPTER_REVIEW"]=sum(x["chapter_missing"] and x["status"] not in {"APPROVED","REJECTED"} for x in items)
-    return render_template("extraction_review_dashboard.html",items=items,stats=stats),review_start_url=url_for("extraction_review.start_review"),review_queue_count=len(_review_queue_ids()))
+    return render_template("extraction_review_dashboard.html",items=items,stats=stats,review_start_url=url_for("extraction_review.start_review"),review_queue_count=len(_review_queue_ids()))
 @review_bp.route("/start")
 def start_review():
     queue = _review_queue_ids()
@@ -251,7 +251,7 @@ def item(item_id):
         except ValueError:continue
         ids += [f"{p.stem}:{i}" for i,x in enumerate(d["questions"]) if isinstance(x,dict)]
     pos=ids.index(item_id) if item_id in ids else 0;pages=v["source_pages"];urls=[{"number":p,"url":url_for("extraction_review.page_image_numbered",item_id=item_id,page_number=p)} for p in pages];crop=_render_question_crop(pdf,pages[0],str(v["source_question_number"]),item_id) if pages else None;missing=[n for n in INFERRED_FIELDS_REQUIRE_HUMAN_VERIFICATION if not str(v.get(n) or "").strip()]
-    return render_template("extraction_review_item.html",item_id=item_id,filename=path.name,data=data,question=q,values=v,review=review,missing_inferred_fields=missing,stored_assets=stored_assets,source_pdf=pdf.name,page_number=pages[0] if pages else 1,source_page_urls=urls,question_crop_url=url_for("extraction_review.question_crop",item_id=item_id) if crop else None,previous_url=url_for("extraction_review.item",item_id=ids[pos-1]) if pos>0 else None,next_url=url_for("extraction_review.item",item_id=ids[pos+1]) if pos+1<len(ids) else None,position=pos+1,total=len(ids))
+    return render_template("extraction_review_item.html",item_id=item_id,filename=path.name,data=data,question=q,values=v,review=review,missing_inferred_fields=missing,stored_assets=stored_assets,source_pdf=pdf.name,page_number=pages[0] if pages else 1,source_page_urls=urls,question_crop_url=url_for("extraction_review.question_crop",item_id=item_id) if crop else None,previous_url=url_for("extraction_review.item",item_id=ids[pos-1]) if pos>0 else None,next_url=url_for("extraction_review.item",item_id=ids[pos+1]) if pos+1<len(ids) else None,position=pos+1,total=len(ids),chapters=_canonical_chapters(v.get("subject"),v.get("board"),v.get("class_level")),review_start_url=url_for("extraction_review.start_review"))
 @review_bp.route("/<path:item_id>/review",methods=["POST"])
 def review(item_id):
     _path,data,q=_find_item(item_id);status=request.form.get("status","NEEDS_REVIEW").upper();note=request.form.get("note","").strip();current=_load_review(item_id)
