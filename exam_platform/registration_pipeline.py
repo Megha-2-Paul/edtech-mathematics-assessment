@@ -18,11 +18,7 @@ from typing import Iterable, Mapping
 from urllib.parse import parse_qs, urlparse
 from urllib.request import Request, urlopen
 
-from sqlalchemy import text
-
-from database import engine
 from .models import Student
-from .storage import storage
 
 
 ALLOWED_SUBJECTS = {"Mathematics", "Applied Mathematics"}
@@ -190,6 +186,9 @@ def extract_registration(row: Mapping[str, str], row_number: int) -> tuple[Stude
 
 
 def _existing_student_ids(email: str, phone: str) -> set[str]:
+    from sqlalchemy import text
+    from database import engine
+
     ids: set[str] = set()
     with engine.connect() as db:
         if email:
@@ -228,6 +227,8 @@ def enroll_student(student: Student) -> Student:
         student.student_id = next(iter(ids))
     else:
         student.student_id = _new_student_id()
+
+    from .storage import storage
 
     storage.register_student(student)
     return student
