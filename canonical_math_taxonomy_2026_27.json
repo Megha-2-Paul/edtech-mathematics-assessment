@@ -998,3 +998,1342 @@
       "status": "VERIFIED"
     },
     {
+      "id": "am_alligation_mixture",
+      "name": "Alligation and Mixture",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_numerical_problems",
+      "name": "Numerical Problems",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_numerical_inequalities",
+      "name": "Numerical Inequalities",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_matrices",
+      "name": "Matrices",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_determinants",
+      "name": "Determinants",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_inverse_matrices",
+      "name": "Inverse of a Matrix",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_simultaneous_equations",
+      "name": "Systems of Simultaneous Equations",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_derivatives_applications",
+      "name": "Differentiation and its Applications",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_integration_applications",
+      "name": "Integration and its Applications",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_differential_equations_modeling",
+      "name": "Differential Equations and Modelling",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_probability_distributions",
+      "name": "Probability Distributions",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_inferential_statistics",
+      "name": "Inferential Statistics",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_time_series",
+      "name": "Time-based Data",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_financial_mathematics",
+      "name": "Financial Mathematics",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_linear_programming",
+      "name": "Linear Programming",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "application_of_calculus",
+      "name": "Application of Calculus",
+      "subject_id": "maths",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "linear_regression",
+      "name": "Linear Regression",
+      "subject_id": "maths",
+      "active": true,
+      "status": "VERIFIED"
+    }
+  ],
+  "mappings": [
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u1",
+      "canonical_chapter_id": "real_numbers",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u2",
+      "canonical_chapter_id": "polynomials",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u2",
+      "canonical_chapter_id": "pair_linear_equations_two_variables",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u2",
+      "canonical_chapter_id": "quadratic_equations",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u2",
+      "canonical_chapter_id": "arithmetic_progressions",
+      "chapter_order": 4,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u3",
+      "canonical_chapter_id": "coordinate_geometry",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u4",
+      "canonical_chapter_id": "triangles",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u4",
+      "canonical_chapter_id": "circles",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u4",
+      "canonical_chapter_id": "constructions",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u5",
+      "canonical_chapter_id": "introduction_to_trigonometry",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u5",
+      "canonical_chapter_id": "applications_of_trigonometry",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u6",
+      "canonical_chapter_id": "areas_related_to_circles",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u6",
+      "canonical_chapter_id": "surface_areas_and_volumes",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u7",
+      "canonical_chapter_id": "statistics",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_id": "cbse10_u7",
+      "canonical_chapter_id": "probability",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u1",
+      "canonical_chapter_id": "sets",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u1",
+      "canonical_chapter_id": "relations_and_functions",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u2",
+      "canonical_chapter_id": "trigonometric_functions",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u2",
+      "canonical_chapter_id": "principle_mathematical_induction",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u2",
+      "canonical_chapter_id": "complex_numbers",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u2",
+      "canonical_chapter_id": "quadratic_equations",
+      "chapter_order": 4,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u2",
+      "canonical_chapter_id": "linear_inequations",
+      "chapter_order": 5,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u2",
+      "canonical_chapter_id": "permutations_and_combinations",
+      "chapter_order": 6,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u2",
+      "canonical_chapter_id": "binomial_theorem",
+      "chapter_order": 7,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u2",
+      "canonical_chapter_id": "sequences_and_series",
+      "chapter_order": 8,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u3",
+      "canonical_chapter_id": "straight_lines",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u3",
+      "canonical_chapter_id": "conic_sections",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u3",
+      "canonical_chapter_id": "three_dimensional_geometry",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u4",
+      "canonical_chapter_id": "limits_and_derivatives",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u5",
+      "canonical_chapter_id": "statistics",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_u5",
+      "canonical_chapter_id": "probability",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_u1",
+      "canonical_chapter_id": "relations_and_functions",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_u1",
+      "canonical_chapter_id": "inverse_trigonometric_functions",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_u2",
+      "canonical_chapter_id": "matrices",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_u2",
+      "canonical_chapter_id": "determinants",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_u3",
+      "canonical_chapter_id": "continuity_and_differentiability",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_u3",
+      "canonical_chapter_id": "applications_of_derivatives",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_u3",
+      "canonical_chapter_id": "integrals",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_u3",
+      "canonical_chapter_id": "applications_of_integrals",
+      "chapter_order": 4,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_u3",
+      "canonical_chapter_id": "differential_equations",
+      "chapter_order": 5,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_u4",
+      "canonical_chapter_id": "vector_algebra",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_u4",
+      "canonical_chapter_id": "three_dimensional_geometry",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_u5",
+      "canonical_chapter_id": "linear_programming",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_u6",
+      "canonical_chapter_id": "probability",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u1",
+      "canonical_chapter_id": "commercial_gst",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u1",
+      "canonical_chapter_id": "banking",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u1",
+      "canonical_chapter_id": "shares_and_dividends",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u2",
+      "canonical_chapter_id": "linear_inequations",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u2",
+      "canonical_chapter_id": "quadratic_equations",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u2",
+      "canonical_chapter_id": "ratio_and_proportion",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u2",
+      "canonical_chapter_id": "factorisation_of_polynomials",
+      "chapter_order": 4,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u2",
+      "canonical_chapter_id": "matrices",
+      "chapter_order": 5,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u2",
+      "canonical_chapter_id": "arithmetic_progressions",
+      "chapter_order": 6,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u2",
+      "canonical_chapter_id": "geometric_progressions",
+      "chapter_order": 7,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u3",
+      "canonical_chapter_id": "reflection",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u3",
+      "canonical_chapter_id": "section_formula",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u3",
+      "canonical_chapter_id": "midpoint_formula",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u3",
+      "canonical_chapter_id": "equation_of_straight_line",
+      "chapter_order": 4,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u4",
+      "canonical_chapter_id": "similarity",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u4",
+      "canonical_chapter_id": "loci",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u4",
+      "canonical_chapter_id": "circles",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u4",
+      "canonical_chapter_id": "constructions",
+      "chapter_order": 4,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u5",
+      "canonical_chapter_id": "surface_areas_and_volumes",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u6",
+      "canonical_chapter_id": "trigonometric_identities",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u6",
+      "canonical_chapter_id": "heights_and_distances",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u7",
+      "canonical_chapter_id": "statistics",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_id": "icse10_u8",
+      "canonical_chapter_id": "probability",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_a1",
+      "canonical_chapter_id": "sets",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_a1",
+      "canonical_chapter_id": "relations_and_functions",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_a1",
+      "canonical_chapter_id": "trigonometric_functions",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_a2",
+      "canonical_chapter_id": "complex_numbers",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_a2",
+      "canonical_chapter_id": "quadratic_equations",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_a2",
+      "canonical_chapter_id": "linear_inequations",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_a2",
+      "canonical_chapter_id": "permutations_and_combinations",
+      "chapter_order": 4,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_a2",
+      "canonical_chapter_id": "binomial_theorem",
+      "chapter_order": 5,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_a2",
+      "canonical_chapter_id": "sequences_and_series",
+      "chapter_order": 6,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_a3",
+      "canonical_chapter_id": "straight_lines",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_a3",
+      "canonical_chapter_id": "circles",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_a4",
+      "canonical_chapter_id": "limits_and_derivatives",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_a5",
+      "canonical_chapter_id": "statistics",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_a5",
+      "canonical_chapter_id": "probability",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_b6",
+      "canonical_chapter_id": "conic_sections",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_b7",
+      "canonical_chapter_id": "three_dimensional_geometry",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_b8",
+      "canonical_chapter_id": "mathematical_reasoning",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_c9",
+      "canonical_chapter_id": "statistics",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_c10",
+      "canonical_chapter_id": "correlation_analysis",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 11,
+      "unit_id": "isc11_c11",
+      "canonical_chapter_id": "index_numbers_moving_averages",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u1",
+      "canonical_chapter_id": "am_numbers_iks_binary",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u1",
+      "canonical_chapter_id": "am_indices_logarithms",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u1",
+      "canonical_chapter_id": "am_numerical_applications",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u2",
+      "canonical_chapter_id": "am_sets",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u2",
+      "canonical_chapter_id": "am_relations",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u2",
+      "canonical_chapter_id": "am_mathematical_logic",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u2",
+      "canonical_chapter_id": "am_sequences_series",
+      "chapter_order": 4,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u3",
+      "canonical_chapter_id": "am_functions_graphs",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u3",
+      "canonical_chapter_id": "am_limits_continuity",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u3",
+      "canonical_chapter_id": "am_differentiation",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u4",
+      "canonical_chapter_id": "am_combinatorics",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u4",
+      "canonical_chapter_id": "am_probability",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u5",
+      "canonical_chapter_id": "am_descriptive_statistics",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u6",
+      "canonical_chapter_id": "am_financial_basics",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_id": "cbse11_am_u7",
+      "canonical_chapter_id": "am_coordinate_geometry",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u1",
+      "canonical_chapter_id": "am_modulo_congruence",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u1",
+      "canonical_chapter_id": "am_alligation_mixture",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u1",
+      "canonical_chapter_id": "am_numerical_problems",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u1",
+      "canonical_chapter_id": "am_numerical_inequalities",
+      "chapter_order": 4,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u2",
+      "canonical_chapter_id": "am_matrices",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u2",
+      "canonical_chapter_id": "am_determinants",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u2",
+      "canonical_chapter_id": "am_inverse_matrices",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u2",
+      "canonical_chapter_id": "am_simultaneous_equations",
+      "chapter_order": 4,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u3",
+      "canonical_chapter_id": "am_derivatives_applications",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u3",
+      "canonical_chapter_id": "am_integration_applications",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u3",
+      "canonical_chapter_id": "am_differential_equations_modeling",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u4",
+      "canonical_chapter_id": "am_probability_distributions",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u5",
+      "canonical_chapter_id": "am_inferential_statistics",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u6",
+      "canonical_chapter_id": "am_time_series",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u7",
+      "canonical_chapter_id": "am_financial_mathematics",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_id": "cbse12_am_u8",
+      "canonical_chapter_id": "am_linear_programming",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_a1",
+      "canonical_chapter_id": "relations_and_functions",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_a1",
+      "canonical_chapter_id": "inverse_trigonometric_functions",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_a2",
+      "canonical_chapter_id": "matrices",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_a2",
+      "canonical_chapter_id": "determinants",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_a3",
+      "canonical_chapter_id": "continuity_and_differentiability",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_a3",
+      "canonical_chapter_id": "applications_of_derivatives",
+      "chapter_order": 2,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_a3",
+      "canonical_chapter_id": "integrals",
+      "chapter_order": 3,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_a3",
+      "canonical_chapter_id": "differential_equations",
+      "chapter_order": 4,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_a4",
+      "canonical_chapter_id": "probability",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_b1",
+      "canonical_chapter_id": "vector_algebra",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_b2",
+      "canonical_chapter_id": "three_dimensional_geometry",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_b3",
+      "canonical_chapter_id": "applications_of_integrals",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_c1",
+      "canonical_chapter_id": "application_of_calculus",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_c2",
+      "canonical_chapter_id": "linear_regression",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "board": "ISC",
+      "class_level": 12,
+      "unit_id": "isc12_c3",
+      "canonical_chapter_id": "linear_programming",
+      "chapter_order": 1,
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    }
+  ],
+  "subjects": [
+    {
+      "subject_id": "maths",
+      "name": "Mathematics",
+      "status": "VERIFIED"
+    },
+    {
+      "subject_id": "applied_mathematics",
+      "name": "Applied Mathematics",
+      "status": "VERIFIED",
+      "board_scope": [
+        "CBSE"
+      ],
+      "class_scope": [
+        11,
+        12
+      ],
+      "cbse_subject_code": "241"
+    }
+  ]
+}

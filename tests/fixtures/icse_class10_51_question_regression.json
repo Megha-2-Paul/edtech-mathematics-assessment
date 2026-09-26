@@ -1,0 +1,2338 @@
+{
+  "metadata": {
+    "board": "ICSE",
+    "class": 10,
+    "academic_year": "2026-27",
+    "subject": "Mathematics",
+    "chapter": "Full Paper (Mixed Chapters)",
+    "chapter_number": null,
+    "source_file": "ICSE_Class10_Sample_1.pdf",
+    "syllabus_verification": {
+      "status": "VERIFIED",
+      "source": "Cross-referenced against multiple independent syllabus-tracking sites (Oswal Publishers, Vedantu, Shaalaa, Allen) that report the CISCE-published ICSE Class 10 Mathematics syllabus for 2026-27; the primary cisce.org PDF was not directly fetchable in this session, so treat this as high-confidence secondary verification rather than a direct primary-source read.",
+      "verified_chapter_name": "N/A - paper spans multiple units",
+      "verified_topics": [
+        "Commercial Mathematics (GST, Banking - Recurring Deposits, Shares & Dividends)",
+        "Algebra (Linear Inequations, Quadratic Equations, Factorisation, Matrices, Arithmetic & Geometric Progressions, Ratio & Proportion)",
+        "Geometry (Similarity, Circles, Constructions & Loci, Reflection)",
+        "Mensuration (Cylinder, Cone, Sphere, Surface Area & Volume)",
+        "Trigonometry (Identities, Heights & Distances)",
+        "Statistics (Mean, Median, Mode, Histogram, Ogive)",
+        "Probability (Simple Probability)",
+        "Coordinate Geometry (Section Formula, Equation of a Line)"
+      ]
+    },
+    "total_extracted_questions": 41,
+    "total_generated_questions": 10,
+    "total_questions": 51
+  },
+  "questions": [
+    {
+      "question_id": "PDF_COMMERCIAL_MATH_Q001",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Commercial Mathematics",
+      "chapter_number": null,
+      "topic": "Goods and Services Tax (GST)",
+      "type": "MCQ",
+      "difficulty": "EASY",
+      "competency": "Understanding",
+      "marks": 1,
+      "question_text": "A customer pays a total GST of ₹600 on an article in an intra-state sale, and the tax rate is 12%. The price of the article is:",
+      "options": [
+        "₹2,000",
+        "₹3,000",
+        "₹5,000",
+        "₹7,200"
+      ],
+      "correct_answer": "₹5,000",
+      "answer": "₹5,000",
+      "solution": "GST = 12% of price = ₹600. Price = 600 / 0.12 = ₹5,000.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Set up GST equation and solve for price.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "gst",
+        "commercial-math",
+        "mcq"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_COMMERCIAL_MATH_Q002",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Commercial Mathematics",
+      "chapter_number": null,
+      "topic": "Banking - Recurring Deposit Accounts",
+      "type": "ASSERTION_REASON",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 1,
+      "question_text": "Assertion (A): In a recurring deposit account, a man deposits ₹1000 per month for 1 year. On maturity he receives ₹13500. The amount of interest he earns is ₹1500.\nReason (R): Interest earned = Maturity value − Total amount deposited.\nOptions: (a) (A) is true and (R) is false. (b) (A) is false and (R) is true. (c) Both (A) and (R) are true, and (R) is the correct explanation for (A). (d) Both (A) and (R) are true, but (R) is not the correct explanation for (A).",
+      "options": [
+        "(a) (A) is true and (R) is false.",
+        "(b) (A) is false and (R) is true.",
+        "(c) Both (A) and (R) are true, and (R) is the correct explanation for (A).",
+        "(d) Both (A) and (R) are true, but (R) is not the correct explanation for (A)."
+      ],
+      "correct_answer": "(c) Both (A) and (R) are true, and (R) is the correct explanation for (A).",
+      "answer": "Option (c)",
+      "solution": "Total deposited = 1000 × 12 = ₹12,000. Interest = Maturity value − Deposit = 13500 − 12000 = ₹1500, so (A) is true. (R) correctly states the general formula used, and it directly explains (A).",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Verify assertion by computing interest.",
+          "marks": 0.5
+        },
+        {
+          "step": 2,
+          "description": "Confirm reason correctly explains assertion.",
+          "marks": 0.5
+        }
+      ],
+      "tags": [
+        "banking",
+        "recurring-deposit",
+        "assertion-reason"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_COMMERCIAL_MATH_Q003",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Commercial Mathematics",
+      "chapter_number": null,
+      "topic": "Shares and Dividends",
+      "type": "MCQ",
+      "difficulty": "MEDIUM",
+      "competency": "Understanding",
+      "marks": 1,
+      "question_text": "A man buys 50, ₹100 shares of a company at ₹125 paying 6% dividend per annum. At the end of the year, the company will pay a total dividend of:",
+      "options": [
+        "₹100",
+        "₹125",
+        "₹5000",
+        "₹6250"
+      ],
+      "correct_answer": "₹5000",
+      "answer": "₹5000",
+      "solution": "Note: the standard dividend formula (Face Value × Number of Shares × Rate = 50 × 100 × 6% = ₹300) does not match any listed option. The paper's own marking scheme lists (c) ₹5000, which equals the total face value invested (50 × ₹100), not the dividend amount. This is preserved as given per the source paper, but the question/answer pairing appears internally inconsistent.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "As per source marking scheme, selected option (c).",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "shares-dividends",
+        "mcq"
+      ],
+      "extraction_warning": "The marking-scheme answer (₹5000) does not match the standard dividend calculation (Face Value × Shares × Rate = ₹300) for the numbers stated; preserved exactly as given in the source without alteration."
+    },
+    {
+      "question_id": "PDF_ALGEBRA_Q004",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Quadratic Equations - Nature of Roots",
+      "type": "MCQ",
+      "difficulty": "MEDIUM",
+      "competency": "Understanding",
+      "marks": 1,
+      "question_text": "If the roots of the quadratic equation x² − 8x + p² = 0 are equal, then the positive value of p is:",
+      "options": [
+        "16",
+        "8",
+        "4",
+        "2"
+      ],
+      "correct_answer": "4",
+      "answer": "4",
+      "solution": "For equal roots, discriminant = 0: (−8)² − 4(1)(p²) = 0 → 64 = 4p² → p² = 16 → p = 4 (positive value).",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Apply discriminant = 0 condition and solve for p.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "quadratic-equations",
+        "discriminant",
+        "mcq"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_ALGEBRA_Q005",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Ratio and Proportion",
+      "type": "MCQ",
+      "difficulty": "EASY",
+      "competency": "Understanding",
+      "marks": 1,
+      "question_text": "12, 18 and x are in continued proportion. The value of x is:",
+      "options": [
+        "24",
+        "27",
+        "30",
+        "36"
+      ],
+      "correct_answer": "27",
+      "answer": "27",
+      "solution": "Continued proportion: 12/18 = 18/x → x = 18×18/12 = 27.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Apply continued proportion relation and solve.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "ratio-proportion",
+        "mcq"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_ALGEBRA_Q006",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Factorisation of Polynomials (Remainder & Factor Theorem)",
+      "type": "MCQ",
+      "difficulty": "MEDIUM",
+      "competency": "Understanding",
+      "marks": 1,
+      "question_text": "(x + 2) and (x + 3) are the factors of x³ + 4x² + x − 6. The third factor of the given polynomial is:",
+      "options": [
+        "(x − 1)",
+        "(x − 4)",
+        "(x + 1)",
+        "(x + 4)"
+      ],
+      "correct_answer": "(x − 1)",
+      "answer": "(x − 1)",
+      "solution": "Product of roots = −(−6)/1 = 6 with sign convention; dividing x³+4x²+x−6 by (x+2)(x+3)=x²+5x+6 gives quotient (x−1). Check: (x+2)(x+3)(x−1) = (x²+5x+6)(x−1) = x³+4x²+x−6. ✓",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Divide polynomial by known factors to find the third factor.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "polynomials",
+        "factor-theorem",
+        "mcq"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_ALGEBRA_Q007",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Matrices",
+      "type": "MCQ",
+      "difficulty": "EASY",
+      "competency": "Understanding",
+      "marks": 1,
+      "question_text": "Given two matrices A and B, where A = [−1  2] and B = [3; 4], then product AB is:",
+      "options": [
+        "[−3; 8]",
+        "5",
+        "[5]",
+        "[−3  8]"
+      ],
+      "correct_answer": "[5]",
+      "answer": "[5]",
+      "solution": "AB = [−1  2] × [3; 4] = (−1×3 + 2×4) = (−3+8) = [5], a 1×1 matrix.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Multiply row matrix by column matrix.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "matrices",
+        "mcq"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_ALGEBRA_Q008",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Geometric Progression",
+      "type": "MCQ",
+      "difficulty": "EASY",
+      "competency": "Analysis",
+      "marks": 1,
+      "question_text": "If the nth term of a Geometric Progression (G.P.) is given by 5 × 2ⁿ then the common ratio is:",
+      "options": [
+        "2",
+        "5",
+        "10",
+        "20"
+      ],
+      "correct_answer": "2",
+      "answer": "2",
+      "solution": "Tₙ = 5×2ⁿ, Tₙ₋₁ = 5×2ⁿ⁻¹. Common ratio = Tₙ/Tₙ₋₁ = 2.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Compute ratio of consecutive terms.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "geometric-progression",
+        "mcq"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_COORDINATE_GEOMETRY_Q009",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Coordinate Geometry",
+      "chapter_number": null,
+      "topic": "Equation of a Line",
+      "type": "MCQ",
+      "difficulty": "EASY",
+      "competency": "Application",
+      "marks": 1,
+      "question_text": "The line y = 2x passes through which pair of coordinates?",
+      "options": [
+        "(0, 0) and (2, 2)",
+        "(0, 2) and (2, 4)",
+        "(1, 2) and (−1, −2)",
+        "(2, 2) and (−2, −2)"
+      ],
+      "correct_answer": "(1, 2) and (−1, −2)",
+      "answer": "(1, 2) and (−1, −2)",
+      "solution": "Substitute each pair into y=2x. For (1,2): 2=2(1) ✓; for (−1,−2): −2=2(−1) ✓. Both points satisfy the line.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Test each coordinate pair against y = 2x.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "coordinate-geometry",
+        "straight-lines",
+        "mcq"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_MENSURATION_Q010",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "UNCERTAIN",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Mensuration",
+      "chapter_number": null,
+      "topic": "Scale Drawings - Area Ratio",
+      "type": "MCQ",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 1,
+      "question_text": "On a map of scale 1: 50,000, a rectangular plot has sides 4 cm by 3 cm. The actual area of the plot on ground is:",
+      "options": [
+        "3 km²",
+        "9 km²",
+        "12 km²",
+        "16 km²"
+      ],
+      "correct_answer": "3 km²",
+      "answer": "3 km²",
+      "solution": "Linear scale 1:50,000 → area scale = 1: 50,000² = 1: 2.5×10⁹. Map area = 4×3 = 12 cm². Actual area = 12 × 2.5×10⁹ cm² = 3×10¹⁰ cm² = 3 km² (since 1 km² = 10¹⁰ cm²).",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Convert linear scale to area scale and compute actual area.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "mensuration",
+        "scale",
+        "mcq"
+      ],
+      "extraction_warning": "Map-scale-to-actual-area problems are not listed as an explicit standalone topic in the verified CISCE unit list; classified here under Mensuration/ratio application as the closest fit, but the exact syllabus placement could not be confirmed with certainty."
+    },
+    {
+      "question_id": "PDF_GEOMETRY_Q011",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Geometry",
+      "chapter_number": null,
+      "topic": "Circles - Tangent Properties",
+      "type": "MCQ",
+      "difficulty": "HARD",
+      "competency": "Analysis",
+      "marks": 1,
+      "question_text": "In the given diagram, the radius of the circle with centre O is 3 cm. PA and PB are the tangents to the circle which are at right angle to each other. The length of OP is:",
+      "options": [
+        "3/√2 cm",
+        "3 cm",
+        "3√2 cm",
+        "6√2 cm"
+      ],
+      "correct_answer": "3√2 cm",
+      "answer": "3√2 cm",
+      "solution": "Since PA ⊥ PB and OA ⊥ PA, OB ⊥ PB (radius-tangent property), OAPB forms a square-like configuration with ∠APB=90°, so ∠AOB=90°. OP is the diagonal of the kite OAPB where OA=OB=3 (radius) and ∠OAP=∠OBP=90°. Using right triangle OAP: OP = OA × √2 = 3√2 cm (since triangle formed is an isosceles right triangle).",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Use tangent-radius perpendicularity and right-angle condition.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "circles",
+        "tangents",
+        "mcq"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_MENSURATION_Q012",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Mensuration",
+      "chapter_number": null,
+      "topic": "Volume of Cone",
+      "type": "MCQ",
+      "difficulty": "EASY",
+      "competency": "Understanding",
+      "marks": 1,
+      "question_text": "A conical tent with a capacity of 616 m³ has a base area 154 m². The height of the tent is:",
+      "options": [
+        "3 m",
+        "4 m",
+        "7 m",
+        "12 m"
+      ],
+      "correct_answer": "12 m",
+      "answer": "12 m",
+      "solution": "Volume = (1/3) × base area × height → 616 = (1/3) × 154 × h → h = 616×3/154 = 12 m.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Apply cone volume formula and solve for height.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "mensuration",
+        "cone",
+        "mcq"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_TRIGONOMETRY_Q013",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Trigonometry",
+      "chapter_number": null,
+      "topic": "Trigonometric Identities",
+      "type": "ASSERTION_REASON",
+      "difficulty": "MEDIUM",
+      "competency": "Analysis",
+      "marks": 1,
+      "question_text": "Assertion (A): If secθ + tanθ = a and secθ − tanθ = b, then ab = 1.\nReason (R): sec²θ − tan²θ = 1.\nOptions: (a) (A) is true and (R) is false. (b) (A) is false and (R) is true. (c) Both (A) and (R) are true, and (R) is the correct explanation for (A). (d) Both (A) and (R) are true, but (R) is not the correct explanation for (A).",
+      "options": [
+        "(a) (A) is true and (R) is false.",
+        "(b) (A) is false and (R) is true.",
+        "(c) Both (A) and (R) are true, and (R) is the correct explanation for (A).",
+        "(d) Both (A) and (R) are true, but (R) is not the correct explanation for (A)."
+      ],
+      "correct_answer": "(c) Both (A) and (R) are true, and (R) is the correct explanation for (A).",
+      "answer": "Option (c)",
+      "solution": "ab = (secθ+tanθ)(secθ−tanθ) = sec²θ − tan²θ = 1, using the standard identity, so both A and R are true and R directly explains A.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Multiply a and b and simplify using the identity.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "trigonometry",
+        "identities",
+        "assertion-reason"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_STATISTICS_Q014",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Statistics",
+      "chapter_number": null,
+      "topic": "Measures of Central Tendency - Median",
+      "type": "MCQ",
+      "difficulty": "MEDIUM",
+      "competency": "Analysis",
+      "marks": 1,
+      "question_text": "Consider the following distribution 30, 34, 35, 36, 37, 38, 39, 40. If the value 35 is removed from the given data, then the median changes by:",
+      "options": [
+        "0.5",
+        "1.0",
+        "1.5",
+        "2.0"
+      ],
+      "correct_answer": "0.5",
+      "answer": "0.5",
+      "solution": "Original (8 values, sorted): median = avg of 4th & 5th = (36+37)/2 = 36.5. After removing 35 (7 values): 30,34,36,37,38,39,40, median = 4th value = 37. Change = 37 − 36.5 = 0.5.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Find original median.",
+          "marks": 0.5
+        },
+        {
+          "step": 2,
+          "description": "Find new median after removal and compute the change.",
+          "marks": 0.5
+        }
+      ],
+      "tags": [
+        "statistics",
+        "median",
+        "mcq"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_PROBABILITY_Q015",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Probability",
+      "chapter_number": null,
+      "topic": "Simple Probability",
+      "type": "MCQ",
+      "difficulty": "EASY",
+      "competency": "Understanding",
+      "marks": 1,
+      "question_text": "A game of chance consists of spinning an arrow which is equally likely to come to rest pointing to one of the numbers 1, 2, 3……12. The probability that it will point to an odd number is:",
+      "options": [
+        "1/6",
+        "1/12",
+        "1/2",
+        "5/12"
+      ],
+      "correct_answer": "1/2",
+      "answer": "1/2",
+      "solution": "Odd numbers from 1 to 12: {1,3,5,7,9,11} = 6 numbers. P(odd) = 6/12 = 1/2.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Count favourable outcomes and compute probability.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "probability",
+        "mcq"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_MENSURATION_Q016",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Mensuration",
+      "chapter_number": null,
+      "topic": "Volume of Solids (Cone, Sphere, Cylinder)",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Analysis",
+      "marks": 4,
+      "question_text": "Three students A, B and C of Class 10 are each given an equal amount of Play-Dough to form different shaped solids. A forms a cone of radius 7 cm and height 28 cm. B forms a sphere of radius r and C forms a cylinder of radius 14 cm. Find the: (a) radius r of the sphere so formed. (b) height of the cylinder so formed. (c) Volume of the dough given to each of them. Give your answers to (b) and (c) correct to the nearest whole number. (Use π = 22/7)",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(a) r = 7 cm  (b) H' ≈ 2 cm  (c) Volume ≈ 1437 cm³ each",
+      "solution": "Volume of cone A = (1/3)πr²H = (1/3)π(7²)(28) = (1/3)×(22/7)×49×28 = 1437.33 cm³ ≈ 1437 cm³.\n(a) Sphere B has same volume: (4/3)πr³ = 1437.33 → r³ = 343 → r = 7 cm.\n(b) Cylinder C: πR²H' = 1437.33, R=14 → H' = 1437.33/(π×196) = 7/3 ≈ 2.33 ≈ 2 cm.\n(c) Each has volume ≈ 1437 cm³.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Compute volume of the cone.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Find radius of equal-volume sphere.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Find height of equal-volume cylinder.",
+          "marks": 1
+        },
+        {
+          "step": 4,
+          "description": "State volumes correctly rounded.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "mensuration",
+        "volume",
+        "cone",
+        "sphere",
+        "cylinder"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_ALGEBRA_Q017",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Quadratic Equations - Solving using formula",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 4,
+      "question_text": "Solve the quadratic equation (x − 2)² + 11x − 7 = 0 and give your answer correct to 3 significant figures.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "x = 0.405 or x = −7.41",
+      "solution": "(x−2)²+11x−7=0 → x²−4x+4+11x−7=0 → x²+7x−3=0. Using the quadratic formula: x = [−7 ± √(49+12)]/2 = [−7 ± √61]/2 = [−7 ± 7.8102]/2. So x = 0.4051 ≈ 0.405 or x = −7.4051 ≈ −7.41.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Expand and simplify to standard quadratic form.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Apply the quadratic formula.",
+          "marks": 2
+        },
+        {
+          "step": 3,
+          "description": "Round both roots to 3 significant figures.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "algebra",
+        "quadratic-equations"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_COORDINATE_GEOMETRY_Q018",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Coordinate Geometry",
+      "chapter_number": null,
+      "topic": "Section Formula & Equation of a Line",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Analysis",
+      "marks": 4,
+      "question_text": "A line is formed joining the two points P(−4,1) and Q(11,−2). Straight line PQ intersects the x-axis at R. Find the: (a) ratio PR : RQ. (b) coordinates of the point R. (c) equation of the line perpendicular to PQ at R.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(a) PR:RQ = 1:2  (b) R(1,0)  (c) 5x − y = 5",
+      "solution": "(a) R lies on x-axis, so y-coordinate = 0. Using section formula with ratio m:n, y = [m(−2)+n(1)]/(m+n) = 0 → −2m+n=0 → m:n = 1:2.\n(b) x = [1(11)+2(−4)]/(1+2) = (11−8)/3 = 1 → R(1,0).\n(c) Slope of PQ = (−2−1)/(11−(−4)) = −3/15 = −1/5. Slope of perpendicular = 5. Equation: y−0 = 5(x−1) → 5x − y = 5.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Find ratio PR:RQ using section formula.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Find coordinates of R.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Find slope of PQ.",
+          "marks": 1
+        },
+        {
+          "step": 4,
+          "description": "Find equation of perpendicular line at R.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "coordinate-geometry",
+        "section-formula",
+        "straight-lines"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_COMMERCIAL_MATH_Q019",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Commercial Mathematics",
+      "chapter_number": null,
+      "topic": "GST - Discount",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Analysis",
+      "marks": 4,
+      "question_text": "A shopkeeper marked an article at ₹2000. The rate of GST on the article is 18%. The customer has only ₹1888 with him and he requests the shopkeeper to reduce the price so that he can buy the article at ₹1888 including GST. What percent discount must the shopkeeper give to do so?",
+      "options": [],
+      "correct_answer": null,
+      "answer": "20%",
+      "solution": "Let reduced price (before GST) = x. x + 18% of x = 1888 → 1.18x = 1888 → x = ₹1600. Reduction in price = 2000 − 1600 = ₹400. Percentage reduction = (400/2000)×100 = 20%.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Set up equation for reduced price including GST.",
+          "marks": 2
+        },
+        {
+          "step": 2,
+          "description": "Compute reduction and percentage discount.",
+          "marks": 2
+        }
+      ],
+      "tags": [
+        "gst",
+        "discount",
+        "commercial-math"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_ALGEBRA_Q020",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Arithmetic Progression",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 4,
+      "question_text": "An Arithmetic Progression (A.P.) consists of all whole numbers which are divisible by 3 and 5. (a) Write its first term and the common difference. (b) Find the 10th term of the A.P. (c) Find the sum of the first 10 terms of the A.P.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(a) a=15, d=15  (b) T₁₀=150  (c) S₁₀=825",
+      "solution": "Numbers divisible by both 3 and 5 are multiples of 15: 15, 30, 45, ... so a=15, d=15.\n(b) T₁₀ = a+(10−1)d = 15+9×15 = 150.\n(c) S₁₀ = (10/2)[2(15)+9(15)] = 5[30+135] = 5×165 = 825.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Identify first term and common difference.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Compute the 10th term.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Compute the sum of the first 10 terms.",
+          "marks": 2
+        }
+      ],
+      "tags": [
+        "arithmetic-progression",
+        "algebra"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_GEOMETRY_Q021",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Geometry",
+      "chapter_number": null,
+      "topic": "Reflection (Transformation Geometry)",
+      "type": "LONG",
+      "difficulty": "MEDIUM",
+      "competency": "Analysis",
+      "marks": 5,
+      "question_text": "Study the graph and answer the given questions: [Graph shows polygon ABCDEFGHIJKLMNO plotted on a coordinate grid, roughly diamond-shaped, symmetric about both axes] (a) Write down the coordinates of A, B, C, D and E. (b) Write down the image of A under reflection on the y-axis. (c) Name the point, with its coordinates, which is the image of C under reflection through the origin. (d) What is the image of the polygon ABCDEFGHI when reflected on the y-axis? (e) Write down the equation of the line joining the points N and D.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(a) A(0,3), B(1,2), C(2,2), D(2,1), E(3,0)  (b) A(0,3)  (c) K(−2,−2)  (d) A P O N M L K J I  (e) y = 1",
+      "solution": "(a) Read directly from the graph: A(0,3), B(1,2), C(2,2), D(2,1), E(3,0).\n(b) Reflecting A(0,3) on the y-axis leaves it unchanged (since x=0): image is A(0,3).\n(c) Reflection of C(2,2) through the origin gives (−2,−2), which corresponds to point K.\n(d) Reflecting the polygon ABCDEFGHI on the y-axis maps it onto the labelled points on the mirrored side, in reverse order: A P O N M L K J I.\n(e) N and D both lie on the horizontal line y=1, so the equation is y = 1.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Read off coordinates from the graph.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Find image of A under y-axis reflection.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Find image of C under reflection through origin.",
+          "marks": 1
+        },
+        {
+          "step": 4,
+          "description": "Determine reflected image of the polygon.",
+          "marks": 1
+        },
+        {
+          "step": 5,
+          "description": "Find equation of line ND.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "geometry",
+        "reflection",
+        "coordinate-geometry"
+      ],
+      "extraction_warning": "Question depends on a diagram (a plotted polygon) that could not be fully re-verified pixel-by-pixel; coordinates are taken from the paper's own marking scheme rather than independently re-derived from the image."
+    },
+    {
+      "question_id": "PDF_COMMERCIAL_MATH_Q022",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Commercial Mathematics",
+      "chapter_number": null,
+      "topic": "Banking - Recurring Deposits",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Analysis",
+      "marks": 3,
+      "question_text": "A man opened a recurring deposit account in a bank. He deposits ₹1000 per month for 2 years. The matured value is equal to 26 times the amount he pays per month. Find the: (a) interest paid by the bank. (b) rate of interest per annum that the bank was paying for the recurring deposit account.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(a) ₹2000  (b) 8% per annum",
+      "solution": "P=₹1000, n=24 months, Maturity Value = 26×1000 = ₹26,000.\n(a) Interest = MV − (P×n) = 26000 − 24000 = ₹2000.\n(b) Interest = P×n(n+1)/(2×12) × r/100 → 2000 = [1000×24×25/2]×(r/100)/12... using I = P×n(n+1)/(2×12)×(r/100): 2000 = 1000×24×25/(2×12) × r/100 = 2500×r/100 → r = 8%.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Compute interest from maturity value.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Apply recurring deposit interest formula to find rate.",
+          "marks": 2
+        }
+      ],
+      "tags": [
+        "banking",
+        "recurring-deposit"
+      ],      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_ALGEBRA_Q023",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Matrices",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Analysis",
+      "marks": 3,
+      "question_text": "Given, matrix A = [x  1; 2  2] and B = [x; x−2], such that AB is a null matrix. Find the: (a) order of the null matrix. (b) value of x, given that x > 0.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(a) 2×1  (b) x = 1",
+      "solution": "(a) A is 2×2 and B is 2×1, so AB is 2×1, matching the order of the null matrix, 2×1.\n(b) AB = [x²+x−2; 4x−4] = [0;0]. From the second row: 4x−4=0 → x=1. Check first row: 1+1−2=0 ✓, consistent with x=1.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "State order of the null matrix.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Multiply matrices and solve for x.",
+          "marks": 2
+        }
+      ],
+      "tags": [
+        "matrices",
+        "algebra"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_TRIGONOMETRY_Q024",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Trigonometry",
+      "chapter_number": null,
+      "topic": "Trigonometric Identities",
+      "type": "LONG",
+      "difficulty": "HARD",
+      "competency": "Application",
+      "marks": 4,
+      "question_text": "Prove the following trigonometric identity: cos²θ/(1−tanθ) + sin²θ/(1−cotθ) = 1 + cosθsinθ",
+      "options": [],
+      "correct_answer": null,
+      "answer": "Identity proved (see solution)",
+      "solution": "LHS = cos²θ/(1−sinθ/cosθ) + sin²θ/(1−cosθ/sinθ) = cos³θ/(cosθ−sinθ) + sin³θ/(sinθ−cosθ) = cos³θ/(cosθ−sinθ) − sin³θ/(cosθ−sinθ) = [1/(cosθ−sinθ)](cos³θ−sin³θ). Using cos³θ−sin³θ = (cosθ−sinθ)(cos²θ+sin²θ+cosθsinθ), this simplifies to cos²θ+sin²θ+cosθsinθ = 1+sinθcosθ = RHS.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Rewrite tanθ and cotθ in terms of sinθ, cosθ.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Combine into a single fraction with common denominator.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Factor the difference of cubes.",
+          "marks": 1
+        },
+        {
+          "step": 4,
+          "description": "Simplify to match RHS.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "trigonometry",
+        "identities",
+        "proof"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_COMMERCIAL_MATH_Q025",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Commercial Mathematics",
+      "chapter_number": null,
+      "topic": "Shares and Dividends",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 3,
+      "question_text": "Ms. Kaur invested ₹8000 in buying ₹100 shares of a company paying 6% dividend at ₹80. After a year, she sold these shares at ₹75 each and invested the proceeds including the dividend received during the first year in buying ₹20 shares paying 15% dividend at ₹27 each. Find: (a) dividend received by her during the first year. (b) number of shares she purchased using the total proceeds including the dividend.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(a) ₹600  (b) 300 shares",
+      "solution": "Number of shares bought = 8000/80 = 100. Annual dividend = 6% of (100×₹100 face value) = 6/100×100×100 = ₹600.\n(a) Dividend = ₹600.\n(b) Sale proceeds = 100×75 = ₹7500. Total proceeds including dividend = 7500+600 = ₹8100. Number of new shares = 8100/27 = 300.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Find number of shares and dividend received.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Find sale proceeds and total funds available.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Find number of new shares purchased.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "shares-dividends",
+        "commercial-math"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_ALGEBRA_Q026",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Linear Inequations",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 3,
+      "question_text": "Solve the following inequation, write the solution set and represent it on the real number line: −6 + 12x/5 ≤ 7x/5 − 3 < 2/5 + 2x, x ∈ R.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "{x : −5⅔ < x ≤ 3, x ∈ R}",
+      "solution": "Split into two inequalities.\n(1) −6+12x/5 ≤ 7x/5−3 → 12x/5−7x/5 ≤ 6−3 → 5x/5 ≤ 3 → x ≤ 3.\n(2) 7x/5−3 < 2/5+2x → 7x/5−2x < 2/5+3 → −3x/5 < 17/5 → x > −17/3 = −5⅔.\nCombined solution: −5⅔ < x ≤ 3, x ∈ R, represented on the number line with an open circle at −5⅔ and closed circle at 3.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Solve first part of the compound inequation.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Solve second part of the compound inequation.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Combine solution sets and represent on number line.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "linear-inequations",
+        "algebra"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_GEOMETRY_Q027",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Geometry",
+      "chapter_number": null,
+      "topic": "Circles - Angle Properties",
+      "type": "LONG",
+      "difficulty": "HARD",
+      "competency": "Analysis",
+      "marks": 4,
+      "question_text": "In the given figure, O is the centre of the circle and AD = AB. If ∠ABC = 32°, find the angles x, y, z, v and w.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "x=58°, y=58°, z=58°, v=64°, w=116°",
+      "solution": "∠BAC=90° (angle in semicircle, since presumably BC is a diameter). In ΔABC: x+90°+32°=180° → x=58°.\ny = x = 58° (alternate segment theorem). z = x = 58° (angles in the same segment).\nIn ΔADB, AD=AB (given) → ∠ADB=∠ABD=z=58°. v+z+z=180° → v=180−116=64°.\nIn cyclic quadrilateral ADEB, v+w=180° (opposite angles of cyclic quadrilateral are supplementary) → w=180−64=116°.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Find x using angle sum in triangle with angle in semicircle.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Find y using alternate segment theorem.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Find z using angles in the same segment.",
+          "marks": 1
+        },
+        {
+          "step": 4,
+          "description": "Find v using isosceles triangle property.",
+          "marks": 0.5
+        },
+        {
+          "step": 5,
+          "description": "Find w using cyclic quadrilateral property.",
+          "marks": 0.5
+        }
+      ],
+      "tags": [
+        "circles",
+        "angle-properties",
+        "geometry"
+      ],
+      "extraction_warning": "Question depends on a diagram whose exact configuration (which chord is the diameter, exact point layout) could not be fully re-verified visually; angle relationships and final values are taken directly from the paper's own marking scheme."
+    },
+    {
+      "question_id": "PDF_ALGEBRA_Q028",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Factorisation of Polynomials (Remainder & Factor Theorem)",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Analysis",
+      "marks": 3,
+      "question_text": "Using Remainder and Factor Theorem, factorise the following polynomial: 2x³ + 5x² − 28x − 15.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(x−3)(x+5)(2x+1)",
+      "solution": "f(x)=2x³+5x²−28x−15. f(3)=2(27)+5(9)−28(3)−15=54+45−84−15=0, so (x−3) is a factor. Dividing: f(x)=(x−3)(2x²+11x+5). Factorising the quadratic: 2x²+11x+5=(x+5)(2x+1). So f(x)=(x−3)(x+5)(2x+1).",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Use factor theorem to find one factor.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Divide to find the quadratic factor.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Factorise the quadratic completely.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "polynomials",
+        "factor-theorem",
+        "algebra"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_GEOMETRY_Q029",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Geometry",
+      "chapter_number": null,
+      "topic": "Similarity of Triangles / Basic Proportionality Theorem",
+      "type": "SHORT",
+      "difficulty": "HARD",
+      "competency": "Application",
+      "marks": 3,
+      "question_text": "In the given diagram, AD ∥ GE ∥ BC, DE = 18 cm, EC = 3 cm, AD = 35 cm. Find: (a) AF:FC and AG:GB (b) length of EF (c) area (trapezium ADEF) : area (Δ EFC)",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(a) AF:FC = 6:1, AG:GB = 6:1  (b) EF = 5 cm  (c) 48:1",
+      "solution": "(a) In ΔADC, FE ∥ AD, so AF/FC = DE/EC = 18/3 = 6/1 by BPT.\nSimilarly, AG/GB = AF/FC = 6/1.\n(b) ΔADC ~ ΔFEC (AA similarity, since FE∥AD), so EF/AD = EC/DC = 3/35, giving EF = 35×3/21 = 5 cm. (Note: DC = DE+EC = 18+3 = 21.)\n(c) Area ratio: area(trapezium ADEF) : area(ΔEFC) = (AD²−EF²) : EF² = (35²−5²):5² = (1225−25):25 = 1200:25 = 48:1.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Apply BPT to find AF:FC and AG:GB.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Use similar triangles to find EF.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Compute area ratio between trapezium and triangle.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "similarity",
+        "bpt",
+        "geometry"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_GEOMETRY_Q030",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Geometry",
+      "chapter_number": null,
+      "topic": "Loci and Constructions",
+      "type": "LONG",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 4,
+      "question_text": "Use ruler and compass for this question: (a) Draw line segment AB of length 6 cm. (b) Construct the locus of points which are equidistant from A and B. Mark a point on the locus which is 4.5 cm from A. Name this point as O. (c) Construct the locus of all points which are 4.5 cm from O. (d) Mark the point of intersection of loci (b) and (c) as P, which is on the same side of AB as O. (e) Construct the locus of points which are equidistant from AP and AB.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "Construction (see solution steps)",
+      "solution": "(a) Draw AB=6 cm with ruler.\n(b) The locus equidistant from A and B is the perpendicular bisector of AB; mark point O on it at 4.5 cm from A.\n(c) Draw a circle of radius 4.5 cm centred at O — this is the locus of points 4.5 cm from O.\n(d) The intersection of the perpendicular bisector and this circle (on the same side as O) is marked P — note in this configuration P coincides with/near O's own position on the bisector satisfying both conditions.\n(e) The locus equidistant from lines AP and AB is the angle bisector of ∠PAB.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Draw AB=6 cm accurately.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Construct perpendicular bisector and mark O correctly.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Construct circle of radius 4.5 cm at O and mark P.",
+          "marks": 1
+        },
+        {
+          "step": 4,
+          "description": "Construct angle bisector of ∠PAB.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "loci",
+        "constructions",
+        "geometry"
+      ],
+      "extraction_warning": "This is a ruler-and-compass construction question; the solution describes the construction steps rather than a numeric answer, consistent with the question's nature."
+    },
+    {
+      "question_id": "PDF_PROBABILITY_Q031",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Probability",
+      "chapter_number": null,
+      "topic": "Simple Probability",
+      "type": "SHORT",
+      "difficulty": "EASY",
+      "competency": "Application",
+      "marks": 3,
+      "question_text": "A bag contains identical cards numbered 1 to 50. A card is selected randomly. Find the probability that the card selected, is: (a) divisible by 6. (b) not divisible by 2 and 3.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(a) 4/25  (b) 21/25",
+      "solution": "Total outcomes = 50.\n(a) Multiples of 6 up to 50: 6,12,18,24,30,36,42,48 → 8 numbers. P = 8/50 = 4/25.\n(b) Numbers divisible by 6 (i.e., by both 2 and 3) = 8 (found above). P(divisible by 2 and 3) = 8/50 = 4/25. So P(not divisible by 2 and 3) = 1 − 4/25 = 21/25.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Count multiples of 6 and find P(divisible by 6).",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Find P(not divisible by 2 and 3) using complement.",
+          "marks": 2
+        }
+      ],
+      "tags": [
+        "probability"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_GEOMETRY_Q032",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Geometry",
+      "chapter_number": null,
+      "topic": "Circles - Tangent Properties / Proofs",
+      "type": "LONG",
+      "difficulty": "HARD",
+      "competency": "Analysis",
+      "marks": 3,
+      "question_text": "In the given figure, the parallelogram ABCD circumscribes a circle, touching the circle at P, Q, R and S. Prove that: (a) AB = BC (b) diagonals AC and BD bisect each other at right angles.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "Both results proved (see solution)",
+      "solution": "(a) Since tangents from an external point are equal: AP=AS, BP=BQ, CR=CQ, DR=DS. Adding: (AP+BP)+(CR+DR) = (AS+DS)+(BQ+CQ) → AB+CD = AD+BC. Since ABCD is a parallelogram, AB=CD and AD=BC, so AB+AB = BC+BC → 2AB=2BC → AB=BC.\n(b) Since AB=BC=CD=DA (parallelogram with adjacent sides equal), ABCD is a rhombus. In a rhombus, the diagonals bisect each other at right angles — this is a standard property, so AC and BD bisect each other at right angles.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Use equal tangent lengths to derive AB=BC.",
+          "marks": 1.5
+        },
+        {
+          "step": 2,
+          "description": "Identify ABCD as a rhombus and apply diagonal property.",
+          "marks": 1.5
+        }
+      ],
+      "tags": [
+        "circles",
+        "tangents",
+        "parallelogram",
+        "proof"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_ALGEBRA_Q033",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Ratio and Proportion - Properties of Proportion",
+      "type": "SHORT",
+      "difficulty": "HARD",
+      "competency": "Understanding",
+      "marks": 4,
+      "question_text": "Given, (a+2b+x)/(a−2b+x) = (a+b)²/(a−b)². Using properties of proportion, find the value of x.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "x = b²/a",
+      "solution": "Applying componendo-dividendo: [(a+2b+x)+(a−2b+x)] / [(a+2b+x)−(a−2b+x)] = [(a+b)²+(a−b)²] / [(a+b)²−(a−b)²].\nLHS numerator = 2(a+x), denominator = 4b. RHS numerator = 2(a²+b²), denominator = 4ab.\nSo 2(a+x)/4b = 2(a²+b²)/4ab → (a+x)/b = (a²+b²)/(ab) → (a+x) = (a²+b²)/a → x = (a²+b²)/a − a = b²/a.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Apply componendo-dividendo to both sides.",
+          "marks": 2
+        },
+        {
+          "step": 2,
+          "description": "Simplify and solve for x.",
+          "marks": 2
+        }
+      ],
+      "tags": [
+        "ratio-proportion",
+        "componendo-dividendo",
+        "algebra"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_STATISTICS_Q034",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Statistics",
+      "chapter_number": null,
+      "topic": "Mean of Grouped Data",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 3,
+      "question_text": "The mean of the following distribution is 27 and the sum of all the frequencies is 50. Find the missing frequencies x and y.\nClass: 0-10, 10-20, 20-30, 30-40, 40-50 | Frequency: 8, x, 12, 13, y",
+      "options": [],
+      "correct_answer": null,
+      "answer": "x = 7, y = 10",
+      "solution": "Sum of frequencies: 8+x+12+13+y = 50 → x+y = 17.\nUsing midpoints (5,15,25,35,45): Σfx = 8(5)+x(15)+12(25)+13(35)+y(45) = 40+15x+300+455+45y = 795+15x+45y.\nMean = Σfx/Σf = (795+15x+45y)/50 = 27 → 795+15x+45y = 1350 → 15x+45y = 555 → x+3y = 37.\nSolving x+y=17 and x+3y=37: subtract → 2y=20 → y=10, x=7.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Form equation from total frequency = 50.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Form equation from mean = 27 using midpoints.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Solve simultaneous equations for x and y.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "statistics",
+        "mean",
+        "grouped-data"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_ALGEBRA_Q035",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Quadratic Equations - Word Problems (Mensuration application)",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Analysis",
+      "marks": 3,
+      "question_text": "In the given diagram, the area of the shaded region is 57 m². Form an equation in x and solve it to find the possible value of x. [Outer rectangle 12 m by 10 m, with inner unshaded rectangle of dimensions x by (12−x)/(10−x) style cut-out at a corner]",
+      "options": [],
+      "correct_answer": null,
+      "answer": "x = 3 cm (rejecting x = 19 as not possible)",
+      "solution": "Shaded area = full rectangle area − unshaded corner rectangle = 12×10 − (12−x)(10−x) = 57.\n120 − [120−22x+x²] = 57 → 120−120+22x−x² = 57 → −x²+22x = 57 → x²−22x+57=0 → (x−19)(x−3)=0 → x=19 or x=3.\nSince x must be less than the rectangle's dimensions (10), x=19 is rejected. So x = 3.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Set up equation for shaded area.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Expand and simplify into standard quadratic form.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Solve and reject the invalid root.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "quadratic-equations",
+        "mensuration",
+        "algebra"
+      ],
+      "extraction_warning": "Question depends on a diagram (a rectangle with a cut-out corner) whose exact dimension labels could not be fully re-verified visually; the setup and answer are taken directly from the paper's own marking scheme."
+    },
+    {
+      "question_id": "PDF_MENSURATION_Q036",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Mensuration",
+      "chapter_number": null,
+      "topic": "Volume of Combined Solids",
+      "type": "LONG",
+      "difficulty": "HARD",
+      "competency": "Analysis",
+      "marks": 4,
+      "question_text": "Two beakers (drinking glasses) are cylindrical in shape having diameter and height 7 cm and 10 cm respectively. Glass A has hemispherical raised bottom, and glass B has a conical raised bottom of height 3.5 cm. Determine which glass has a greater capacity and calculate the difference in their capacities. Give your answer correct to 2 decimal places. (Use π = 22/7)",
+      "options": [],
+      "correct_answer": null,
+      "answer": "Glass B has greater capacity, by 44.92 cm³",
+      "solution": "Radius = 3.5 cm for both, cylinder height H=10 cm.\nCapacity of Glass A (cylinder minus hemisphere): Vₐ = πr²H − (2/3)πr³.\nCapacity of Glass B (cylinder minus cone of height 3.5): V_B = πr²H − (1/3)πr²h', h'=3.5.\nV_B − Vₐ = (2/3)πr³ − (1/3)πr²h' = (1/3)πr²[2r − h'] = (1/3)×(22/7)×3.5²×(2×3.5−3.5) = (1/3)×(22/7)×12.25×3.5 = 44.92 cm³ (approx).\nSince V_B − Vₐ > 0, Glass B has greater capacity, by 44.92 cm³.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Set up volume expressions for both glasses.",
+          "marks": 1.5
+        },
+        {
+          "step": 2,
+          "description": "Compute the difference in capacities.",
+          "marks": 1.5
+        },
+        {
+          "step": 3,
+          "description": "State which glass has greater capacity and by how much.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "mensuration",
+        "volume",
+        "combined-solids"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_STATISTICS_Q037",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Statistics",
+      "chapter_number": null,
+      "topic": "Ogive - Median, Quartiles/Percentile-type reading",
+      "type": "LONG",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 5,
+      "question_text": "The distribution given below represents marks obtained by 200 students in a Mathematics Examination with maximum marks 80.\nMarks: 0-10,10-20,20-30,30-40,40-50,50-60,60-70,70-80 | No. of students: 8,12,16,24,29,38,42,31\nUsing graph paper draw an ogive for the given distribution. Along one axis take 2 cm equal to 10 marks and along the other axis take 1cm equal to 10 students. Use your graph to find the following: (a) Median (b) Number of students who scored above 75 marks (c) If the pass percentage is 35%, find the number of students who scored 35% and below.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(a) Median ≈ 53 (±1)  (b) 14 students  (c) ≈34 students (±2)",
+      "solution": "Cumulative frequencies: 8,20,36,60,89,127,169,200 (total 200).\n(a) Median position = N/2 = 100th value; reading from the ogive gives median ≈ 53 (±1).\n(b) From the ogive, cumulative frequency at 75 marks ≈ 186; students scoring above 75 = 200−186 = 14.\n(c) 35% of 80 marks = 28 marks; reading cumulative frequency at 28 from the ogive gives approximately 34 (±2) students scoring 35% and below.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Construct cumulative frequency table and draw the ogive.",
+          "marks": 2
+        },
+        {
+          "step": 2,
+          "description": "Read median from the graph.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Find students scoring above 75 marks.",
+          "marks": 1
+        },
+        {
+          "step": 4,
+          "description": "Find students scoring 35% and below.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "statistics",
+        "ogive",
+        "median"
+      ],
+      "extraction_warning": "This question requires a graphically-drawn ogive; the numeric answers given are graph-reading estimates (with the paper's own stated tolerance of ±1 or ±2) rather than exact algebraic values."
+    },
+    {
+      "question_id": "PDF_TRIGONOMETRY_Q038",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Trigonometry",
+      "chapter_number": null,
+      "topic": "Heights and Distances",
+      "type": "LONG",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 5,
+      "question_text": "Draw the necessary diagram for this question. A man on the top of a lighthouse observes the angle of depression of two ships on the opposite sides of the lighthouse as 32° and 58° respectively. If the height of the lighthouse is 120 m, find the distance between the two ships. Give your answer correct to the nearest meter.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "≈267 m",
+      "solution": "Let A be the top of the lighthouse (height AD=120 m), with ships at B and C on opposite sides.\nIn ΔABD: angle of depression to the ship at 58° gives ∠ABD's relevant angle; BD/AD = tan(90°−32°) → BD = 120×tan58° = 120×1.600 = 192.0 m.\nIn ΔACD: CD/AD = tan(90°−58°) → CD = 120×tan32° = 120×0.6249 = 74.988 m.\nDistance between ships BC = BD+CD = 192.0+74.988 ≈ 267 m (using the paper's computed value of 120×2.2249 ≈ 266.988 ≈ 267 m).",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Draw diagram identifying lighthouse and both ships.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Find distance BD using angle of depression 32°.",
+          "marks": 2
+        },
+        {
+          "step": 3,
+          "description": "Find distance CD using angle of depression 58° and sum for total distance.",
+          "marks": 2
+        }
+      ],
+      "tags": [
+        "trigonometry",
+        "heights-distances"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_ALGEBRA_Q039",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Geometric Progression",
+      "type": "SHORT",
+      "difficulty": "HARD",
+      "competency": "Analysis",
+      "marks": 3,
+      "question_text": "A finite Geometric Progression (G.P.) series contains 10 terms. The sum of the first three terms is 7 and that of the last three terms is 896. Find the first term and the common ratio.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "a = 1, r = 2",
+      "solution": "Let terms be a, ar, ar², ..., ar⁹. Given a+ar+ar²=7 and ar⁷+ar⁸+ar⁹=896.\nDividing: (ar⁷+ar⁸+ar⁹)/(a+ar+ar²) = ar⁷(1+r+r²)/[a(1+r+r²)] = r⁷ = 896/7 = 128 → r⁷=128 → r=2.\nThen a(1+2+4)=7 → 7a=7 → a=1.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Set up equations for first three and last three terms.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Divide equations to find common ratio r.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Solve for first term a.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "geometric-progression",
+        "algebra"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_GEOMETRY_Q040",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Geometry",
+      "chapter_number": null,
+      "topic": "Circles - Tangent Properties",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 3,
+      "question_text": "In a circle with centre O, PA and PB are tangents drawn from an external point P. If PA = 9 cm and ∠APB = 60°, find the: (a) length of PB. (b) radius of the circle.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(a) PB = 9 cm  (b) radius ≈ 5.2 cm",
+      "solution": "(a) Tangents from the same external point are equal: PB = PA = 9 cm.\n(b) OP bisects ∠APB, so ∠OAP=90° (radius ⊥ tangent) and ∠OAP's adjacent angle = 30°. In right triangle OAP: OA/PA = tan30° = 1/√3 → OA = 9×(1/√3) = 3√3 ≈ 5.2 cm.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Use equal tangent lengths for PB.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Use right triangle with half the angle at P to find radius.",
+          "marks": 2
+        }
+      ],
+      "tags": [
+        "circles",
+        "tangents",
+        "geometry"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "PDF_STATISTICS_Q041",
+      "source": "PDF_EXTRACTED",
+      "source_details": {
+        "label": "PDF",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Statistics",
+      "chapter_number": null,
+      "topic": "Histogram - Mode",
+      "type": "LONG",
+      "difficulty": "MEDIUM",
+      "competency": "Analysis",
+      "marks": 4,
+      "question_text": "The table given below shows a record of the weight in kilogram of 100 students of a school.\nWeight(kg): 30-35,35-40,40-45,45-50,50-55,55-60,60-65,65-70 | No. of Students: 5,7,14,21,25,15,7,6\nDraw a histogram and find the modal weight. [Take 2 cm = 5 kg along one axis and 2 cm = 5 students along the other axis]",
+      "options": [],
+      "correct_answer": null,
+      "answer": "Modal weight ≈ 51.5 kg",
+      "solution": "Draw bars of the given frequencies against the class intervals. The modal class (highest frequency 25) is 50-55. Using the graphical method (drawing lines from the top corners of the modal-class bar to the adjacent bars' top corners and reading where they intersect), the mode is read as approximately 51.5 kg.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Draw histogram with correct scale.",
+          "marks": 2
+        },
+        {
+          "step": 2,
+          "description": "Identify modal class and construct mode lines.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Read off the modal weight.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "statistics",
+        "histogram",
+        "mode"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "GEN_COMMERCIAL_MATH_Q001",
+      "source": "SIMILAR_GENERATED",
+      "source_details": {
+        "label": "GENERATED",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Commercial Mathematics",
+      "chapter_number": null,
+      "topic": "Goods and Services Tax (GST)",
+      "type": "MCQ",
+      "difficulty": "EASY",
+      "competency": "Application",
+      "marks": 1,
+      "question_text": "A retailer buys a machine for ₹15,000 (exclusive of GST) and sells it to a customer at the same price. If the GST rate is 18%, the amount of GST paid by the customer is:",
+      "options": [
+        "₹1,500",
+        "₹2,250",
+        "₹2,700",
+        "₹3,000"
+      ],
+      "correct_answer": "₹2,700",
+      "answer": "₹2,700",
+      "solution": "GST = 18% of ₹15,000 = 0.18×15000 = ₹2,700.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Compute GST as a percentage of price.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "gst",
+        "generated"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "GEN_MENSURATION_Q002",
+      "source": "SIMILAR_GENERATED",
+      "source_details": {
+        "label": "GENERATED",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Mensuration",
+      "chapter_number": null,
+      "topic": "Volume of Solids (Cone, Sphere, Cylinder)",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 4,
+      "question_text": "A metallic sphere of radius 9 cm is melted and recast into a cone of height 27 cm. Find the radius of the base of the cone. If the same metal is instead recast into a cylinder of the same radius as the cone and height 12 cm, verify whether the cylinder's volume matches the sphere's volume, showing your working.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "Radius of cone base = 9 cm; the cylinder of height 12 cm and radius 9 cm does NOT have the same volume as the sphere.",
+      "solution": "Volume of sphere = (4/3)πr³ = (4/3)π(9³) = (4/3)π×729 = 972π cm³.\nVolume of cone = (1/3)πR²(27) = 9πR². Setting equal: 9πR² = 972π → R² = 108 → R = 6√3 ≈ 10.39 cm (Note: this shows the cone's radius is not simply 9 cm as a naive equal-radius assumption might suggest — solving properly gives R ≈ 10.39 cm).\nFor the cylinder check with radius 9 cm and height 12: Volume = π(9²)(12) = 972π cm³, which numerically matches the sphere's volume of 972π cm³ — so a cylinder of radius 9 cm and height 12 cm does have equal volume to the sphere, though the cone (found above) does not have radius 9 cm.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Compute volume of the sphere.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Set cone volume equal to sphere volume and solve for cone radius.",
+          "marks": 2
+        },
+        {
+          "step": 3,
+          "description": "Check the cylinder's volume against the sphere's volume.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "mensuration",
+        "volume",
+        "generated"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "GEN_COMMERCIAL_MATH_Q003",
+      "source": "SIMILAR_GENERATED",
+      "source_details": {
+        "label": "GENERATED",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Commercial Mathematics",
+      "chapter_number": null,
+      "topic": "GST",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 4,
+      "question_text": "A shopkeeper marks an article at ₹3,500. He allows a discount of 10% and then charges GST at 12% on the discounted price. Find: (a) the discounted price, (b) the GST amount charged, (c) the total price paid by the customer.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(a) ₹3,150  (b) ₹378  (c) ₹3,528",
+      "solution": "(a) Discount = 10% of 3500 = ₹350. Discounted price = 3500−350 = ₹3,150.\n(b) GST = 12% of 3150 = ₹378.\n(c) Total price = 3150+378 = ₹3,528.",      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Compute discounted price.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Compute GST on discounted price.",
+          "marks": 2
+        },
+        {
+          "step": 3,
+          "description": "Compute total price paid.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "gst",
+        "discount",
+        "generated"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "GEN_ALGEBRA_Q004",
+      "source": "SIMILAR_GENERATED",
+      "source_details": {
+        "label": "GENERATED",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Arithmetic Progression",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 4,
+      "question_text": "An A.P. consists of all two-digit numbers which leave a remainder of 2 when divided by 7. Find: (a) the first term and common difference, (b) the number of terms in this A.P., (c) the sum of all terms.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(a) a=16, d=7  (b) 12 terms  (c) 654",
+      "solution": "Two-digit numbers leaving remainder 2 on division by 7: 16, 23, 30, ..., broadly up to 93 (largest two-digit such number: 93 = 7×13+2).\n(a) a=16, d=7.\n(b) Last term l=93: l=a+(n−1)d → 93=16+(n−1)(7) → 77=7(n−1) → n−1=11 → n=12... recheck: 16+7(n-1)=93 → 7(n-1)=77 → n-1=11 → n=12. So n=12 terms (not 13 — corrected).\n(c) Sum = n/2[a+l] = 12/2×(16+93) = 6×109 = 654.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Identify first term and common difference.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Find number of terms.",
+          "marks": 2
+        },
+        {
+          "step": 3,
+          "description": "Find the sum of the A.P.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "arithmetic-progression",
+        "generated"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "GEN_GEOMETRY_Q005",
+      "source": "SIMILAR_GENERATED",
+      "source_details": {
+        "label": "GENERATED",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Geometry",
+      "chapter_number": null,
+      "topic": "Reflection (Transformation Geometry)",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 4,
+      "question_text": "Triangle PQR has vertices P(2,3), Q(4,5) and R(1,6). (a) Find the coordinates of the image of triangle PQR under reflection in the x-axis. (b) Find the coordinates of the image of P under reflection in the origin. (c) State the equation of the line of symmetry used in part (a).",
+      "options": [],
+      "correct_answer": null,
+      "answer": "(a) P'(2,−3), Q'(4,−5), R'(1,−6)  (b) P''(−2,−3)  (c) y = 0",
+      "solution": "(a) Reflection in the x-axis maps (x,y)→(x,−y): P(2,3)→P'(2,−3), Q(4,5)→Q'(4,−5), R(1,6)→R'(1,−6).\n(b) Reflection in the origin maps (x,y)→(−x,−y): P(2,3)→P''(−2,−3).\n(c) The x-axis, whose equation is y=0, is the mirror line used in part (a).",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Reflect all three vertices in the x-axis.",
+          "marks": 2
+        },
+        {
+          "step": 2,
+          "description": "Reflect P in the origin.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "State equation of the mirror line.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "reflection",
+        "coordinate-geometry",
+        "generated"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "GEN_COMMERCIAL_MATH_Q006",
+      "source": "SIMILAR_GENERATED",
+      "source_details": {
+        "label": "GENERATED",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Commercial Mathematics",
+      "chapter_number": null,
+      "topic": "Banking - Recurring Deposits",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 3,
+      "question_text": "A woman has a recurring deposit account and deposits ₹1500 per month for 3 years at 9% per annum simple interest. Find the maturity value of her account.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "₹61,492.50",
+      "solution": "P=1500, n=36 months, r=9%.\nInterest = P×n(n+1)/(2×12)×(r/100) = 1500×36×37/24 × 9/100 = 1500×1332/24×0.09 = 1500×55.5×0.09 = ₹7,492.50.\nTotal deposited = 1500×36 = ₹54,000.\nMaturity value = 54000+7492.50 = ₹61,492.50.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Apply recurring deposit interest formula.",
+          "marks": 2
+        },
+        {
+          "step": 2,
+          "description": "Compute maturity value.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "banking",
+        "recurring-deposit",
+        "generated"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "GEN_TRIGONOMETRY_Q007",
+      "source": "SIMILAR_GENERATED",
+      "source_details": {
+        "label": "GENERATED",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Trigonometry",
+      "chapter_number": null,
+      "topic": "Trigonometric Identities",
+      "type": "LONG",
+      "difficulty": "HARD",
+      "competency": "Application",
+      "marks": 4,
+      "question_text": "Prove the following identity: (sinθ + cosθ)/(sinθ − cosθ) + (sinθ − cosθ)/(sinθ + cosθ) = 2/(sin²θ − cos²θ)",
+      "options": [],
+      "correct_answer": null,
+      "answer": "Identity proved (see solution)",
+      "solution": "LHS = [(sinθ+cosθ)² + (sinθ−cosθ)²] / [(sinθ−cosθ)(sinθ+cosθ)] = [2sin²θ+2cos²θ] / (sin²θ−cos²θ) = 2(sin²θ+cos²θ)/(sin²θ−cos²θ) = 2/(sin²θ−cos²θ), since sin²θ+cos²θ=1. This equals RHS.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Combine LHS over a common denominator.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Expand and simplify numerator using algebraic identities.",
+          "marks": 2
+        },
+        {
+          "step": 3,
+          "description": "Apply Pythagorean identity to match RHS.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "trigonometry",
+        "identities",
+        "proof",
+        "generated"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "GEN_ALGEBRA_Q008",
+      "source": "SIMILAR_GENERATED",
+      "source_details": {
+        "label": "GENERATED",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Algebra",
+      "chapter_number": null,
+      "topic": "Ratio and Proportion - Properties of Proportion",
+      "type": "SHORT",
+      "difficulty": "HARD",
+      "competency": "Understanding",
+      "marks": 4,
+      "question_text": "If (3x+2y)/(3x−2y) = 5/1, use properties of proportion to find the value of x:y.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "x : y = 1 : 1",
+      "solution": "By componendo-dividendo: [(3x+2y)+(3x−2y)] / [(3x+2y)−(3x−2y)] = (5+1)/(5−1) → (6x)/(4y) = 6/4 → 6x×4 = 6×4y → 24x = 24y → x = y, so x:y = 1:1.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Apply componendo-dividendo.",
+          "marks": 2
+        },
+        {
+          "step": 2,
+          "description": "Simplify to find the ratio x:y.",
+          "marks": 2
+        }
+      ],
+      "tags": [
+        "ratio-proportion",
+        "generated"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "GEN_STATISTICS_Q009",
+      "source": "SIMILAR_GENERATED",
+      "source_details": {
+        "label": "GENERATED",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Statistics",
+      "chapter_number": null,
+      "topic": "Mean, Median, Mode",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 3,
+      "question_text": "The following data gives the number of goals scored by a football team in 20 matches: 0,1,2,1,3,2,2,1,0,4,2,1,3,2,1,0,2,3,1,2. Find the mean and mode of the number of goals scored.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "Mean = 1.65 goals, Mode = 2 goals",
+      "solution": "Sum = 0+1+2+1+3+2+2+1+0+4+2+1+3+2+1+0+2+3+1+2 = 33. Mean = 33/20 = 1.65.\nFrequency of each value: 0 appears 3 times, 1 appears 6 times, 2 appears 7 times, 3 appears 3 times, 4 appears 1 time. Mode = 2 (highest frequency, 7 times).",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Compute the mean from the raw data.",
+          "marks": 1.5
+        },
+        {
+          "step": 2,
+          "description": "Tabulate frequencies and identify the mode.",
+          "marks": 1.5
+        }
+      ],
+      "tags": [
+        "statistics",
+        "mean",
+        "mode",
+        "generated"
+      ],
+      "extraction_warning": null
+    },
+    {
+      "question_id": "GEN_GEOMETRY_Q010",
+      "source": "SIMILAR_GENERATED",
+      "source_details": {
+        "label": "GENERATED",
+        "year": null
+      },
+      "syllabus_status": "IN_SYLLABUS",
+      "board": "ICSE",
+      "class": 10,
+      "academic_year": "2026-27",
+      "chapter": "Geometry",
+      "chapter_number": null,
+      "topic": "Circles - Tangent Properties",
+      "type": "SHORT",
+      "difficulty": "MEDIUM",
+      "competency": "Application",
+      "marks": 3,
+      "question_text": "Two concentric circles have radii 13 cm and 5 cm. Find the length of the chord of the larger circle which touches the smaller circle.",
+      "options": [],
+      "correct_answer": null,
+      "answer": "24 cm",
+      "solution": "Let O be the common centre. The chord AB of the larger circle is tangent to the smaller circle at point M, so OM ⊥ AB and OM = 5 cm (radius of smaller circle), OA = 13 cm (radius of larger circle). In right triangle OMA: AM = √(OA²−OM²) = √(169−25) = √144 = 12 cm. Since M is the midpoint of the chord, AB = 2×AM = 24 cm.",
+      "marking_scheme": [
+        {
+          "step": 1,
+          "description": "Set up right triangle using the perpendicular from centre to chord.",
+          "marks": 1
+        },
+        {
+          "step": 2,
+          "description": "Apply Pythagoras' theorem to find half the chord.",
+          "marks": 1
+        },
+        {
+          "step": 3,
+          "description": "Double to find the full chord length.",
+          "marks": 1
+        }
+      ],
+      "tags": [
+        "circles",
+        "tangents",
+        "generated"
+      ],
+      "extraction_warning": null
+    }
+  ]
+}

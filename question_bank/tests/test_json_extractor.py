@@ -62,6 +62,30 @@ def test_json_extractor_converts_batch_to_raw_questions():
     assert questions[1].raw_question_id == "ai-json-2"
 
 
+def test_json_extractor_supports_canonical_provider_aliases():
+    payload = sample_payload()
+    payload["questions"] = [
+        {
+            "question_number": 7,
+            "text": "Choose the correct value.",
+            "type": "mcq",
+            "options": ["1", "2", "3", "4"],
+            "correct_answer": "C",
+            "marks": 1,
+            "class": 10,
+            "page_number": 4,
+        }
+    ]
+
+    question = AIJSONQuestionExtractor(payload).extract()[0]
+
+    assert question.raw_text == "Choose the correct value."
+    assert question.raw_options[2] == {"label": "C", "text": "3"}
+    assert question.metadata["question_type"] == "mcq"
+    assert question.metadata["class_level"] == 10
+    assert question.metadata["source_page"] == 4
+
+
 def test_json_extractor_builds_source_document():
     source = AIJSONQuestionExtractor(sample_payload()).to_source_document()
 

@@ -1,4 +1,9 @@
-"""Canonical AI extraction contract aligned with the current question database."""
+"""Canonical AI extraction contract aligned with the current question database.
+
+This module is the single vocabulary/alias reference for external-AI JSON.
+Providers may emit supported aliases, but the extractor must normalize them
+into these canonical field names before ingestion.
+"""
 
 QUESTION_FIELDS = {
     "question_number": "source question number; never the canonical DB ID",
@@ -20,6 +25,21 @@ QUESTION_FIELDS = {
     "competency": "questions.competency",
     "source": "questions.source",
     "source_year": "questions.source_year",
+}
+
+# Provider-facing aliases. The first entry is always the canonical key.
+FIELD_ALIASES = {
+    "question_text": ("question_text", "text", "question"),
+    "question_type": ("question_type", "type"),
+    "answer_choices": ("answer_choices", "options"),
+    "class_level": ("class_level", "class"),
+    "question_parts": ("question_parts", "parts", "subquestions"),
+    "source_page": ("source_page", "page_number", "page"),
+    "source_pages": ("source_pages", "pages"),
+    "source_file": ("source_file", "source_pdf", "file_path", "file"),
+    "extraction_provider": ("extraction_provider", "provider"),
+    "extraction_model": ("extraction_model", "model"),
+    "extraction_run_id": ("extraction_run_id", "run_id"),
 }
 
 PROVENANCE_FIELDS = {

@@ -366,7 +366,7 @@ _legacy_save_review = _legacy._save_review
 
 from flask import flash, render_template
 from werkzeug.utils import secure_filename
-from question_bank.extraction.ai_json_bulk_import import AIJSONBulkImporter, ApprovedQuestionPublisher
+from question_bank.extraction.ai_json_bulk_import import AIJSONBulkImporter, ApprovedQuestionPublisher, stable_batch_id
 from question_bank.extraction.review_persistence import get_item as _persistent_get_item, list_items as _persistent_list_items, save_batch as _persistent_save_batch, save_review as _db_save_review
 
 _JSON_MAX_BYTES = 5 * 1024 * 1024
@@ -403,36 +403,44 @@ _legacy._save_review = _persistent_save_review
 def _json_upload_view():
     if request.method == "GET":
         return render_template("extraction_json_upload.html")
-    upload = request.files.get("json_file")
-    if not upload or not upload.filename:
-        return render_template("extraction_json_upload.html", error="Select a JSON file.")
-    filename = secure_filename(upload.filename)
-    if not filename.lower().endswith(".json"):
-        return render_template("extraction_json_upload.html", error="Only .json files are accepted.")
-    payload_bytes = upload.read(_JSON_MAX_BYTES + 1)
-    if len(payload_bytes) > _JSON_MAX_BYTES:
-        return render_template("extraction_json_upload.html", error="JSON file is too large. Maximum size is 5 MB.")
-    try:
-        payload = json.loads(payload_bytes.decode("utf-8-sig"))
-        result = AIJSONBulkImporter(existing_questions=_legacy.storage.questions.values()).prepare(payload)
-    except Exception as exc:
-        return render_template("extraction_json_upload.html", error=f"Import validation failed: {exc}")
-    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    batch_id = f"{stamp}_{uuid.uuid4().hex[:12]}"
-    target = _legacy.INBOX_DIR / f"{batch_id}_{_legacy._safe_id(Path(filename).stem)}.json"
-    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    _persistent_save_batch(batch_id=batch_id, filename=target.name, payload=payload)
+    uploads = request.files.getlist("json_file")
+    if not uploads:
+        single = request.files.get("json_file")
+        uploads = [single] if single else []
+    uploads = [u for u in uploads if u and u.filename]
+    if not uploads:
+        return render_template("extraction_json_upload.html", error="Select at least one JSON file.")
+
+    aggregate = {"total": 0, "review_required": 0, "duplicates": 0, "validation_pending": 0, "invalid": 0, "batches": 0}
+    saved = []
+    for upload in uploads:
+        filename = secure_filename(upload.filename)
+        if not filename.lower().endswith(".json"):
+            return render_template("extraction_json_upload.html", error=f"Only .json files are accepted: {filename}")
+        payload_bytes = upload.read(_JSON_MAX_BYTES + 1)
+        if len(payload_bytes) > _JSON_MAX_BYTES:
+            return render_template("extraction_json_upload.html", error=f"JSON file is too large (maximum 5 MB): {filename}")
+        try:
+            payload = json.loads(payload_bytes.decode("utf-8-sig"))
+            result = AIJSONBulkImporter(existing_questions=_legacy.storage.questions.values()).prepare(payload)
+        except Exception as exc:
+            return render_template("extraction_json_upload.html", error=f"Import validation failed for {filename}: {exc}")
+
+        batch_id = stable_batch_id(payload)
+        target = _legacy.INBOX_DIR / f"{batch_id}_{_legacy._safe_id(Path(filename).stem)}.json"
+        target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+        _persistent_save_batch(batch_id=batch_id, filename=target.name, payload=payload)
+        saved.append({"batch_id": batch_id, "filename": filename, "items": result.total})
+        aggregate["batches"] += 1
+        for key in ("total", "review_required", "duplicates", "validation_pending", "invalid"):
+            aggregate[key] += getattr(result, key)
+
     return render_template(
         "extraction_json_upload.html",
         success=True,
-        filename=target.name,
-        summary={
-            "total": result.total,
-            "review_required": result.review_required,
-            "duplicates": result.duplicates,
-            "validation_pending": result.validation_pending,
-            "invalid": result.invalid,
-        },
+        filename=(saved[0]["filename"] if len(saved) == 1 else f"{len(saved)} JSON batches"),
+        summary=aggregate,
+        batches=saved,
     )
 
 def _candidate_from_form(candidate, form):
