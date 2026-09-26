@@ -229,7 +229,14 @@ def dashboard():
             if not isinstance(q,dict):continue
             rid=f"{p.stem}:{i}";r=_load_review(rid);items.append({"item_id":rid,"file":p.name,"source_pdf":str(d.get("source_pdf") or d.get("source_paper") or ""),"index":i,"question_number":str(_field(q,"question_number","number",default=i+1)),"page_number":_field(q,"source_page","page_number","page",default=1),"marks":q.get("marks"),"question_type":q.get("question_type") or q.get("type") or "","status":r.get("status","PENDING"),"chapter_missing":not str(q.get("chapter") or "").strip()})
     stats={s:sum(x["status"]==s for x in items) for s in ("PENDING","APPROVED","REJECTED","NEEDS_REVIEW")};stats["CHAPTER_REVIEW"]=sum(x["chapter_missing"] and x["status"] not in {"APPROVED","REJECTED"} for x in items)
-    return render_template("extraction_review_dashboard.html",items=items,stats=stats)
+    return render_template("extraction_review_dashboard.html",items=items,stats=stats),review_start_url=url_for("extraction_review.start_review"),review_queue_count=len(_review_queue_ids()))
+@review_bp.route("/start")
+def start_review():
+    queue = _review_queue_ids()
+    if not queue:
+        return redirect(url_for("extraction_review.dashboard"))
+    return redirect(url_for("extraction_review.item", item_id=queue[0]))
+
 @review_bp.route("/<path:item_id>")
 def item(item_id):
     path,data,q=_find_item(item_id);pdf=_source_pdf(data,q);review=_load_review(item_id);v=_review_form_values(q,data,review);stored_assets=[]
