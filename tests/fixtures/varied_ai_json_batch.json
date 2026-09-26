@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "source": "PDF_EXTRACTED",
+  "source_details": {"source_id": "VARIED_BATCH_01", "file": "ICSE_Class10_Varied_Sample.pdf", "year": 2026},
+  "extraction_provider": "claude",
+  "extraction_model": "claude-free-manual",
+  "metadata": {"subject": "Mathematics", "board": "ICSE", "class": 10, "academic_year": "2026-27"},
+  "questions": [
+    {"question_id":"VARIED_Q001","text":"What is the GST on ₹25,000 at 18%?","type":"multiple_choice","options":["₹4,000","₹4,500","₹5,000","₹5,500"],"correct_answer":"₹4,500","marks":1,"topic":"GST","chapter":"GST","source_page":2},
+    {"question_id":"VARIED_Q002","question":"If the roots of x² - 5x + 6 = 0 are α and β, find α+β.","type":"very-short","marks":1,"chapter":"Quadratic Equations","topic":"Nature of Roots","page_number":3},
+    {"question_id":"VARIED_Q003","text":"State the formula for the nth term of an arithmetic progression.","type":"SHORT","marks":2,"chapter":"Algebra","topic":"Arithmetic Progression","source_pages":[4,5]},
+    {"question_id":"VARIED_Q004","text":"Prove the given trigonometric identity.","type":"LONG","marks":4,"chapter":"Trigonometry","topic":"Trigonometric Identities","question_parts":[{"part":"a","text":"Prove the identity","marks":4}],"assets":[{"type":"diagram","path":"assets/q004.png"}]},
+    {"question_id":"VARIED_Q005","text":"Assertion: The graph of a linear equation is a straight line. Reason: A linear equation has degree one.","type":"assertion-reason","options":[{"label":"A","text":"Both A and R are true and R explains A"},{"label":"B","text":"Both A and R are true but R does not explain A"},{"label":"C","text":"A is true but R is false"},{"label":"D","text":"A is false but R is true"}],"correct_answer":"A","marks":1,"chapter":"Equation of a Straight Line","topic":"Equation of a Line"},
+    {"question_id":"VARIED_Q006","text":"A cylinder has radius 7 cm and height 10 cm. Find its volume.","type":"saq","marks":3,"chapter":"Mensuration","topic":"Volume of Solids (Cone, Sphere, Cylinder)"},
+    {"question_id":"VARIED_Q007","text":"Identify the chapter for this intentionally incomplete record.","type":"vsaq","marks":1},
+    {"question_id":"VARIED_Q008","text":"What is the GST on ₹25,000 at 18%?","type":"mcq","options":["₹4,000","₹4,500","₹5,000","₹5,500"],"correct_answer":"B","marks":1,"chapter":"GST","topic":"GST","source_page":2}
+  ]
+}
