@@ -70,6 +70,54 @@ def test_json_extractor_builds_source_document():
     assert source.metadata["extraction_method"] == "ai_json"
 
 
+def test_json_extractor_accepts_string_source_with_source_details():
+    payload = sample_payload()
+    payload["source"] = "PDF_EXTRACTED"
+    payload["source_details"] = {
+        "source_id": "icse-2026-maths",
+        "file": "Improvia_ICSE_Class10_Maths.pdf",
+        "year": 2026,
+    }
+    payload["questions"][0]["source"] = "PDF_EXTRACTED"
+    payload["questions"][0]["source_details"] = {
+        "file": "Improvia_ICSE_Class10_Maths.pdf",
+        "page": 7,
+        "year": 2026,
+    }
+
+    extractor = AIJSONQuestionExtractor(payload)
+    source = extractor.to_source_document()
+    question = extractor.extract()[0]
+
+    assert source.source_type == "PDF_EXTRACTED"
+    assert source.file_path == "Improvia_ICSE_Class10_Maths.pdf"
+    assert source.source_year == 2026
+    assert question.metadata["source_label"] == "PDF_EXTRACTED"
+    assert question.metadata["source_file"] == "Improvia_ICSE_Class10_Maths.pdf"
+    assert question.metadata["source_details"]["page"] == 7
+    assert question.metadata["verification_status"] == "PENDING"
+
+
+def test_json_extractor_accepts_source_file_at_envelope_level():
+    payload = sample_payload()
+    payload["source"] = "PDF_EXTRACTED"
+    payload["source_file"] = "paper.pdf"
+
+    source = AIJSONQuestionExtractor(payload).to_source_document()
+
+    assert source.name == "paper.pdf"
+    assert source.file_path == "paper.pdf"
+
+
+def test_json_extractor_rejects_invalid_source_details():
+    payload = sample_payload()
+    payload["source"] = "PDF_EXTRACTED"
+    payload["source_details"] = "not-an-object"
+
+    with pytest.raises(AIJSONExtractionError):
+        AIJSONQuestionExtractor(payload).to_source_document()
+
+
 def test_json_extractor_rejects_missing_questions_array():
     with pytest.raises(AIJSONExtractionError):
         AIJSONQuestionExtractor({"schema_version": "1.0"}).extract()
@@ -79,7 +127,7 @@ def test_json_extractor_rejects_unsupported_schema_version():
     with pytest.raises(AIJSONExtractionError):
         AIJSONQuestionExtractor(
             {"schema_version": "9.0", "questions": []}
-        ).extract()
+        )
 
 
 def test_json_extractor_does_not_use_source_question_number_as_database_id():
