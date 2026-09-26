@@ -363,10 +363,6 @@ _legacy_register = register_extraction_review
 _legacy_find_item = _legacy._find_item
 _legacy_load_review = _legacy._load_review
 _legacy_save_review = _legacy._save_review
-_legacy._find_item = _persistent_find_item
-_legacy._load_review = _persistent_load_review
-_legacy._save_review = _persistent_save_review
-
 
 from flask import flash, render_template
 from werkzeug.utils import secure_filename
@@ -398,6 +394,11 @@ def _persistent_save_review(item_id, status, note="", question_id=None, question
         _db_save_review(item_id, status, note, question_id, question_snapshot, human_verified_values)
         return
     _legacy_save_review(item_id, status, note, question_id, question_snapshot, human_verified_values)
+
+# Patch the legacy module only after the persistent helpers are defined.
+_legacy._find_item = _persistent_find_item
+_legacy._load_review = _persistent_load_review
+_legacy._save_review = _persistent_save_review
 
 def _json_upload_view():
     if request.method == "GET":
