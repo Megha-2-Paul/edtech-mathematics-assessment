@@ -15,9 +15,17 @@ from sqlalchemy import text
 from database import engine
 
 
-def save_batch(*, batch_id: str, filename: str, payload: dict[str, Any]) -> list[str]:
+def _questions_from_payload(payload: dict[str, Any] | list[Any]) -> list[Any]:
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict):
+        return payload.get("questions") or []
+    raise ValueError("JSON batch payload must be an object or array.")
+
+
+def save_batch(*, batch_id: str, filename: str, payload: dict[str, Any] | list[Any]) -> list[str]:
     """Persist one uploaded JSON batch and return stable item IDs."""
-    questions = payload.get("questions") or []
+    questions = _questions_from_payload(payload)
     now = datetime.now()
     with engine.begin() as db:
         db.execute(
