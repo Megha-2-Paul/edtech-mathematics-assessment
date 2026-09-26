@@ -90,9 +90,11 @@ class QuestionIngestionPipeline:
         metadata.update(raw.metadata)
         question_type = str(metadata.get("question_type") or "saq").lower()
         answer_mode = str(
-            metadata.get(
-                "answer_mode",
-                "option_selection" if question_type == "mcq" else "final_answer_selection_and_handwritten_upload",
+            metadata.get("answer_mode")
+            or (
+                "option_selection"
+                if question_type == "mcq"
+                else "final_answer_selection_and_handwritten_upload"
             )
         )
 
