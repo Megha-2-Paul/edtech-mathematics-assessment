@@ -4,7 +4,7 @@
 <div class="card" style="max-width:900px;margin:auto">
   <span class="badge badge-blue">Question Bank</span>
   <h2>Import External-AI JSON</h2>
-  <p class="muted">Upload a JSON file produced by your external extraction AI. The file is validated through the shared ingestion pipeline before entering the review inbox. Nothing is published automatically.</p>
+  <p class="muted">Upload one or more JSON batches produced by your external extraction AI. Each batch can contain many questions. The file is validated through the shared ingestion pipeline before entering the review inbox. Nothing is published automatically.</p>
   {% if error %}<div class="warning" style="padding:12px;margin:14px 0">{{ error }}</div>{% endif %}
   {% if success %}
     <div class="ok" style="padding:14px;margin:14px 0"><strong>{{ filename }}</strong> is ready for human review.</div>
@@ -18,8 +18,8 @@
   {% else %}
     <form method="post" enctype="multipart/form-data">
       <div style="padding:20px;border:2px dashed #ccc;border-radius:12px;margin:18px 0">
-        <label><strong>JSON file</strong></label><br><input type="file" name="json_file" accept=".json,application/json" required style="margin-top:10px">
-        <p class="small">Maximum 5 MB. Use schema version 1.0.</p>
+        <label><strong>JSON batch files</strong></label><br><input type="file" name="json_file" accept=".json,application/json" multiple required style="margin-top:10px">
+        <p class="small">Select multiple JSON files if you want. Maximum 5 MB per file. Every file is validated and placed in the review inbox; nothing is published automatically.</p>
       </div>
       <button class="btn approve" type="submit">Validate & add to review inbox</button>
       <a class="btn" href="{{ url_for('extraction_review.dashboard') }}">Cancel</a>
