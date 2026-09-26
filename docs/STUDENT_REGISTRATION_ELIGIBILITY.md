@@ -133,3 +133,28 @@ python scripts/import_google_registrations.py --sheet-url "<Google Sheet URL>"
 It defaults to dry-run. Student data is not made public by this code. A private Sheet should be exported/downloaded and passed as CSV unless a future authenticated Google Sheets connector is added.
 
 This is intentional for the MVP: **collect registrations cheaply in Google Sheets, manually approve/enroll, then write only enrolled students to Aiven.**
+
+
+## Direct Google Form connection
+
+The MVP now includes an authenticated webhook for the actual Google Form response Sheet.
+
+### Architecture
+
+Google Form -> response Sheet -> Apps Script installable triggers -> POST /api/registrations/google-form -> existing registration_pipeline.py -> Aiven students.
+
+The form submission itself is acknowledged as PENDING when Enrollment Status is blank. The founder then changes Enrollment Status to APPROVED, ENROLLED, or ACTIVE. The Sheet edit trigger sends the row again; only then is the existing identity-matching enrollment function allowed to write/reuse a permanent Student_ID.
+
+### Google setup
+
+1. Open the Form's response spreadsheet.
+2. Add a column named exactly Enrollment Status.
+3. Open Extensions -> Apps Script.
+4. Add integrations/google_apps_script/ImproviaRegistration.gs.
+5. In Apps Script Project Settings -> Script properties, create IMPROVIA_WEBHOOK_URL and IMPROVIA_WEBHOOK_SECRET.
+6. Configure Render with GOOGLE_REGISTRATION_WEBHOOK_SECRET using the same secret.
+7. Run setupTriggers() once and authorize the script.
+8. Submit one dummy response. It should return PENDING and create no student.
+9. Change that row's Enrollment Status to APPROVED. It should call the webhook and enroll/reuse a permanent Student_ID.
+
+The Apps Script uses installable spreadsheet form-submit and edit triggers so the authorized UrlFetchApp request can reach the Flask webhook.
