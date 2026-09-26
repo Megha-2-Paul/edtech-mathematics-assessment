@@ -13,6 +13,7 @@ from exam_platform.storage import storage
 from question_bank.extraction.extraction_contract import ALLOWED_QUESTION_TYPES, ALLOWED_UPLOAD_MODES, INFERRED_FIELDS_REQUIRE_HUMAN_VERIFICATION
 from question_bank.extraction.question_cropper import extract_page_questions
 from question_bank.extraction.question_asset_persistence import persist_source_visuals
+from exam_platform.ingestion.curriculum import CanonicalTaxonomyResolver
 
 review_bp=Blueprint("extraction_review",__name__,url_prefix="/teacher/extraction-review")
 PROJECT_ROOT=Path(__file__).resolve().parents[2]; INBOX_DIR=Path(os.getenv("EXTRACTION_INBOX_DIR",PROJECT_ROOT/"extraction_inbox")); REVIEW_DIR=Path(os.getenv("EXTRACTION_REVIEW_DIR",PROJECT_ROOT/"extraction_reviews")); SOURCE_DIR=Path(os.getenv("SOURCE_PDF_DIR",PROJECT_ROOT/"source_pdfs")); PAGE_DIR=REVIEW_DIR/"page_renders"; CROP_DIR=REVIEW_DIR/"question_crops"
@@ -156,6 +157,60 @@ def _render_page(pdf,pn):
     if p.exists():return p
     with fitz.open(str(pdf)) as d:d[pn-1].get_pixmap(dpi=150,alpha=False).save(str(p))
     return p
+def _canonical_chapters(subject, board, class_level):
+    """Return verified canonical chapter names for subject/board/class."""
+    try:
+        data = CanonicalTaxonomyResolver().data
+        subject_id = {"mathematics": "maths", "maths": "maths", "applied mathematics": "applied_mathematics", "applied maths": "applied_mathematics"}.get(str(subject or "").strip().casefold())
+        board_name = {"cbse": "CBSE", "icse": "ICSE", "isc": "ISC"}.get(str(board or "").strip().casefold())
+        class_number = int(class_level) if class_level is not None else None
+        if not subject_id or not board_name or class_number is None:
+            return []
+        chapters = {row.get("id"): row for row in data.get("canonical_chapters", []) if isinstance(row, dict) and row.get("id") and row.get("name")}
+        units = {row.get("unit_id"): row for row in data.get("units", []) if isinstance(row, dict) and row.get("unit_id")}
+        names = set()
+        for mapping in data.get("mappings", []):
+            if not isinstance(mapping, dict) or str(mapping.get("board", "")).strip().casefold() != board_name.casefold():
+                continue
+            if mapping.get("class_level") != class_number or mapping.get("status") != "VERIFIED":
+                continue
+            unit = units.get(mapping.get("unit_id"), {})
+            if unit.get("subject_id") != subject_id:
+                continue
+            chapter = chapters.get(mapping.get("canonical_chapter_id"), {})
+            if chapter.get("name"):
+                names.add(str(chapter["name"]))
+        return sorted(names)
+    except Exception:
+        return []
+
+def _review_queue_ids():
+    items = []
+    for p in _extraction_files():
+        try:
+            d = _load_json(p)
+        except ValueError:
+            continue
+        for i, q in enumerate(d["questions"]):
+            if isinstance(q, dict):
+                rid = f"{p.stem}:{i}"
+                status = _load_review(rid).get("status", "PENDING")
+                if status not in {"APPROVED", "REJECTED"}:
+                    items.append((rid, status))
+    pending = [rid for rid, status in items if status == "PENDING"]
+    needs = [rid for rid, status in items if status == "NEEDS_REVIEW"]
+    return pending + needs
+
+def _next_queue_url(current_item_id=None):
+    queue = _review_queue_ids()
+    if not queue:
+        return url_for("extraction_review.dashboard")
+    if current_item_id in queue:
+        idx = queue.index(current_item_id)
+        if idx + 1 < len(queue):
+            return url_for("extraction_review.item", item_id=queue[idx + 1])
+    return url_for("extraction_review.item", item_id=queue[0])
+
 def _render_question_crop(pdf,pn,qn,item):
     try:rows=extract_page_questions(pdf,pn,CROP_DIR/_safe_id(item),dpi=180)
     except Exception:return None
