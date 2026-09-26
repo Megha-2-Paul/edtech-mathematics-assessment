@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from exam_platform.admin import register_admin
 from exam_platform.db_source import storage
 from exam_platform.mock_data import load_mock_data
-from exam_platform.eligibility import is_test_eligible, registration_required
+from exam_platform.eligibility import is_test_eligible
 from exam_platform.models import (
     AnswerImage,
     AnswerStatus,
