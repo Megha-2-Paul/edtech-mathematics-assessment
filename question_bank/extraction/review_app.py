@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Any
 import fitz
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, send_file, url_for
-from exam_platform.models import Question\nfrom exam_platform.ingestion.models import NormalizedQuestion\nfrom exam_platform.ingestion.canonical import build_question
+from exam_platform.models import Question
+from exam_platform.ingestion.models import NormalizedQuestion
+from exam_platform.ingestion.canonical import build_question
 from exam_platform.storage import storage
 from question_bank.extraction.extraction_contract import ALLOWED_QUESTION_TYPES, ALLOWED_UPLOAD_MODES, INFERRED_FIELDS_REQUIRE_HUMAN_VERIFICATION
 from question_bank.extraction.question_cropper import extract_page_questions
