@@ -58,7 +58,7 @@
           "options": {"type": "array"},
           "correct_answer": {"type": ["string", "null"]},
           "marks": {"type": ["number", "null"]},
-          "question_type": {"enum": ["mcq", "vsaq", "saq", "laq", null]},
+          "question_type": {"enum": ["mcq", "vsaq", "saq", "laq", "MCQ", "VSAQ", "SAQ", "LAQ", "SHORT", "LONG", "ASSERTION_REASON", "multiple_choice", null]},
           "type": {"enum": ["mcq", "vsaq", "saq", "laq", null]},
           "answer_mode": {"type": ["string", "null"]},
           "handwritten_upload_mode": {"enum": ["none", "optional", "required", null]},
