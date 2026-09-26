@@ -180,7 +180,7 @@ class AIJSONQuestionExtractor:
                     f"Question #{index} 'extraction_warnings' must be an array."
                 )
 
-            question_number = item.get("question_number")
+            question_number = item.get("question_number") or item.get("question_id")
             question_text = self._text(
                 self._first(item, "question_text"), "question_text", required=True
             )
