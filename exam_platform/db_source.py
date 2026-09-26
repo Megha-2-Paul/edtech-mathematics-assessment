@@ -87,6 +87,7 @@ def _student(row):
         str(row["registration_date"]) if row["registration_date"] else None,
         row["registration_source"],
         row["status"],
+        row.get("subject"),
     )
 
 
