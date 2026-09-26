@@ -1,0 +1,1000 @@
+{
+  "taxonomy_version": "2026.27.4",
+  "subject": {
+    "subject_id": "maths",
+    "name": "Mathematics"
+  },
+  "scope": {
+    "boards": [
+      "CBSE",
+      "ICSE",
+      "ISC"
+    ],
+    "classes": [
+      10,
+      11,
+      12
+    ],
+    "academic_year": "2026-27"
+  },
+  "rules": {
+    "icse_class_10": "ICSE",
+    "isc_classes_11_12": "ISC",
+    "canonical_chapter_is_analytics_layer": true,
+    "board_unit_is_preserved_separately": true,
+    "do_not_force_non_equivalent_board_units_into_one_canonical_chapter": true,
+    "applied_mathematics": "Separate subject from Mathematics; included for CBSE Classes XI-XII only in this taxonomy."
+  },
+  "sources": [
+    {
+      "source_id": "CBSE_X_2026_27",
+      "authority": "CBSE",
+      "scope": "Class X Mathematics",
+      "url": "https://cbseacademic.nic.in/SQP_CLASSX_2026-27.html",
+      "verification_status": "official_current"
+    },
+    {
+      "source_id": "CBSE_XI_XII_2026_27",
+      "authority": "CBSE",
+      "scope": "Classes XI-XII Mathematics",
+      "url": "https://cbseacademic.nic.in/web_material/CurriculumMain27/SecPart2/Maths_SecP2_2026-27.pdf",
+      "verification_status": "official_current"
+    },
+    {
+      "source_id": "ISC_XI_REVISED",
+      "authority": "CISCE",
+      "scope": "ISC Class XI Mathematics",
+      "url": "https://cisce.org/wp-content/uploads/2025/04/23.-ISC-Mathematics-XI-Revised_2025.pdf",
+      "verification_status": "official_revised"
+    },
+    {
+      "source_id": "ISC_XII_REVISED",
+      "authority": "CISCE",
+      "scope": "ISC Class XII Mathematics",
+      "url": "https://cisce.org/wp-content/uploads/2025/04/Mathematics-XII-Revised.pdf",
+      "verification_status": "official_current_verified"
+    },
+    {
+      "source_id": "ICSE_X_CURRENT",
+      "authority": "CISCE",
+      "scope": "ICSE Class X Mathematics",
+      "url": "https://cisce.org/wp-content/uploads/2025/02/9.-Mathematics.pdf",
+      "verification_status": "official_current"
+    },
+    {
+      "type": "official_cbse",
+      "title": "CBSE Applied Mathematics 2026-27 (Subject Code 241)",
+      "url": "https://cbseacademic.nic.in/web_material/CurriculumMain27/SecPart2/Applied_Mathematics_SecP2_2026-27.pdf",
+      "verified_scope": "Class XI-XII top-level units and subject identity"
+    }
+  ],
+  "units": [
+    {
+      "unit_id": "cbse10_u1",
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_order": 1,
+      "unit_name": "Number Systems",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse10_u2",
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_order": 2,
+      "unit_name": "Algebra",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse10_u3",
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_order": 3,
+      "unit_name": "Coordinate Geometry",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse10_u4",
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_order": 4,
+      "unit_name": "Geometry",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse10_u5",
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_order": 5,
+      "unit_name": "Trigonometry",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse10_u6",
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_order": 6,
+      "unit_name": "Mensuration",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse10_u7",
+      "board": "CBSE",
+      "class_level": 10,
+      "unit_order": 7,
+      "unit_name": "Statistics and Probability",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse11_u1",
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_order": 1,
+      "unit_name": "Sets and Functions",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse11_u2",
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_order": 2,
+      "unit_name": "Algebra",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse11_u3",
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_order": 3,
+      "unit_name": "Coordinate Geometry",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse11_u4",
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_order": 4,
+      "unit_name": "Calculus",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse11_u5",
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_order": 5,
+      "unit_name": "Statistics and Probability",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse12_u1",
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_order": 1,
+      "unit_name": "Relations and Functions",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse12_u2",
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_order": 2,
+      "unit_name": "Algebra",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse12_u3",
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_order": 3,
+      "unit_name": "Calculus",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse12_u4",
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_order": 4,
+      "unit_name": "Vectors and Three-Dimensional Geometry",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse12_u5",
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_order": 5,
+      "unit_name": "Linear Programming",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse12_u6",
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_order": 6,
+      "unit_name": "Probability",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "icse10_u1",
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_order": 1,
+      "unit_name": "Commercial Mathematics",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "icse10_u2",
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_order": 2,
+      "unit_name": "Algebra",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "icse10_u3",
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_order": 3,
+      "unit_name": "Coordinate Geometry",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "icse10_u4",
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_order": 4,
+      "unit_name": "Geometry",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "icse10_u5",
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_order": 5,
+      "unit_name": "Mensuration",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "icse10_u6",
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_order": 6,
+      "unit_name": "Trigonometry",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "icse10_u7",
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_order": 7,
+      "unit_name": "Statistics",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "icse10_u8",
+      "board": "ICSE",
+      "class_level": 10,
+      "unit_order": 8,
+      "unit_name": "Probability",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc11_a1",
+      "board": "ISC",
+      "class_level": 11,
+      "unit_order": 1,
+      "unit_name": "Sets and Functions",
+      "section": "A",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc11_a2",
+      "board": "ISC",
+      "class_level": 11,
+      "unit_order": 2,
+      "unit_name": "Algebra",
+      "section": "A",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc11_a3",
+      "board": "ISC",
+      "class_level": 11,
+      "unit_order": 3,
+      "unit_name": "Coordinate Geometry",
+      "section": "A",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc11_a4",
+      "board": "ISC",
+      "class_level": 11,
+      "unit_order": 4,
+      "unit_name": "Calculus",
+      "section": "A",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc11_a5",
+      "board": "ISC",
+      "class_level": 11,
+      "unit_order": 5,
+      "unit_name": "Statistics & Probability",
+      "section": "A",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc11_b6",
+      "board": "ISC",
+      "class_level": 11,
+      "unit_order": 6,
+      "unit_name": "Conic Section",
+      "section": "B",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc11_b7",
+      "board": "ISC",
+      "class_level": 11,
+      "unit_order": 7,
+      "unit_name": "Introduction to Three Dimensional Geometry",
+      "section": "B",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc11_b8",
+      "board": "ISC",
+      "class_level": 11,
+      "unit_order": 8,
+      "unit_name": "Mathematical Reasoning",
+      "section": "B",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc11_c9",
+      "board": "ISC",
+      "class_level": 11,
+      "unit_order": 9,
+      "unit_name": "Statistics",
+      "section": "C",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc11_c10",
+      "board": "ISC",
+      "class_level": 11,
+      "unit_order": 10,
+      "unit_name": "Correlation Analysis",
+      "section": "C",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc11_c11",
+      "board": "ISC",
+      "class_level": 11,
+      "unit_order": 11,
+      "unit_name": "Index Numbers & Moving Averages",
+      "section": "C",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "cbse11_am_u1",
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_order": 1,
+      "unit_name": "Numbers, Quantification and Numerical Applications",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 10
+    },
+    {
+      "unit_id": "cbse11_am_u2",
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_order": 2,
+      "unit_name": "Algebra",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 18
+    },
+    {
+      "unit_id": "cbse11_am_u3",
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_order": 3,
+      "unit_name": "Calculus",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 12
+    },
+    {
+      "unit_id": "cbse11_am_u4",
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_order": 4,
+      "unit_name": "Combinatorics and Probability",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 10
+    },
+    {
+      "unit_id": "cbse11_am_u5",
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_order": 5,
+      "unit_name": "Descriptive Statistics",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 10
+    },
+    {
+      "unit_id": "cbse11_am_u6",
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_order": 6,
+      "unit_name": "Basics of Financial Mathematics",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 15
+    },
+    {
+      "unit_id": "cbse11_am_u7",
+      "board": "CBSE",
+      "class_level": 11,
+      "unit_order": 7,
+      "unit_name": "Coordinate Geometry",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 5
+    },
+    {
+      "unit_id": "cbse12_am_u1",
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_order": 1,
+      "unit_name": "Numbers, Quantification and Numerical Applications",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 11
+    },
+    {
+      "unit_id": "cbse12_am_u2",
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_order": 2,
+      "unit_name": "Algebra",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 10
+    },
+    {
+      "unit_id": "cbse12_am_u3",
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_order": 3,
+      "unit_name": "Calculus",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 15
+    },
+    {
+      "unit_id": "cbse12_am_u4",
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_order": 4,
+      "unit_name": "Probability Distributions",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 10
+    },
+    {
+      "unit_id": "cbse12_am_u5",
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_order": 5,
+      "unit_name": "Inferential Statistics",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 5
+    },
+    {
+      "unit_id": "cbse12_am_u6",
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_order": 6,
+      "unit_name": "Time-based Data",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 6
+    },
+    {
+      "unit_id": "cbse12_am_u7",
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_order": 7,
+      "unit_name": "Financial Mathematics",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 15
+    },
+    {
+      "unit_id": "cbse12_am_u8",
+      "board": "CBSE",
+      "class_level": 12,
+      "unit_order": 8,
+      "unit_name": "Linear Programming",
+      "status": "VERIFIED",
+      "subject_id": "applied_mathematics",
+      "marks": 8
+    },
+    {
+      "unit_id": "isc12_a1",
+      "board": "ISC",
+      "class_level": 12,
+      "unit_order": 1,
+      "unit_name": "Relations and Functions",
+      "section": "A",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc12_a2",
+      "board": "ISC",
+      "class_level": 12,
+      "unit_order": 2,
+      "unit_name": "Algebra",
+      "section": "A",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc12_a3",
+      "board": "ISC",
+      "class_level": 12,
+      "unit_order": 3,
+      "unit_name": "Calculus",
+      "section": "A",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc12_a4",
+      "board": "ISC",
+      "class_level": 12,
+      "unit_order": 4,
+      "unit_name": "Probability",
+      "section": "A",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc12_b1",
+      "board": "ISC",
+      "class_level": 12,
+      "unit_order": 5,
+      "unit_name": "Vectors",
+      "section": "B",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc12_b2",
+      "board": "ISC",
+      "class_level": 12,
+      "unit_order": 6,
+      "unit_name": "Three-Dimensional Geometry",
+      "section": "B",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc12_b3",
+      "board": "ISC",
+      "class_level": 12,
+      "unit_order": 7,
+      "unit_name": "Applications of Integrals",
+      "section": "B",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc12_c1",
+      "board": "ISC",
+      "class_level": 12,
+      "unit_order": 8,
+      "unit_name": "Application of Calculus",
+      "section": "C",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc12_c2",
+      "board": "ISC",
+      "class_level": 12,
+      "unit_order": 9,
+      "unit_name": "Linear Regression",
+      "section": "C",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    },
+    {
+      "unit_id": "isc12_c3",
+      "board": "ISC",
+      "class_level": 12,
+      "unit_order": 10,
+      "unit_name": "Linear Programming",
+      "section": "C",
+      "status": "VERIFIED",
+      "subject_id": "maths"
+    }
+  ],
+  "canonical_chapters": [
+    {
+      "id": "real_numbers",
+      "name": "Real Numbers"
+    },
+    {
+      "id": "polynomials",
+      "name": "Polynomials"
+    },
+    {
+      "id": "pair_linear_equations_two_variables",
+      "name": "Pair of Linear Equations in Two Variables"
+    },
+    {
+      "id": "quadratic_equations",
+      "name": "Quadratic Equations"
+    },
+    {
+      "id": "arithmetic_progressions",
+      "name": "Arithmetic Progressions"
+    },
+    {
+      "id": "geometric_progressions",
+      "name": "Geometric Progressions"
+    },
+    {
+      "id": "linear_inequations",
+      "name": "Linear Inequations"
+    },
+    {
+      "id": "ratio_and_proportion",
+      "name": "Ratio and Proportion"
+    },
+    {
+      "id": "factorisation_of_polynomials",
+      "name": "Factorisation of Polynomials"
+    },
+    {
+      "id": "matrices",
+      "name": "Matrices"
+    },
+    {
+      "id": "commercial_gst",
+      "name": "GST"
+    },
+    {
+      "id": "banking",
+      "name": "Banking"
+    },
+    {
+      "id": "shares_and_dividends",
+      "name": "Shares and Dividends"
+    },
+    {
+      "id": "coordinate_geometry",
+      "name": "Coordinate Geometry"
+    },
+    {
+      "id": "reflection",
+      "name": "Reflection"
+    },
+    {
+      "id": "section_formula",
+      "name": "Section Formula"
+    },
+    {
+      "id": "midpoint_formula",
+      "name": "Mid-point Formula"
+    },
+    {
+      "id": "equation_of_straight_line",
+      "name": "Equation of a Straight Line"
+    },
+    {
+      "id": "triangles",
+      "name": "Triangles"
+    },
+    {
+      "id": "similarity",
+      "name": "Similarity"
+    },
+    {
+      "id": "circles",
+      "name": "Circles"
+    },
+    {
+      "id": "constructions",
+      "name": "Constructions"
+    },
+    {
+      "id": "loci",
+      "name": "Loci"
+    },
+    {
+      "id": "introduction_to_trigonometry",
+      "name": "Introduction to Trigonometry"
+    },
+    {
+      "id": "applications_of_trigonometry",
+      "name": "Some Applications of Trigonometry"
+    },
+    {
+      "id": "trigonometric_identities",
+      "name": "Trigonometric Identities"
+    },
+    {
+      "id": "heights_and_distances",
+      "name": "Heights and Distances"
+    },
+    {
+      "id": "areas_related_to_circles",
+      "name": "Areas Related to Circles"
+    },
+    {
+      "id": "surface_areas_and_volumes",
+      "name": "Surface Areas and Volumes"
+    },
+    {
+      "id": "statistics",
+      "name": "Statistics"
+    },
+    {
+      "id": "probability",
+      "name": "Probability"
+    },
+    {
+      "id": "sets",
+      "name": "Sets"
+    },
+    {
+      "id": "relations_and_functions",
+      "name": "Relations and Functions"
+    },
+    {
+      "id": "trigonometric_functions",
+      "name": "Trigonometric Functions"
+    },
+    {
+      "id": "principle_mathematical_induction",
+      "name": "Principle of Mathematical Induction"
+    },
+    {
+      "id": "complex_numbers",
+      "name": "Complex Numbers"
+    },
+    {
+      "id": "permutations_and_combinations",
+      "name": "Permutations and Combinations"
+    },
+    {
+      "id": "binomial_theorem",
+      "name": "Binomial Theorem"
+    },
+    {
+      "id": "sequences_and_series",
+      "name": "Sequences and Series"
+    },
+    {
+      "id": "straight_lines",
+      "name": "Straight Lines"
+    },
+    {
+      "id": "conic_sections",
+      "name": "Conic Sections"
+    },
+    {
+      "id": "three_dimensional_geometry",
+      "name": "Introduction to Three-dimensional Geometry"
+    },
+    {
+      "id": "limits_and_derivatives",
+      "name": "Limits and Derivatives"
+    },
+    {
+      "id": "mathematical_reasoning",
+      "name": "Mathematical Reasoning"
+    },
+    {
+      "id": "correlation_analysis",
+      "name": "Correlation Analysis"
+    },
+    {
+      "id": "index_numbers_moving_averages",
+      "name": "Index Numbers & Moving Averages"
+    },
+    {
+      "id": "inverse_trigonometric_functions",
+      "name": "Inverse Trigonometric Functions"
+    },
+    {
+      "id": "determinants",
+      "name": "Determinants"
+    },
+    {
+      "id": "continuity_and_differentiability",
+      "name": "Continuity and Differentiability"
+    },
+    {
+      "id": "applications_of_derivatives",
+      "name": "Applications of Derivatives"
+    },
+    {
+      "id": "integrals",
+      "name": "Integrals"
+    },
+    {
+      "id": "applications_of_integrals",
+      "name": "Applications of Integrals"
+    },
+    {
+      "id": "differential_equations",
+      "name": "Differential Equations"
+    },
+    {
+      "id": "vector_algebra",
+      "name": "Vector Algebra"
+    },
+    {
+      "id": "linear_programming",
+      "name": "Linear Programming"
+    },
+    {
+      "id": "am_numbers_iks_binary",
+      "name": "Numbers in Indian Knowledge System and Binary Numbers",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_indices_logarithms",
+      "name": "Indices, Logarithm and Antilogarithm",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_numerical_applications",
+      "name": "Numerical Applications",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_sets",
+      "name": "Sets",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_relations",
+      "name": "Relations",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_mathematical_logic",
+      "name": "Mathematical Logic",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_sequences_series",
+      "name": "Sequences and Series",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_functions_graphs",
+      "name": "Functions and their Graphs",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_limits_continuity",
+      "name": "Limits and Continuity",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_differentiation",
+      "name": "Differentiation",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_combinatorics",
+      "name": "Combinatorics",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_probability",
+      "name": "Probability",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_descriptive_statistics",
+      "name": "Descriptive Statistics",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_financial_basics",
+      "name": "Basics of Financial Mathematics",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_coordinate_geometry",
+      "name": "Coordinate Geometry",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
+      "id": "am_modulo_congruence",
+      "name": "Modulo Arithmetic and Congruence",
+      "subject_id": "applied_mathematics",
+      "active": true,
+      "status": "VERIFIED"
+    },
+    {
