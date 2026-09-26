@@ -13,7 +13,7 @@
 <form method="post">
 <div class="form-grid">
 <div class="field"><label>Test title<input name="title" value="{{ form.get('title','') if form else '' }}" required></label></div>
-<div class="field"><label>Subject<input name="subject" value="Mathematics" required></label></div>
+<div class="field"><label>Subject<select name="subject" required><option>Mathematics</option><option>Applied Mathematics</option></select></label></div>
 <div class="field"><label>Class<select name="class_level"><option>10</option><option>11</option><option>12</option></select></label></div>
 <div class="field"><label>Board<select name="board"><option value="">Any</option><option>CBSE</option><option>ICSE</option></select></label></div>
 <div class="field"><label>Date<input type="date" name="test_date"></label></div>
