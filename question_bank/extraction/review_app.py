@@ -13,6 +13,7 @@ from exam_platform.storage import storage
 from question_bank.extraction.extraction_contract import ALLOWED_QUESTION_TYPES, ALLOWED_UPLOAD_MODES, INFERRED_FIELDS_REQUIRE_HUMAN_VERIFICATION
 from question_bank.extraction.question_cropper import extract_page_questions
 from question_bank.extraction.question_asset_persistence import persist_source_visuals
+from exam_platform.ingestion.curriculum import CanonicalTaxonomyResolver
 
 review_bp=Blueprint("extraction_review",__name__,url_prefix="/teacher/extraction-review")
 PROJECT_ROOT=Path(__file__).resolve().parents[2]; INBOX_DIR=Path(os.getenv("EXTRACTION_INBOX_DIR",PROJECT_ROOT/"extraction_inbox")); REVIEW_DIR=Path(os.getenv("EXTRACTION_REVIEW_DIR",PROJECT_ROOT/"extraction_reviews")); SOURCE_DIR=Path(os.getenv("SOURCE_PDF_DIR",PROJECT_ROOT/"source_pdfs")); PAGE_DIR=REVIEW_DIR/"page_renders"; CROP_DIR=REVIEW_DIR/"question_crops"
@@ -156,6 +157,60 @@ def _render_page(pdf,pn):
     if p.exists():return p
     with fitz.open(str(pdf)) as d:d[pn-1].get_pixmap(dpi=150,alpha=False).save(str(p))
     return p
+def _canonical_chapters(subject, board, class_level):
+    """Return verified canonical chapter names for subject/board/class."""
+    try:
+        data = CanonicalTaxonomyResolver().data
+        subject_id = {"mathematics": "maths", "maths": "maths", "applied mathematics": "applied_mathematics", "applied maths": "applied_mathematics"}.get(str(subject or "").strip().casefold())
+        board_name = {"cbse": "CBSE", "icse": "ICSE", "isc": "ISC"}.get(str(board or "").strip().casefold())
+        class_number = int(class_level) if class_level is not None else None
+        if not subject_id or not board_name or class_number is None:
+            return []
+        chapters = {row.get("id"): row for row in data.get("canonical_chapters", []) if isinstance(row, dict) and row.get("id") and row.get("name")}
+        units = {row.get("unit_id"): row for row in data.get("units", []) if isinstance(row, dict) and row.get("unit_id")}
+        names = set()
+        for mapping in data.get("mappings", []):
+            if not isinstance(mapping, dict) or str(mapping.get("board", "")).strip().casefold() != board_name.casefold():
+                continue
+            if mapping.get("class_level") != class_number or mapping.get("status") != "VERIFIED":
+                continue
+            unit = units.get(mapping.get("unit_id"), {})
+            if unit.get("subject_id") != subject_id:
+                continue
+            chapter = chapters.get(mapping.get("canonical_chapter_id"), {})
+            if chapter.get("name"):
+                names.add(str(chapter["name"]))
+        return sorted(names)
+    except Exception:
+        return []
+
+def _review_queue_ids():
+    items = []
+    for p in _extraction_files():
+        try:
+            d = _load_json(p)
+        except ValueError:
+            continue
+        for i, q in enumerate(d["questions"]):
+            if isinstance(q, dict):
+                rid = f"{p.stem}:{i}"
+                status = _load_review(rid).get("status", "PENDING")
+                if status not in {"APPROVED", "REJECTED"}:
+                    items.append((rid, status))
+    pending = [rid for rid, status in items if status == "PENDING"]
+    needs = [rid for rid, status in items if status == "NEEDS_REVIEW"]
+    return pending + needs
+
+def _next_queue_url(current_item_id=None):
+    queue = _review_queue_ids()
+    if not queue:
+        return url_for("extraction_review.dashboard")
+    if current_item_id in queue:
+        idx = queue.index(current_item_id)
+        if idx + 1 < len(queue):
+            return url_for("extraction_review.item", item_id=queue[idx + 1])
+    return url_for("extraction_review.item", item_id=queue[0])
+
 def _render_question_crop(pdf,pn,qn,item):
     try:rows=extract_page_questions(pdf,pn,CROP_DIR/_safe_id(item),dpi=180)
     except Exception:return None
@@ -174,7 +229,14 @@ def dashboard():
             if not isinstance(q,dict):continue
             rid=f"{p.stem}:{i}";r=_load_review(rid);items.append({"item_id":rid,"file":p.name,"source_pdf":str(d.get("source_pdf") or d.get("source_paper") or ""),"index":i,"question_number":str(_field(q,"question_number","number",default=i+1)),"page_number":_field(q,"source_page","page_number","page",default=1),"marks":q.get("marks"),"question_type":q.get("question_type") or q.get("type") or "","status":r.get("status","PENDING"),"chapter_missing":not str(q.get("chapter") or "").strip()})
     stats={s:sum(x["status"]==s for x in items) for s in ("PENDING","APPROVED","REJECTED","NEEDS_REVIEW")};stats["CHAPTER_REVIEW"]=sum(x["chapter_missing"] and x["status"] not in {"APPROVED","REJECTED"} for x in items)
-    return render_template("extraction_review_dashboard.html",items=items,stats=stats)
+    return render_template("extraction_review_dashboard.html",items=items,stats=stats,review_start_url=url_for("extraction_review.start_review"),review_queue_count=len(_review_queue_ids()))
+@review_bp.route("/start")
+def start_review():
+    queue = _review_queue_ids()
+    if not queue:
+        return redirect(url_for("extraction_review.dashboard"))
+    return redirect(url_for("extraction_review.item", item_id=queue[0]))
+
 @review_bp.route("/<path:item_id>")
 def item(item_id):
     path,data,q=_find_item(item_id);pdf=_source_pdf(data,q);review=_load_review(item_id);v=_review_form_values(q,data,review);stored_assets=[]
@@ -189,7 +251,7 @@ def item(item_id):
         except ValueError:continue
         ids += [f"{p.stem}:{i}" for i,x in enumerate(d["questions"]) if isinstance(x,dict)]
     pos=ids.index(item_id) if item_id in ids else 0;pages=v["source_pages"];urls=[{"number":p,"url":url_for("extraction_review.page_image_numbered",item_id=item_id,page_number=p)} for p in pages];crop=_render_question_crop(pdf,pages[0],str(v["source_question_number"]),item_id) if pages else None;missing=[n for n in INFERRED_FIELDS_REQUIRE_HUMAN_VERIFICATION if not str(v.get(n) or "").strip()]
-    return render_template("extraction_review_item.html",item_id=item_id,filename=path.name,data=data,question=q,values=v,review=review,missing_inferred_fields=missing,stored_assets=stored_assets,source_pdf=pdf.name,page_number=pages[0] if pages else 1,source_page_urls=urls,question_crop_url=url_for("extraction_review.question_crop",item_id=item_id) if crop else None,previous_url=url_for("extraction_review.item",item_id=ids[pos-1]) if pos>0 else None,next_url=url_for("extraction_review.item",item_id=ids[pos+1]) if pos+1<len(ids) else None,position=pos+1,total=len(ids))
+    return render_template("extraction_review_item.html",item_id=item_id,filename=path.name,data=data,question=q,values=v,review=review,missing_inferred_fields=missing,stored_assets=stored_assets,source_pdf=pdf.name,page_number=pages[0] if pages else 1,source_page_urls=urls,question_crop_url=url_for("extraction_review.question_crop",item_id=item_id) if crop else None,previous_url=url_for("extraction_review.item",item_id=ids[pos-1]) if pos>0 else None,next_url=url_for("extraction_review.item",item_id=ids[pos+1]) if pos+1<len(ids) else None,position=pos+1,total=len(ids),chapters=_canonical_chapters(v.get("subject"),v.get("board"),v.get("class_level")),review_start_url=url_for("extraction_review.start_review"))
 @review_bp.route("/<path:item_id>/review",methods=["POST"])
 def review(item_id):
     _path,data,q=_find_item(item_id);status=request.form.get("status","NEEDS_REVIEW").upper();note=request.form.get("note","").strip();current=_load_review(item_id)
@@ -201,6 +263,9 @@ def review(item_id):
         except ValueError as e:return jsonify({"error":str(e)}),400
         if not o["question_text"].strip():return jsonify({"error":"Question text cannot be empty"}),400
         if not o["chapter"].strip():return jsonify({"error":"Chapter must be verified before approval."}),400
+        mapping = CanonicalTaxonomyResolver().resolve(subject=o["subject"], board=o["board"], class_level=o["class_level"], chapter=o["chapter"])
+        if mapping.status != CanonicalTaxonomyResolver.MATCHED:
+            return jsonify({"error":"Chapter must be selected from the verified canonical taxonomy for this subject, board and class."}),400
         if o["question_type"].strip().lower()=="mcq" and not o["correct_answer"].strip():return jsonify({"error":"Correct answer must be verified before approving an MCQ."}),400
         try:
             qobj=_question_from_extraction(q,data,o)
@@ -212,7 +277,7 @@ def review(item_id):
         except Exception as e:note=f"{note + ' ' if note else ''}Visual asset persistence warning: {e}"
         _save_review(item_id,"APPROVED",note or f"Imported as {qobj.question_id}",qobj.question_id,question_snapshot=q,human_verified_values=o)
     else:_save_review(item_id,status,note,question_snapshot=q)
-    return redirect(url_for("extraction_review.item",item_id=item_id))
+    return redirect(_next_queue_url(item_id))
 @review_bp.route("/<path:item_id>/page.png")
 def page_image(item_id):
     _p,d,q=_find_item(item_id);return send_file(_render_page(_source_pdf(d,q),_normalise_pages(q)[0]),mimetype="image/png",max_age=0)
