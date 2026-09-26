@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any
 
 from exam_platform.ingestion.models import RawQuestion, SourceDocument
+from question_bank.extraction.extraction_contract import FIELD_ALIASES, EXTRACTION_SCHEMA_VERSION
 
 
 class AIJSONExtractionError(ValueError):
@@ -9,7 +10,7 @@ class AIJSONExtractionError(ValueError):
 
 
 class AIJSONQuestionExtractor:
-    schema_version = "1.0"
+    schema_version = EXTRACTION_SCHEMA_VERSION
     extraction_method = "ai_json"
 
     def __init__(self, payload: dict | list | str | Path):
@@ -31,6 +32,14 @@ class AIJSONQuestionExtractor:
                 raise AIJSONExtractionError("Input is neither a JSON file nor valid JSON.") from exc
         return payload
 
+    @staticmethod
+    def _first(mapping: dict[str, Any], canonical: str, default: Any = None) -> Any:
+        for key in FIELD_ALIASES.get(canonical, (canonical,)):
+            value = mapping.get(key)
+            if value is not None:
+                return value
+        return default
+
     def _envelope(self) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         if isinstance(self.payload, list):
             return {}, self.payload
@@ -41,7 +50,9 @@ class AIJSONQuestionExtractor:
             raise AIJSONExtractionError("JSON must contain a 'questions' array.")
         version = str(self.payload.get("schema_version", self.schema_version))
         if version != self.schema_version:
-            raise AIJSONExtractionError(f"Unsupported schema_version {version!r}; expected {self.schema_version!r}.")
+            raise AIJSONExtractionError(
+                f"Unsupported schema_version {version!r}; expected {self.schema_version!r}."
+            )
         return self.payload, questions
 
     @staticmethod
@@ -67,14 +78,18 @@ class AIJSONQuestionExtractor:
             elif isinstance(item, dict):
                 label, text = item.get("label"), item.get("text")
                 if not isinstance(label, str) or not isinstance(text, str):
-                    raise AIJSONExtractionError("Each answer choice must contain string 'label' and 'text'.")
+                    raise AIJSONExtractionError(
+                        "Each answer choice must contain string 'label' and 'text'."
+                    )
                 output.append({"label": label.strip(), "text": text.strip()})
             else:
                 raise AIJSONExtractionError("Each answer choice must be a string or object.")
         return output
 
     @staticmethod
-    def _source_object(value: Any, *, details: Any = None, field_name: str = "source") -> dict[str, Any]:
+    def _source_object(
+        value: Any, *, details: Any = None, field_name: str = "source"
+    ) -> dict[str, Any]:
         """Normalize structured source and legacy string+details representations."""
         if value is None:
             value = {}
@@ -92,27 +107,43 @@ class AIJSONQuestionExtractor:
 
     def to_source_document(self) -> SourceDocument:
         envelope, _ = self._envelope()
-        source = self._source_object(envelope.get("source"), details=envelope.get("source_details"))
+        source = self._source_object(
+            envelope.get("source"), details=envelope.get("source_details")
+        )
         metadata = envelope.get("metadata") or {}
         if not isinstance(metadata, dict):
             raise AIJSONExtractionError("'metadata' must be an object.")
-        source_file = source.get("file_path") or source.get("source_file") or source.get("file") or envelope.get("source_file")
-        source_name = source.get("name") or source.get("source_name") or envelope.get("source_name") or source_file
+
+        source_file = self._first(source, "source_file") or envelope.get("source_file")
+        source_name = (
+            source.get("name")
+            or source.get("source_name")
+            or envelope.get("source_name")
+            or source_file
+        )
+
         return SourceDocument(
-            source_id=str(source.get("source_id") or envelope.get("source_id") or "ai-json-import"),
+            source_id=str(
+                source.get("source_id")
+                or envelope.get("source_id")
+                or "ai-json-import"
+            ),
             source_type=str(source.get("source_type") or "ai_json"),
             name=source_name,
             url=source.get("url"),
             file_path=source_file,
             source_year=source.get("source_year") or source.get("year"),
             rights_status=str(source.get("rights_status") or "unknown"),
-            metadata={**metadata,
-                "source_label": source.get("label") or source.get("source_label") or source.get("source_type"),
+            metadata={
+                **metadata,
+                "source_label": source.get("label")
+                or source.get("source_label")
+                or source.get("source_type"),
                 "source_details": source,
                 "extraction_method": self.extraction_method,
-                "extraction_provider": envelope.get("extraction_provider"),
-                "extraction_model": envelope.get("extraction_model"),
-                "extraction_run_id": envelope.get("extraction_run_id"),
+                "extraction_provider": self._first(envelope, "extraction_provider"),
+                "extraction_model": self._first(envelope, "extraction_model"),
+                "extraction_run_id": self._first(envelope, "extraction_run_id"),
                 "schema_version": self.schema_version,
             },
         )
@@ -124,41 +155,68 @@ class AIJSONQuestionExtractor:
         defaults = envelope.get("defaults") or {}
         if not isinstance(defaults, dict):
             raise AIJSONExtractionError("'defaults' must be an object.")
+
         output: list[RawQuestion] = []
         for index, item in enumerate(questions, 1):
             if not isinstance(item, dict):
                 raise AIJSONExtractionError(f"Question #{index} must be an object.")
-            source = self._source_object(item.get("source"), details=item.get("source_details"), field_name=f"Question #{index} source")
+
+            source = self._source_object(
+                item.get("source"),
+                details=item.get("source_details"),
+                field_name=f"Question #{index} source",
+            )
             if not source:
                 source = dict(source_document.metadata.get("source_details") or {})
+
             extraction_warnings = item.get("extraction_warnings") or []
             if not isinstance(extraction_warnings, list):
-                raise AIJSONExtractionError(f"Question #{index} 'extraction_warnings' must be an array.")
+                raise AIJSONExtractionError(
+                    f"Question #{index} 'extraction_warnings' must be an array."
+                )
+
             question_number = item.get("question_number")
-            question_text = self._text(item.get("question_text") or item.get("text") or item.get("question"), "question_text", required=True)
+            question_text = self._text(
+                self._first(item, "question_text"), "question_text", required=True
+            )
             raw_question_id = f"ai-json-{index}"
-            source_file = source.get("file_path") or source.get("source_file") or source.get("file") or source_document.file_path
-            metadata = {**defaults,
+
+            source_file = self._first(source, "source_file") or source_document.file_path
+            source_page = self._first(item, "source_page")
+            source_pages = self._first(item, "source_pages")
+            if source_pages is None:
+                source_pages = [source_page] if isinstance(source_page, int) else []
+
+            question_type = self._first(item, "question_type", defaults.get("question_type"))
+            question_parts = self._first(
+                item, "question_parts", defaults.get("question_parts")
+            ) or []
+
+            metadata = {
+                **defaults,
                 "question_number": question_number,
-                "question_parts": item.get("question_parts") or item.get("parts") or [],
-                "question_type": item.get("question_type") or item.get("type") or defaults.get("question_type"),
-                "original_question_type": item.get("question_type") or item.get("type"),
+                "question_parts": question_parts,
+                "question_type": question_type,
+                "original_question_type": self._first(item, "question_type"),
                 "answer_mode": item.get("answer_mode") or defaults.get("answer_mode"),
-                "handwritten_upload_mode": item.get("handwritten_upload_mode") or defaults.get("handwritten_upload_mode", "none"),
+                "handwritten_upload_mode": item.get("handwritten_upload_mode")
+                or defaults.get("handwritten_upload_mode", "none"),
                 "subject": item.get("subject") or defaults.get("subject"),
                 "board": item.get("board") or defaults.get("board"),
-                "class_level": item.get("class_level") or item.get("class") or defaults.get("class_level"),
+                "class_level": self._first(item, "class_level", defaults.get("class_level")),
                 "chapter": item.get("chapter") or defaults.get("chapter"),
                 "topic": item.get("topic") or defaults.get("topic"),
                 "subtopic": item.get("subtopic") or defaults.get("subtopic"),
                 "difficulty": item.get("difficulty") or defaults.get("difficulty"),
                 "competency": item.get("competency") or defaults.get("competency"),
-                "source_page": item.get("source_page"),
-                "source_pages": item.get("source_pages") or ([item["source_page"]] if isinstance(item.get("source_page"), int) else []),
+                "source_page": source_page,
+                "source_pages": source_pages,
                 "source_question_number": item.get("source_question_number") or question_number,
                 "source_occurrence_id": item.get("source_occurrence_id"),
                 "source": source,
-                "source_label": source.get("label") or source.get("source_label") or source.get("source_type"),
+                "source_label": source.get("label")
+                or source.get("source_label")
+                or source.get("source_type"),
                 "source_details": source,
                 "source_file": source_file,
                 "solution": item.get("solution"),
@@ -170,18 +228,28 @@ class AIJSONQuestionExtractor:
                 "extraction_warnings": extraction_warnings,
                 "verification_status": "PENDING",
             }
-            output.append(RawQuestion(
-                raw_question_id=raw_question_id,
-                source_id=source_id,
-                raw_text=question_text,
-                raw_options=self._options(item.get("answer_choices") if item.get("answer_choices") is not None else item.get("options")),
-                raw_answer=self._text(item.get("correct_answer"), "correct_answer") or None,
-                raw_marks=item.get("marks"),
-                raw_assets=item.get("assets") or [],
-                source_reference=str(item.get("source_reference") or (f"{source_id}:q{question_number}" if question_number is not None else f"{source_id}:item{index}")),
-                extraction_confidence=item.get("extraction_confidence"),
-                metadata=metadata,
-            ))
+
+            output.append(
+                RawQuestion(
+                    raw_question_id=raw_question_id,
+                    source_id=source_id,
+                    raw_text=question_text,
+                    raw_options=self._options(self._first(item, "answer_choices")),
+                    raw_answer=self._text(item.get("correct_answer"), "correct_answer") or None,
+                    raw_marks=item.get("marks"),
+                    raw_assets=item.get("assets") or [],
+                    source_reference=str(
+                        item.get("source_reference")
+                        or (
+                            f"{source_id}:q{question_number}"
+                            if question_number is not None
+                            else f"{source_id}:item{index}"
+                        )
+                    ),
+                    extraction_confidence=item.get("extraction_confidence"),
+                    metadata=metadata,
+                )
+            )
         return output
 
 
