@@ -41,6 +41,27 @@ class MySQLStorage:
         return {'id':q.question_id,'subject':q.subject,'board':q.board,'class':q.class_level,'chapter':q.chapter,'topic':q.topic,'subtopic':q.subtopic,'type':q.question_type,'mode':q.answer_mode,'difficulty':q.difficulty,'competency':q.competency,'content':content,'choices':json.dumps(q.answer_choices,ensure_ascii=False),'correct':q.correct_answer,'marks':q.marks,'upload':q.handwritten_upload_mode,'source':q.source,'year':q.source_year,'status':q.status,'source_type':q.source_type,'verification_status':q.verification_status,'canonical_question_id':q.canonical_question_id or q.question_id}
 
     def create_test(self,test: Test):
+        # Published assessments must not mix Mathematics and Applied Mathematics.
+        for qid in test.questions:
+            question = self.questions.get(qid)
+            if not question:
+                continue
+            if question.subject != test.subject:
+                raise ValueError(
+                    f"Question {qid} has subject {question.subject!r}, "
+                    f"but test {test.test_id} is {test.subject!r}."
+                )
+            if test.board and question.board and question.board != test.board:
+                raise ValueError(
+                    f"Question {qid} has board {question.board!r}, "
+                    f"but test {test.test_id} is {test.board!r}."
+                )
+            if test.class_level and question.class_level and question.class_level != test.class_level:
+                raise ValueError(
+                    f"Question {qid} has class {question.class_level}, "
+                    f"but test {test.test_id} is class {test.class_level}."
+                )
+
         with engine.begin() as db:
             db.execute(text("""INSERT INTO tests(test_id,title,subject,class_level,board,test_date,duration_minutes,total_marks,test_type,status,questions_json) VALUES(:id,:title,:subject,:class,:board,:date,:duration,:marks,:type,:status,:questions) ON DUPLICATE KEY UPDATE title=VALUES(title),status=VALUES(status),questions_json=VALUES(questions_json),subject=VALUES(subject),class_level=VALUES(class_level),board=VALUES(board),test_date=VALUES(test_date),duration_minutes=VALUES(duration_minutes),total_marks=VALUES(total_marks),test_type=VALUES(test_type)"""),{'id':test.test_id,'title':test.title,'subject':test.subject,'class':test.class_level,'board':test.board,'date':test.test_date,'duration':test.duration_minutes,'marks':test.total_marks,'type':test.test_type,'status':test.status,'questions':json.dumps(test.questions)})
             db.execute(text("DELETE FROM test_questions WHERE test_id=:id"),{'id':test.test_id})
