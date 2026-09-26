@@ -263,6 +263,9 @@ def review(item_id):
         except ValueError as e:return jsonify({"error":str(e)}),400
         if not o["question_text"].strip():return jsonify({"error":"Question text cannot be empty"}),400
         if not o["chapter"].strip():return jsonify({"error":"Chapter must be verified before approval."}),400
+        mapping = CanonicalTaxonomyResolver().resolve(subject=o["subject"], board=o["board"], class_level=o["class_level"], chapter=o["chapter"])
+        if mapping.status != CanonicalTaxonomyResolver.MATCHED:
+            return jsonify({"error":"Chapter must be selected from the verified canonical taxonomy for this subject, board and class."}),400
         if o["question_type"].strip().lower()=="mcq" and not o["correct_answer"].strip():return jsonify({"error":"Correct answer must be verified before approving an MCQ."}),400
         try:
             qobj=_question_from_extraction(q,data,o)
@@ -274,7 +277,7 @@ def review(item_id):
         except Exception as e:note=f"{note + ' ' if note else ''}Visual asset persistence warning: {e}"
         _save_review(item_id,"APPROVED",note or f"Imported as {qobj.question_id}",qobj.question_id,question_snapshot=q,human_verified_values=o)
     else:_save_review(item_id,status,note,question_snapshot=q)
-    return redirect(url_for("extraction_review.item",item_id=item_id))
+    return redirect(_next_queue_url(item_id))
 @review_bp.route("/<path:item_id>/page.png")
 def page_image(item_id):
     _p,d,q=_find_item(item_id);return send_file(_render_page(_source_pdf(d,q),_normalise_pages(q)[0]),mimetype="image/png",max_age=0)
