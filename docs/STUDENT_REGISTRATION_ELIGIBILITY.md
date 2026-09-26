@@ -133,3 +133,14 @@ python scripts/import_google_registrations.py --sheet-url "<Google Sheet URL>"
 It defaults to dry-run. Student data is not made public by this code. A private Sheet should be exported/downloaded and passed as CSV unless a future authenticated Google Sheets connector is added.
 
 This is intentional for the MVP: **collect registrations cheaply in Google Sheets, manually approve/enroll, then write only enrolled students to Aiven.**
+
+
+## Direct Google Form/Sheet webhook
+
+The production registration bridge is also available at:
+
+`POST /api/registrations/google-form`
+
+The endpoint requires the `X-Improvia-Webhook-Secret` header and the same value in Render's `GOOGLE_REGISTRATION_WEBHOOK_SECRET` environment variable. It only writes a student when the submitted row has an approved enrollment status (`APPROVED`, `ENROLLED`, or `ACTIVE`). Blank or other statuses are acknowledged without writing to Aiven.
+
+For the current MVP, the Google Form-bound Apps Script watches the linked response Sheet's `Enrollment Status` column. This keeps the approval gate explicit: a normal form submission does not enroll a student automatically.
