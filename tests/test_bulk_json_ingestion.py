@@ -53,8 +53,8 @@ def test_varied_json_batch_normalizes_aliases_and_detects_duplicate():
     assert questions[4].question.metadata["original_question_type"] == "assertion-reason"
     assert questions[4].question.question_type == "mcq"
     assert questions[5].question.metadata["source_pages"] == [4] or questions[5].question.metadata["source_pages"] == []
-    assert questions[6].status == "VALIDATION_PENDING"
-    assert questions[7].status == "DUPLICATE"
+    assert questions[6].status == "validation_pending"
+    assert questions[7].status == "duplicate"
     assert questions[7].duplicate_of == "ai-json-1"
 
 
