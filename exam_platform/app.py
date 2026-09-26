@@ -71,6 +71,62 @@ def ensure_student_record(student_id):
             )
         )
 
+# ---------------------------------------------------------------------------
+# Google registration webhook
+# ---------------------------------------------------------------------------
+
+@app.route("/api/registrations/google-form", methods=["POST"])
+def google_form_registration_webhook():
+    """Receive a reviewed Google Form/Sheet row and enroll only approved rows."""
+    expected_secret = os.getenv("GOOGLE_REGISTRATION_WEBHOOK_SECRET", "").strip()
+    supplied_secret = request.headers.get("X-Improvia-Webhook-Secret", "").strip()
+
+    if not expected_secret:
+        return jsonify({"error": "Google registration webhook is not configured"}), 503
+    if not supplied_secret or not hmac.compare_digest(supplied_secret, expected_secret):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    row = payload.get("row")
+    if not isinstance(row, dict):
+        return jsonify({"error": "Expected JSON object field 'row'"}), 400
+
+    from exam_platform.registration_pipeline import (
+        DEFAULT_ENROLLMENT_STATUSES,
+        _value,
+        enroll_student,
+        extract_registration,
+    )
+
+    enrollment_status = _value(row, "enrollment_status").upper()
+    if not enrollment_status:
+        return jsonify({
+            "status": "PENDING",
+            "message": "No Enrollment Status; student was not written.",
+        }), 200
+
+    if enrollment_status not in DEFAULT_ENROLLMENT_STATUSES:
+        return jsonify({
+            "status": "SKIPPED",
+            "message": f"Enrollment Status={enrollment_status!r}; student was not written.",
+        }), 200
+
+    student, error = extract_registration(row, payload.get("row_number", 0))
+    if error:
+        return jsonify({"status": "ERROR", "message": error}), 400
+
+    try:
+        student = enroll_student(student)
+    except Exception as exc:
+        app.logger.exception("Google registration enrollment failed")
+        return jsonify({"status": "ERROR", "message": str(exc)}), 500
+
+    return jsonify({
+        "status": "ENROLLED",
+        "student_id": student.student_id,
+        "message": f"{student.name} enrolled successfully.",
+    }), 200
+
 
 # ---------------------------------------------------------------------------
 # Attempt and timer helpers
