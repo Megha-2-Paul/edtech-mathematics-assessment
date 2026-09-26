@@ -115,11 +115,12 @@ class AIJSONQuestionExtractor:
         if not isinstance(metadata, dict):
             raise AIJSONExtractionError("'metadata' must be an object.")
 
-        source_file = self._first(source, "source_file") or envelope.get("source_file")
+        source_file = self._first(source, "source_file") or envelope.get("source_file") or metadata.get("source_file")
         source_name = (
             source.get("name")
             or source.get("source_name")
             or envelope.get("source_name")
+            or metadata.get("source_name")
             or source_file
         )
 
@@ -153,7 +154,10 @@ class AIJSONQuestionExtractor:
         envelope, questions = self._envelope()
         source_document = self.to_source_document()
         source_id = source_document.source_id
-        defaults = envelope.get("defaults") or {}
+        metadata_defaults = envelope.get("metadata") or {}
+        if not isinstance(metadata_defaults, dict):
+            raise AIJSONExtractionError("'metadata' must be an object.")
+        defaults = {**metadata_defaults, **(envelope.get("defaults") or {})}
         if not isinstance(defaults, dict):
             raise AIJSONExtractionError("'defaults' must be an object.")
 
