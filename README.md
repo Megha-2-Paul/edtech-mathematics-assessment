@@ -24,6 +24,7 @@ This is not intended to be a generic mock-test marketplace. The product loop is:
 - Student result and performance-report views
 - Cumulative question/performance history foundation
 - Production deployment on Render using Aiven MySQL as the primary database
+- Canonical subject/syllabus taxonomy for Mathematics and Applied Mathematics (2026–27)
 
 ## Current environment architecture
 
@@ -50,6 +51,8 @@ Students / Tests / Questions / Attempts / Responses / Evaluations / History
 The production application does **not** currently require local-MySQL ↔ Aiven synchronization.
 
 The repository also contains an optional question-bank sync layer controlled by `QUESTION_BANK_SYNC_DATABASE_URL`. This is a separate primary-to-secondary question-bank mechanism; it is not the student-registration architecture and is currently not configured in the Render environment.
+
+The canonical syllabus taxonomy is maintained separately from question-bank sync. It has been validated and deployed independently to local MySQL and Aiven MySQL. It currently distinguishes Mathematics from Applied Mathematics and contains 88 canonical chapters, 62 syllabus units and 133 syllabus mappings for 2026–27.
 
 See `PRODUCTION_ARCHITECTURE.md` for the verified production topology and the planned registration/enrollment flow.
 
