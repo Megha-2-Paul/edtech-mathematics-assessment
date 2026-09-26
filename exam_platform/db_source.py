@@ -198,6 +198,27 @@ class DatabaseFirstStorage:
 
     def create_test(self, test: Test):
         """Persist a test, including its exam monitoring mode and question links."""
+        # Prevent Mathematics / Applied Mathematics and academic-context mixing.
+        for qid in test.questions:
+            question = self.get_question(qid)
+            if not question:
+                continue
+            if question.subject != test.subject:
+                raise ValueError(
+                    f"Question {qid} has subject {question.subject!r}, "
+                    f"but test {test.test_id} is {test.subject!r}."
+                )
+            if test.board and question.board and question.board != test.board:
+                raise ValueError(
+                    f"Question {qid} has board {question.board!r}, "
+                    f"but test {test.test_id} is {test.board!r}."
+                )
+            if test.class_level and question.class_level and question.class_level != test.class_level:
+                raise ValueError(
+                    f"Question {qid} has class {question.class_level}, "
+                    f"but test {test.test_id} is class {test.class_level}."
+                )
+
         monitoring_mode = test.monitoring_mode
         try:
             from flask import has_request_context, request
