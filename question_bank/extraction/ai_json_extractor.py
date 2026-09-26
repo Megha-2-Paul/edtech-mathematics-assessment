@@ -158,6 +158,8 @@ class AIJSONQuestionExtractor:
         if not isinstance(metadata_defaults, dict):
             raise AIJSONExtractionError("'metadata' must be an object.")
         defaults = {**metadata_defaults, **(envelope.get("defaults") or {})}
+        if defaults.get("class_level") is None and defaults.get("class") is not None:
+            defaults["class_level"] = defaults["class"]
         if not isinstance(defaults, dict):
             raise AIJSONExtractionError("'defaults' must be an object.")
 
