@@ -121,7 +121,7 @@ def apply(url,taxonomy):
             for u in c["units"]:
                 for ch in u["chapters"]:
                     cid=slug(ch["official_chapter_name"])
-                    concept_subject.setdefault(cid,c["subject_id"])
+                    concept_subject.setdefault(cid,None)
         for cid,sid in concept_subject.items():
             db.execute(text("""INSERT INTO canonical_concepts(concept_id,concept_name,subject_id,active)
               VALUES(:id,:name,:subject,1) ON DUPLICATE KEY UPDATE concept_name=VALUES(concept_name),subject_id=VALUES(subject),active=1"""),
