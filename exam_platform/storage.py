@@ -148,7 +148,7 @@ class MySQLStorage:
     def get_subjects(self):
         with engine.connect() as db:
             try:
-                rows = db.execute(text("SELECT subject_id,subject_name,subject_code,active FROM subject_catalog WHERE active=1 ORDER BY subject_name,subject_code")).mappings().all()
+                rows = db.execute(text("SELECT MIN(subject_id) AS subject_id,subject_name,MIN(subject_code) AS subject_code,MAX(active) AS active FROM subject_catalog WHERE active=1 GROUP BY subject_name ORDER BY subject_name")).mappings().all()
                 if rows:
                     return [{"subject_id":r["subject_id"],"name":r["subject_name"],"subject_code":r["subject_code"],"active":r["active"]} for r in rows]
             except Exception:
