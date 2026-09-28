@@ -437,7 +437,7 @@
       "board": "ICSE",
       "class_level": 9,
       "subject_id": "mathematics",
-      "subject_code": "041",
+      "subject_code": "51",
       "academic_year": "2026-27",
       "units": [
         {
@@ -547,7 +547,7 @@
       "board": "ICSE",
       "class_level": 10,
       "subject_id": "mathematics",
-      "subject_code": "041",
+      "subject_code": "51",
       "academic_year": "2026-27",
       "units": [
         {
@@ -664,7 +664,7 @@
       "board": "ISC",
       "class_level": 11,
       "subject_id": "mathematics",
-      "subject_code": "041",
+      "subject_code": "860",
       "academic_year": "2026-27",
       "units": [
         {
@@ -751,7 +751,7 @@
       "board": "ISC",
       "class_level": 12,
       "subject_id": "mathematics",
-      "subject_code": "041",
+      "subject_code": "860",
       "academic_year": "2026-27",
       "units": [
         {
