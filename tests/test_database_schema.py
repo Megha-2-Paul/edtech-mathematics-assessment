@@ -19,6 +19,13 @@ EXPECTED_TABLES = {
     "answer_images",
     "evaluation_errors",
     "question_history",
+    "subject_catalog",
+    "curriculum_catalog",
+    "curriculum_units",
+    "canonical_concepts",
+    "curriculum_chapters",
+    "question_curriculum_map",
+    "student_subject_enrollments",
 }
 
 
