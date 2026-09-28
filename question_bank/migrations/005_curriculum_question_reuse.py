@@ -153,7 +153,12 @@ def apply(url,taxonomy):
         db.execute(text("""INSERT IGNORE INTO student_subject_enrollments(student_id,board,class_level,subject_id,subject_code,academic_year,status)
           SELECT s.student_id,s.board,s.class_level,
                  CASE WHEN s.subject='Applied Mathematics' THEN 'applied_mathematics' ELSE 'mathematics' END,
-                 CASE WHEN s.subject='Applied Mathematics' THEN '241' ELSE '041' END,
+                 CASE
+                   WHEN s.subject='Applied Mathematics' THEN '241'
+                   WHEN s.board='ICSE' AND s.subject='Mathematics' THEN '51'
+                   WHEN s.board='ISC' AND s.subject='Mathematics' THEN '860'
+                   ELSE '041'
+                 END,
                  '2026-27','ACTIVE'
           FROM students s
           WHERE s.status='active' AND s.board IS NOT NULL AND s.class_level IS NOT NULL
