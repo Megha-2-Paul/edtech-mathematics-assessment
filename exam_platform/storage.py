@@ -199,11 +199,16 @@ class MySQLStorage:
     def get_student(self,sid): return self.students.get(sid)
 
     def register_student(self, student: Student):
-        """Persist a reviewed registration, including board/class/subject eligibility data."""
-        if student.subject not in {"Mathematics", "Applied Mathematics"}:
-            raise ValueError("Student subject must be 'Mathematics' or 'Applied Mathematics'.")
-        if student.class_level is None or student.board not in {"CBSE", "ICSE"}:
-            raise ValueError("Registered students require a valid class level and board.")
+        """Persist a reviewed registration and matching subject enrollment."""
+        supported = {
+            ("CBSE","Mathematics"), ("CBSE","Applied Mathematics"),
+            ("CBSE","Information Technology"), ("CBSE","Computer Applications"),
+            ("CBSE","Computer Science"), ("CBSE","Informatics Practices"),
+            ("ICSE","Mathematics"), ("ICSE","Computer Applications"),
+            ("ISC","Mathematics"), ("ISC","Computer Science"),
+        }
+        if student.class_level is None or (student.board, student.subject) not in supported:
+            raise ValueError("Registered students require a supported board/class/subject combination.")
         self.create_student(student)
         return student
 
