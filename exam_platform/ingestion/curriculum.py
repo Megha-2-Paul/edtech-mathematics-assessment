@@ -99,10 +99,11 @@ class CanonicalTaxonomyResolver:
                         if normalize_label(ch.get("official_chapter_name"))==label:
                             candidates.append({"official_chapter_id":f"{uid}__c{ci}","official_chapter_name":ch.get("official_chapter_name"),"canonical_concept_id":ch.get("canonical_concept_id") or normalize_label(ch.get("official_chapter_name")).replace(" ","_"),"syllabus_unit_id":uid,"syllabus_unit_name":u.get("unit_name"),"chapter_order":ci,"mapping_status":"VERIFIED"})
         else:
+            legacy_subject_id = "maths" if subject_id == "mathematics" else subject_id
             for mapping in self._mappings:
                 if normalize_label(mapping.get("board"))!=normalize_label(board_name) or mapping.get("class_level")!=class_number: continue
                 unit=self._units.get(mapping.get("unit_id"),{})
-                if unit.get("subject_id")!=subject_id: continue
+                if unit.get("subject_id")!=legacy_subject_id: continue
                 ch=self._chapters.get(mapping.get("canonical_chapter_id"),{})
                 if normalize_label(ch.get("name"))==label:
                     candidates.append({"canonical_chapter_id":ch.get("id"),"canonical_chapter_name":ch.get("name"),"syllabus_unit_id":unit.get("unit_id"),"syllabus_unit_name":unit.get("unit_name"),"chapter_order":mapping.get("chapter_order"),"mapping_status":mapping.get("status")})
@@ -112,5 +113,5 @@ class CanonicalTaxonomyResolver:
                 return CurriculumMapping(self.UNRESOLVED,original,board=board_name,class_level=class_number,subject_id=subject_id,candidates=(m,),reason="taxonomy_mapping_not_verified")
             return CurriculumMapping(self.MATCHED,original,m.get("official_chapter_id") or m.get("canonical_chapter_id"),m.get("official_chapter_name") or m.get("canonical_chapter_name"),m.get("canonical_concept_id"),m.get("syllabus_unit_id"),m.get("syllabus_unit_name"),m.get("official_chapter_id"),m.get("official_chapter_name"),board_name,class_number,subject_id,(m,),"")
         if not candidates:
-            return CurriculumMapping(self.UNRESOLVED,original,board=board_name,class_level=class_number,subject_id=subject_id,reason="no_exact_official_chapter")
+            return CurriculumMapping(self.UNRESOLVED,original,board=board_name,class_level=class_number,subject_id=subject_id,reason="no_exact_canonical_mapping" if not self._new else "no_exact_official_chapter")
         return CurriculumMapping(self.AMBIGUOUS,original,board=board_name,class_level=class_number,subject_id=subject_id,candidates=tuple(candidates),reason="multiple_exact_official_chapters")
