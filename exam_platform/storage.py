@@ -166,6 +166,35 @@ class MySQLStorage:
                 db.execute(text("""INSERT INTO students(student_id,name,email,phone,city,role,class_level,board,subject,school,registration_date,registration_source,status) VALUES(:id,:name,:email,:phone,:city,:role,:class,:board,:subject,:school,:reg,:source,:status)"""), params)
         s.email = email
         self.students[s.student_id]=s
+        self._upsert_subject_enrollment(s)
+
+    def _upsert_subject_enrollment(self, student: Student):
+        subject_map = {
+            ("CBSE","Mathematics"): ("mathematics","041"),
+            ("ICSE","Mathematics"): ("mathematics","ICSE"),
+            ("ISC","Mathematics"): ("mathematics","ISC"),
+            ("CBSE","Applied Mathematics"): ("applied_mathematics","241"),
+            ("CBSE","Information Technology"): ("cbse_information_technology","402"),
+            ("CBSE","Computer Applications"): ("cbse_computer_applications","165"),
+            ("CBSE","Computer Science"): ("cbse_computer_science","083"),
+            ("CBSE","Informatics Practices"): ("cbse_informatics_practices","065"),
+            ("ICSE","Computer Applications"): ("icse_computer_applications","86"),
+            ("ISC","Computer Science"): ("isc_computer_science","868"),
+        }
+        key=(student.board,student.subject)
+        if key not in subject_map or student.class_level is None:
+            return
+        subject_id, subject_code=subject_map[key]
+        try:
+            with engine.begin() as db:
+                db.execute(text("""
+                    INSERT INTO student_subject_enrollments(student_id,board,class_level,subject_id,subject_code,academic_year,status)
+                    VALUES(:student,:board,:class,:subject,:code,'2026-27','ACTIVE')
+                    ON DUPLICATE KEY UPDATE status='ACTIVE',subject_code=VALUES(subject_code),updated_at=CURRENT_TIMESTAMP
+                """), {"student":student.student_id,"board":student.board,"class":student.class_level,"subject":subject_id,"code":subject_code})
+        except Exception:
+            # Legacy/bootstrap environments may not have run migration 005 yet.
+            pass
 
     def get_student(self,sid): return self.students.get(sid)
 
