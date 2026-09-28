@@ -52,3 +52,11 @@ def test_migration_version_matches_taxonomy():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     assert module.VERSION == load_taxonomy()["taxonomy_version"]
+
+
+def test_board_specific_mathematics_codes():
+    data = load_taxonomy()
+    by = {(c["board"], c["class_level"], c["subject_id"]): c for c in data["curricula"]}
+    assert by[("CBSE", 10, "mathematics")]["subject_code"] == "041"
+    assert by[("ICSE", 10, "mathematics")]["subject_code"] == "51"
+    assert by[("ISC", 11, "mathematics")]["subject_code"] == "860"
