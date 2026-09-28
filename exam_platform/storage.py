@@ -115,14 +115,45 @@ class MySQLStorage:
 
     def get_chapters(self, board, class_level, subject_name):
         with engine.connect() as db:
+            try:
+                rows = db.execute(text("""
+                    SELECT cc.curriculum_chapter_id AS chapter_id,
+                           cc.official_chapter_name AS chapter_name,
+                           cc.chapter_order AS sort_order,
+                           cc.canonical_concept_id,
+                           cu.unit_name
+                    FROM curriculum_chapters cc
+                    JOIN curriculum_units cu ON cu.unit_id=cc.unit_id
+                    JOIN curriculum_catalog cur ON cur.curriculum_id=cu.curriculum_id
+                    JOIN subject_catalog sc ON sc.subject_id=cur.subject_id
+                    WHERE cur.board=:board AND cur.class_level=:class
+                      AND sc.subject_name=:subject AND cur.academic_year='2026-27'
+                      AND cur.status='VERIFIED' AND cc.status='VERIFIED'
+                    ORDER BY cu.unit_order,cc.chapter_order
+                """), {'board':board,'class':class_level,'subject':subject_name}).mappings().all()
+                if rows:
+                    return rows
+            except Exception:
+                pass
             return db.execute(text("SELECT c.* FROM chapters c JOIN subjects s ON s.subject_id=c.subject_id WHERE c.board=:board AND c.class_level=:class AND s.name=:subject AND c.active=1 ORDER BY c.sort_order,c.chapter_name"), {'board':board,'class':class_level,'subject':subject_name}).mappings().all()
 
     def get_competencies(self, subject_name):
         with engine.connect() as db:
-            return db.execute(text("SELECT c.* FROM competencies c JOIN subjects s ON s.subject_id=c.subject_id WHERE s.name=:subject AND c.active=1 ORDER BY c.sort_order,c.name"), {'subject':subject_name}).mappings().all()
+            rows = db.execute(text("SELECT c.* FROM competencies c JOIN subjects s ON s.subject_id=c.subject_id WHERE s.name=:subject AND c.active=1 ORDER BY c.sort_order,c.name"), {'subject':subject_name}).mappings().all()
+            if rows:
+                return rows
+        return [{"competency_id":f"generic_{i}","name":name,"description":"Controlled assessment competency.","sort_order":i}
+                for i,name in enumerate(("Conceptual Understanding","Procedural Fluency","Application","Problem Solving","Reasoning","Interpretation","Analysis","Debugging"),1)]
 
     def get_subjects(self):
-        with engine.connect() as db: return db.execute(text("SELECT * FROM subjects WHERE active=1 ORDER BY name")).mappings().all()
+        with engine.connect() as db:
+            try:
+                rows = db.execute(text("SELECT MIN(subject_id) AS subject_id,subject_name,MIN(subject_code) AS subject_code,MAX(active) AS active FROM subject_catalog WHERE active=1 GROUP BY subject_name ORDER BY subject_name")).mappings().all()
+                if rows:
+                    return [{"subject_id":r["subject_id"],"name":r["subject_name"],"subject_code":r["subject_code"],"active":r["active"]} for r in rows]
+            except Exception:
+                pass
+            return db.execute(text("SELECT * FROM subjects WHERE active=1 ORDER BY name")).mappings().all()
 
     def create_student(self,s: Student):
         email = s.email.strip() if isinstance(s.email, str) and s.email.strip() else None
@@ -135,15 +166,49 @@ class MySQLStorage:
                 db.execute(text("""INSERT INTO students(student_id,name,email,phone,city,role,class_level,board,subject,school,registration_date,registration_source,status) VALUES(:id,:name,:email,:phone,:city,:role,:class,:board,:subject,:school,:reg,:source,:status)"""), params)
         s.email = email
         self.students[s.student_id]=s
+        self._upsert_subject_enrollment(s)
+
+    def _upsert_subject_enrollment(self, student: Student):
+        subject_map = {
+            ("CBSE","Mathematics"): ("mathematics","041"),
+            ("ICSE","Mathematics"): ("mathematics","51"),
+            ("ISC","Mathematics"): ("mathematics","860"),
+            ("CBSE","Applied Mathematics"): ("applied_mathematics","241"),
+            ("CBSE","Information Technology"): ("cbse_information_technology","402"),
+            ("CBSE","Computer Applications"): ("cbse_computer_applications","165"),
+            ("CBSE","Computer Science"): ("cbse_computer_science","083"),
+            ("CBSE","Informatics Practices"): ("cbse_informatics_practices","065"),
+            ("ICSE","Computer Applications"): ("icse_computer_applications","86"),
+            ("ISC","Computer Science"): ("isc_computer_science","868"),
+        }
+        key=(student.board,student.subject)
+        if key not in subject_map or student.class_level is None:
+            return
+        subject_id, subject_code=subject_map[key]
+        try:
+            with engine.begin() as db:
+                db.execute(text("""
+                    INSERT INTO student_subject_enrollments(student_id,board,class_level,subject_id,subject_code,academic_year,status)
+                    VALUES(:student,:board,:class,:subject,:code,'2026-27','ACTIVE')
+                    ON DUPLICATE KEY UPDATE status='ACTIVE',subject_code=VALUES(subject_code),updated_at=CURRENT_TIMESTAMP
+                """), {"student":student.student_id,"board":student.board,"class":student.class_level,"subject":subject_id,"code":subject_code})
+        except Exception:
+            # Legacy/bootstrap environments may not have run migration 005 yet.
+            pass
 
     def get_student(self,sid): return self.students.get(sid)
 
     def register_student(self, student: Student):
-        """Persist a reviewed registration, including board/class/subject eligibility data."""
-        if student.subject not in {"Mathematics", "Applied Mathematics"}:
-            raise ValueError("Student subject must be 'Mathematics' or 'Applied Mathematics'.")
-        if student.class_level is None or student.board not in {"CBSE", "ICSE"}:
-            raise ValueError("Registered students require a valid class level and board.")
+        """Persist a reviewed registration and matching subject enrollment."""
+        supported = {
+            ("CBSE","Mathematics"), ("CBSE","Applied Mathematics"),
+            ("CBSE","Information Technology"), ("CBSE","Computer Applications"),
+            ("CBSE","Computer Science"), ("CBSE","Informatics Practices"),
+            ("ICSE","Mathematics"), ("ICSE","Computer Applications"),
+            ("ISC","Mathematics"), ("ISC","Computer Science"),
+        }
+        if student.class_level is None or (student.board, student.subject) not in supported:
+            raise ValueError("Registered students require a supported board/class/subject combination.")
         self.create_student(student)
         return student
 

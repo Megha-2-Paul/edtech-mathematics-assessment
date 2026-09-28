@@ -27,8 +27,13 @@ def test_51_question_batch_is_a_regression_fixture():
     matched = sum(c.question.metadata.get("curriculum_mapping_status") == "MATCHED" for c in candidates)
     unresolved = sum(c.question.metadata.get("curriculum_mapping_status") == "UNRESOLVED" for c in candidates)
     ambiguous = sum(c.question.metadata.get("curriculum_mapping_status") == "AMBIGUOUS" for c in candidates)
-    assert matched == 48
-    assert unresolved == 3
+    # The fixture uses legacy unit labels such as "Algebra" and "Geometry".
+    # The 2026-27 resolver intentionally requires exact official chapter names;
+    # these legacy labels therefore remain review-required rather than being
+    # guessed into individual chapters.
+    # Exact official chapters are matched; broad legacy unit labels remain review-required.
+    assert matched == 27
+    assert unresolved == 24
     assert ambiguous == 0
     assert candidates[1].question.question_type == "mcq"
     assert candidates[1].question.metadata["original_question_type"] == "ASSERTION_REASON"
