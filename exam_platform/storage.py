@@ -115,14 +115,45 @@ class MySQLStorage:
 
     def get_chapters(self, board, class_level, subject_name):
         with engine.connect() as db:
+            try:
+                rows = db.execute(text("""
+                    SELECT cc.curriculum_chapter_id AS chapter_id,
+                           cc.official_chapter_name AS chapter_name,
+                           cc.chapter_order AS sort_order,
+                           cc.canonical_concept_id,
+                           cu.unit_name
+                    FROM curriculum_chapters cc
+                    JOIN curriculum_units cu ON cu.unit_id=cc.unit_id
+                    JOIN curriculum_catalog cur ON cur.curriculum_id=cu.curriculum_id
+                    JOIN subject_catalog sc ON sc.subject_id=cur.subject_id
+                    WHERE cur.board=:board AND cur.class_level=:class
+                      AND sc.subject_name=:subject AND cur.academic_year='2026-27'
+                      AND cur.status='VERIFIED' AND cc.status='VERIFIED'
+                    ORDER BY cu.unit_order,cc.chapter_order
+                """), {'board':board,'class':class_level,'subject':subject_name}).mappings().all()
+                if rows:
+                    return rows
+            except Exception:
+                pass
             return db.execute(text("SELECT c.* FROM chapters c JOIN subjects s ON s.subject_id=c.subject_id WHERE c.board=:board AND c.class_level=:class AND s.name=:subject AND c.active=1 ORDER BY c.sort_order,c.chapter_name"), {'board':board,'class':class_level,'subject':subject_name}).mappings().all()
 
     def get_competencies(self, subject_name):
         with engine.connect() as db:
-            return db.execute(text("SELECT c.* FROM competencies c JOIN subjects s ON s.subject_id=c.subject_id WHERE s.name=:subject AND c.active=1 ORDER BY c.sort_order,c.name"), {'subject':subject_name}).mappings().all()
+            rows = db.execute(text("SELECT c.* FROM competencies c JOIN subjects s ON s.subject_id=c.subject_id WHERE s.name=:subject AND c.active=1 ORDER BY c.sort_order,c.name"), {'subject':subject_name}).mappings().all()
+            if rows:
+                return rows
+        return [{"competency_id":f"generic_{i}","name":name,"description":"Controlled assessment competency.","sort_order":i}
+                for i,name in enumerate(("Conceptual Understanding","Procedural Fluency","Application","Problem Solving","Reasoning","Interpretation","Analysis","Debugging"),1)]
 
     def get_subjects(self):
-        with engine.connect() as db: return db.execute(text("SELECT * FROM subjects WHERE active=1 ORDER BY name")).mappings().all()
+        with engine.connect() as db:
+            try:
+                rows = db.execute(text("SELECT subject_id,subject_name,subject_code,active FROM subject_catalog WHERE active=1 ORDER BY subject_name,subject_code")).mappings().all()
+                if rows:
+                    return [{"subject_id":r["subject_id"],"name":r["subject_name"],"subject_code":r["subject_code"],"active":r["active"]} for r in rows]
+            except Exception:
+                pass
+            return db.execute(text("SELECT * FROM subjects WHERE active=1 ORDER BY name")).mappings().all()
 
     def create_student(self,s: Student):
         email = s.email.strip() if isinstance(s.email, str) and s.email.strip() else None
