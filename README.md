@@ -1,12 +1,45 @@
 # Mathematics Assessment & Improvement System
 
-A low-cost assessment platform for CBSE/ICSE Mathematics (initially Classes 10–12) focused on one question:
+A low-cost assessment platform for school students focused on one question:
 
 > **Why is a student losing marks, and what should they improve next?**
+
+Improvia is expanding its initial pilot scope beyond the original Classes 10–12 Mathematics focus. The controlled pilot will cover **Classes 9–12 Mathematics**, with **Computer-related subjects introduced for applicable classes**, beginning with Class 10 CBSE.
 
 This is not intended to be a generic mock-test marketplace. The product loop is:
 
 **Test → Submission → Evaluation → Diagnosis → Report → Student Profile → Recommended Focus → Next Test → Progress**
+
+## Current pilot scope
+
+### Mathematics
+- Class 9 — Mathematics
+- Class 10 — Mathematics
+- Class 11 — Mathematics
+- Class 12 — Mathematics
+- CBSE and ICSE where the relevant curriculum is supported
+
+### Computer / Computer-related subjects
+- Class 10 CBSE — Information Technology (Code 402)
+- Class 10 CBSE — Computer Applications (Code 165)
+- Additional computer subjects/classes can be added after curriculum validation.
+
+**Important:** “Computer” should not be stored as one ambiguous Class 10 CBSE subject. The platform should distinguish **Information Technology (402)** from **Computer Applications (165)** because CBSE treats them as separate subjects. For 2026–27, CBSE's scheme of studies lists Information Technology and Computer Science/Informatics Practices as separate subject options, while the Class X sample-paper page separately lists Computer Application. citeturn0search0turn0search1
+
+The Class 10 CBSE Information Technology curriculum (402) itself has distinct components such as Employability Skills and Subject Specific Skills, so those should be represented as curriculum structure rather than treated as generic “computer” content. citeturn0search12
+
+## Pilot validation cohort
+
+The first real-user pilot can use:
+
+| Student | Assessment scope |
+|---|---|
+| Class 10 CBSE student | Mathematics + Information Technology / Computer subject as applicable |
+| Class 9 ICSE student | Mathematics |
+
+The purpose of this pilot is to validate the assessment → evaluation → diagnosis → report → improvement experience across more than one class, board and subject.
+
+The pilot does **not** by itself prove demand across every class, board or subject. Expansion should continue only where students/guardians find the analysis useful and are willing to take another assessment or refer another student.
 
 ## Current MVP
 
@@ -19,12 +52,31 @@ This is not intended to be a generic mock-test marketplace. The product loop is:
 - Teacher/admin question-bank management
 - Teacher/admin test creation
 - Manual subjective evaluation
-- Structured error codes for diagnosis
+- Structured error diagnosis
 - MySQL as the persistent source of truth
 - Student result and performance-report views
 - Cumulative question/performance history foundation
 - Production deployment on Render using Aiven MySQL as the primary database
-- Canonical subject/syllabus taxonomy for Mathematics and Applied Mathematics (2026–27)
+- Canonical subject/syllabus taxonomy
+
+## Assessment philosophy
+
+The product should not simply report:
+
+> **62 / 80**
+
+It should help answer:
+
+- Where were marks lost?
+- Why were they lost?
+- Which mistakes are recurring?
+- Which chapters/topics need attention?
+- What should the student practise next?
+- What changed in the next assessment?
+
+For Mathematics, the initial diagnostic categories include calculation, conceptual, formula, sign, incomplete steps, wrong method, missing justification, misunderstood question, and time/attempt issues.
+
+Other subjects should **not** automatically inherit the Mathematics error taxonomy. Each subject should use an appropriate evaluation/diagnosis framework.
 
 ## Current environment architecture
 
@@ -50,11 +102,9 @@ Students / Tests / Questions / Attempts / Responses / Evaluations / History
 
 The production application does **not** currently require local-MySQL ↔ Aiven synchronization.
 
-The repository also contains an optional question-bank sync layer controlled by `QUESTION_BANK_SYNC_DATABASE_URL`. This is a separate primary-to-secondary question-bank mechanism; it is not the student-registration architecture and is currently not configured in the Render environment.
+The repository also contains an optional question-bank sync layer controlled by `QUESTION_BANK_SYNC_DATABASE_URL`. This is a separate primary-to-secondary question-bank mechanism; it is not the student-registration architecture.
 
-The canonical syllabus taxonomy is maintained separately from question-bank sync. It has been validated and deployed independently to local MySQL and Aiven MySQL. It currently distinguishes Mathematics from Applied Mathematics and contains 88 canonical chapters, 62 syllabus units and 133 syllabus mappings for 2026–27.
-
-See `PRODUCTION_ARCHITECTURE.md` for the verified production topology and the planned registration/enrollment flow.
+See `PRODUCT_WORKFLOW.md` for the current expanded product scope and pilot workflow, and `PRODUCTION_ARCHITECTURE.md` for the production registration architecture.
 
 ## Architecture
 
@@ -74,42 +124,6 @@ Student Website
 
 Planned orchestration and communication can use n8n, Python reporting/analytics, email, and WhatsApp. These integrations are not the core exam engine.
 
-## Repository structure
-
-```text
-.
-├── exam_platform/
-│   ├── app.py
-│   ├── admin.py
-│   ├── db_source.py
-│   ├── database.py
-│   ├── evaluation.py
-│   ├── diagnosis.py
-│   ├── diagnostic_rules.py
-│   ├── diagnostic_rules_adapter.py
-│   ├── models.py
-│   ├── question_selection.py
-│   ├── reporting.py
-│   ├── student_profile.py
-│   ├── storage.py
-│   ├── mock_data.py
-│   ├── static/
-│   └── templates/
-├── database/
-├── question_bank/
-├── .env.example
-├── .gitignore
-├── PRODUCT_WORKFLOW.md
-├── PRODUCTION_ARCHITECTURE.md
-├── PRODUCT_STRATEGY.md
-├── EXAM_PLATFORM_REPORT.md
-├── PLATFORM_VERIFICATION.md
-├── SESSION_SUMMARY.md
-└── README.md
-```
-
-The current structure is intentionally kept stable before functional testing. Structural refactoring is a later phase.
-
 ## Data model direction
 
 The system is designed to retain structured history at question level, including:
@@ -119,7 +133,7 @@ The system is designed to retain structured history at question level, including
 - Question ID and question metadata
 - Marks awarded
 - Attempt/response status
-- Evaluation error codes and comments
+- Evaluation error categories and comments
 - Handwritten answer-image references
 - Question history across tests
 - Longitudinal performance data
@@ -128,7 +142,7 @@ This enables analysis of recurring errors rather than only reporting scores.
 
 ## Error taxonomy
 
-The initial evaluation codes are:
+For Mathematics, the initial evaluation categories are:
 
 - C01 — Calculation
 - C02 — Conceptual
@@ -140,58 +154,38 @@ The initial evaluation codes are:
 - C08 — Misunderstood question
 - C09 — Time/attempt
 
-These codes may evolve as real student data is collected.
+These are an initial Mathematics framework and may evolve from real student data.
+
+Subject-specific diagnosis should be defined separately for Computer/IT and future subjects.
 
 ## Registration status
 
-The current prototype can create a temporary session-based student/Guest Student record when an exam flow is exercised without a registered student.
-
-For the controlled launch, registration should instead follow:
+The current controlled-launch process is:
 
 ```text
 Google Form
    ↓
 Google Sheets
    ↓
-Confirm eligible student
+Manual review / confirmation
    ↓
-Create/reuse permanent Student_ID
+Create or reuse permanent Student_ID
    ↓
 Aiven MySQL
    ↓
 Assessment access
 ```
 
-Google Sheets is intended to hold the raw registration and validation/customer-research responses. It should not become the production database or a continuously synchronized second source of truth.
-
-No database schema change is currently required for this registration plan.
+Google Sheets holds raw registration and validation responses during the pilot. Aiven remains the production source of truth for enrolled students and assessment data.
 
 ## Current development stage
 
 The platform is at the **controlled functional-testing / pre-public-launch stage**.
 
-The next priority is to validate the complete assessment → evaluation → diagnosis → report loop with real users before adding AI grading or large-scale platform features.
-
-## Before public launch
-
-Production hardening will still be required, including:
-
-- Secure environment configuration and secrets
-- Authentication and authorization hardening
-- Server-authoritative timing
-- Attempt locking and duplicate-submission protection
-- Secure image/object storage
-- File validation and size limits
-- HTTPS
-- Rate limiting
-- Database backups
-- Error logging and monitoring
-- Evaluation audit trail
-- Secure report access
-- Privacy/consent handling
+The immediate priority is to validate the complete assessment → evaluation → diagnosis → report loop with real students across the initial pilot scope before adding AI grading or large-scale platform features.
 
 ## Intentionally deferred
 
-The MVP does not require AI grading, handwriting OCR, fully adaptive testing, parent/tutor dashboards, mobile apps, multiple subjects, State Boards, JEE, or a large subscription platform.
+The MVP does not require AI grading, handwriting OCR, fully adaptive testing, parent/tutor dashboards, mobile apps, State Boards, JEE, or a large subscription platform.
 
-Those should be considered only after the assessment-and-diagnosis loop is validated with real paying students.
+Expansion to additional subjects should be driven by curriculum validation and real student demand rather than adding subjects only because the technology can support them.
