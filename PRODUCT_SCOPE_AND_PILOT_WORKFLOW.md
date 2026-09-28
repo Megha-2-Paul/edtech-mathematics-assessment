@@ -5,23 +5,24 @@
 Improvia is expanding its initial controlled pilot from the earlier **Classes 10–12 Mathematics** focus to:
 
 ### Mathematics
-- Class 9
-- Class 10
-- Class 11
-- Class 12
-- CBSE and ICSE, subject to curriculum/question-bank validation
+- CBSE Classes 9–12 — Mathematics
+- CBSE Classes 11–12 — Applied Mathematics (241)
+- ICSE Classes 9–10 — Mathematics
+- ISC Classes 11–12 — Mathematics
+
+The exact official chapter name is stored at the curriculum layer. Cross-board concepts are stored separately for analytics and controlled question reuse.
 
 ### Computer-related subjects
-The initial computer pilot is focused on Class 10 CBSE.
+The platform now models these as distinct subjects rather than one generic “Computer” value:
 
-The platform must distinguish between separate CBSE subjects rather than using one generic “Computer” label:
+- CBSE IX–X — Information Technology (402)
+- CBSE X — Computer Applications (165)
+- CBSE XI–XII — Computer Science (083)
+- CBSE XI–XII — Informatics Practices (065)
+- ICSE IX–X — Computer Applications (86)
+- ISC XI–XII — Computer Science (868)
 
-- **Information Technology — Code 402**
-- **Computer Applications — Code 165**
-
-CBSE's current curriculum/scheme treats these as distinct offerings. The 2026–27 CBSE Class X sample-paper page lists Computer Application separately, while the skill-education curriculum identifies Information Technology (402) as a separate Class X subject. citeturn0search0turn0search1turn0search12
-
-Do not assume that every Class 10 student who says “Computer” is studying the same syllabus. Registration and assessment selection should capture the exact subject.
+A student's subject enrollment is stored separately from the core Student record so one Student_ID can hold multiple active subjects.
 
 ## 2. Initial real-student pilot
 
@@ -229,15 +230,7 @@ The product can now be described at a high level as:
 
 > **Improvia is building an assessment and improvement platform for school students that goes beyond the score to help them understand where they are losing marks, why it is happening, and what to work on next.**
 
-The controlled pilot starts with:
-
-**Classes 9–12 Mathematics**
-
-and:
-
-**Class 10 CBSE computer-related subjects, beginning with Information Technology (402) and Computer Applications (165) where applicable.**
-
-More subjects can be added after validation.
+The platform taxonomy currently supports the verified 2026–27 curriculum scope above. The controlled real-student pilot remains deliberately smaller; expanding database capability does not mean all curricula are commercially validated.
 
 ## 10. Important product principle
 
