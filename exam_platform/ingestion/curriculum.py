@@ -76,6 +76,25 @@ class CanonicalTaxonomyResolver:
         self._units={x["unit_id"]:x for x in self.data.get("units",[]) if isinstance(x,dict) and x.get("unit_id")}
         self._mappings=[x for x in self.data.get("mappings",[]) if isinstance(x,dict)]
         self._curricula=self.data.get("curricula",[])
+        if self._new:
+            legacy_chapters=[]; legacy_units=[]; legacy_mappings=[]
+            seen=set()
+            for cur in self._curricula:
+                for ui,u in enumerate(cur.get("units",[]),1):
+                    uid=f"{cur.get('curriculum_id')}__u{ui}"
+                    legacy_units.append({"unit_id":uid,"board":cur.get("board"),"class_level":cur.get("class_level"),
+                                         "subject_id":"maths" if cur.get("subject_id")=="mathematics" else cur.get("subject_id"),
+                                         "unit_name":u.get("unit_name")})
+                    for ci,ch in enumerate(u.get("chapters",[]),1):
+                        cid=f"{uid}__c{ci}"
+                        if cid not in seen:
+                            seen.add(cid)
+                            legacy_chapters.append({"id":cid,"name":ch.get("official_chapter_name")})
+                        legacy_mappings.append({"unit_id":uid,"board":cur.get("board"),"class_level":cur.get("class_level"),
+                                                "canonical_chapter_id":cid,"chapter_order":ci,"status":"VERIFIED"})
+            self.data.setdefault("canonical_chapters",legacy_chapters)
+            self.data.setdefault("units",legacy_units)
+            self.data.setdefault("mappings",legacy_mappings)
 
     def resolve(self,*,subject:Any,board:Any,class_level:Any,chapter:Any)->CurriculumMapping:
         original=str(chapter).strip() if chapter is not None else None
