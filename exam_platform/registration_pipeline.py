@@ -4,7 +4,7 @@ The Google Form remains the collection layer. A Google Sheet response export is
 reviewed by the founder, and only explicitly enrolled rows are persisted as
 Student records in the existing MySQL/Aiven database.
 
-No new database tables are required by this module.
+The enrollment flow writes the reviewed student and an active subject enrollment; migration 005 adds the enrollment table.
 """
 from __future__ import annotations
 
@@ -21,8 +21,11 @@ from urllib.request import Request, urlopen
 from .models import Student
 
 
-ALLOWED_SUBJECTS = {"Mathematics", "Applied Mathematics"}
-ALLOWED_BOARDS = {"CBSE", "ICSE"}
+ALLOWED_SUBJECTS = {
+    "Mathematics", "Applied Mathematics", "Information Technology",
+    "Computer Applications", "Computer Science", "Informatics Practices",
+}
+ALLOWED_BOARDS = {"CBSE", "ICSE", "ISC"}
 DEFAULT_ENROLLMENT_STATUSES = {"APPROVED", "ENROLLED", "ACTIVE"}
 
 FIELD_ALIASES = {
@@ -56,6 +59,8 @@ FIELD_ALIASES = {
         "Board",
     ),
     "subject": (
+        "Which subject are you studying?",
+        "Which subject are you studying",
         "Which Mathematics subject are you studying?",
         "Which Mathematics subject are you studying",
         "Mathematics subject",
@@ -134,12 +139,23 @@ def normalize_board(value: str) -> str:
 
 
 def normalize_subject(value: str) -> str:
-    value = _clean(value).casefold()
-    if value == "mathematics":
-        return "Mathematics"
-    if value == "applied mathematics":
-        return "Applied Mathematics"
-    return _clean(value)
+    raw = _clean(value)
+    value = raw.casefold()
+    aliases = {
+        "mathematics": "Mathematics",
+        "applied mathematics": "Applied Mathematics",
+        "information technology": "Information Technology",
+        "information technology (402)": "Information Technology",
+        "computer applications": "Computer Applications",
+        "computer applications (165)": "Computer Applications",
+        "computer applications (86)": "Computer Applications",
+        "computer science": "Computer Science",
+        "computer science (083)": "Computer Science",
+        "computer science (868)": "Computer Science",
+        "informatics practices": "Informatics Practices",
+        "informatics practices (065)": "Informatics Practices",
+    }
+    return aliases.get(value, raw)
 
 
 def normalize_class(value: str) -> int | None:
