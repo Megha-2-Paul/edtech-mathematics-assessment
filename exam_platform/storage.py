@@ -171,8 +171,8 @@ class MySQLStorage:
     def _upsert_subject_enrollment(self, student: Student):
         subject_map = {
             ("CBSE","Mathematics"): ("mathematics","041"),
-            ("ICSE","Mathematics"): ("mathematics","ICSE"),
-            ("ISC","Mathematics"): ("mathematics","ISC"),
+            ("ICSE","Mathematics"): ("mathematics","51"),
+            ("ISC","Mathematics"): ("mathematics","860"),
             ("CBSE","Applied Mathematics"): ("applied_mathematics","241"),
             ("CBSE","Information Technology"): ("cbse_information_technology","402"),
             ("CBSE","Computer Applications"): ("cbse_computer_applications","165"),
