@@ -1,5 +1,5 @@
 {
-  "taxonomy_version": "2026.27.6",
+  "taxonomy_version": "2026.27.7",
   "academic_year": "2026-27",
   "subjects": [
     {
@@ -438,7 +438,109 @@
       "class_level": 9,
       "subject_id": "mathematics",
       "subject_code": "041",
-      "academic_year": "2026-27"
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Pure Arithmetic",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Rational and Irrational Numbers"
+            }
+          ]
+        },
+        {
+          "unit_name": "Commercial Mathematics",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Compound Interest"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Expansions"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Factorisation"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Simultaneous Linear Equations in two variables"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Indices/Exponents"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Logarithms"
+            }
+          ]
+        },
+        {
+          "unit_name": "Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Triangles"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Rectilinear Figures"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Circle"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Constructions of Polygons"
+            }
+          ]
+        },
+        {
+          "unit_name": "Statistics",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Statistics"
+            }
+          ]
+        },
+        {
+          "unit_name": "Mensuration",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Mensuration"
+            }
+          ]
+        },
+        {
+          "unit_name": "Trigonometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Trigonometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Coordinate Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Coordinate Geometry"
+            }
+          ]
+        }
+      ]
     },
     {
       "curriculum_id": "mathematics_ICSE_10_2026_27",
@@ -446,7 +548,116 @@
       "class_level": 10,
       "subject_id": "mathematics",
       "subject_code": "041",
-      "academic_year": "2026-27"
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Commercial Mathematics",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Goods and Services Tax (GST)"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Banking"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Shares and Dividends"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Linear Inequations"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Quadratic Equations in one variable"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Ratio and Proportion"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Factorisation of polynomials"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Matrices"
+            },
+            {
+              "chapter_order": 6,
+              "official_chapter_name": "Arithmetic and Geometric Progression"
+            },
+            {
+              "chapter_order": 7,
+              "official_chapter_name": "Co-ordinate Geometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Similarity"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Loci"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Circles"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Constructions"
+            }
+          ]
+        },
+        {
+          "unit_name": "Mensuration",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Mensuration"
+            }
+          ]
+        },
+        {
+          "unit_name": "Trigonometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Trigonometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Statistics",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Statistics"
+            }
+          ]
+        },
+        {
+          "unit_name": "Probability",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Probability"
+            }
+          ]
+        }
+      ]
     },
     {
       "curriculum_id": "mathematics_ISC_11_2026_27",
@@ -454,7 +665,86 @@
       "class_level": 11,
       "subject_id": "mathematics",
       "subject_code": "041",
-      "academic_year": "2026-27"
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Sets and Functions",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Sets"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Relations & Functions"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Trigonometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Complex Numbers"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Permutations and Combinations"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Binomial Theorem"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Sequence and Series"
+            }
+          ]
+        },
+        {
+          "unit_name": "Coordinate Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Straight Lines"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Conic Section"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Introduction to Three Dimensional Geometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Calculus",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Limits and Derivatives"
+            }
+          ]
+        },
+        {
+          "unit_name": "Statistics & Probability",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Statistics"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Probability"
+            }
+          ]
+        }
+      ]
     },
     {
       "curriculum_id": "mathematics_ISC_12_2026_27",
@@ -462,7 +752,96 @@
       "class_level": 12,
       "subject_id": "mathematics",
       "subject_code": "041",
-      "academic_year": "2026-27"
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Relations and Functions",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Relations and Functions"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Inverse Trigonometric Functions"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Matrices"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Determinants"
+            }
+          ]
+        },
+        {
+          "unit_name": "Calculus",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Continuity and Differentiability"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Applications of Derivatives"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Integrals"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Applications of Integrals"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Differential Equations"
+            }
+          ]
+        },
+        {
+          "unit_name": "Vector Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Vector Algebra"
+            }
+          ]
+        },
+        {
+          "unit_name": "Three-Dimensional Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Three-Dimensional Geometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Linear Programming",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Linear Programming"
+            }
+          ]
+        },
+        {
+          "unit_name": "Probability",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Probability"
+            }
+          ]
+        }
+      ]
     },
     {
       "curriculum_id": "applied_mathematics_CBSE_11_2026_27",
