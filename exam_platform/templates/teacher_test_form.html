@@ -13,9 +13,9 @@
 <form method="post">
 <div class="form-grid">
 <div class="field"><label>Test title<input name="title" value="{{ form.get('title','') if form else '' }}" required></label></div>
-<div class="field"><label>Subject<select name="subject" required><option>Mathematics</option><option>Applied Mathematics</option></select></label></div>
-<div class="field"><label>Class<select name="class_level"><option>10</option><option>11</option><option>12</option></select></label></div>
-<div class="field"><label>Board<select name="board"><option value="">Any</option><option>CBSE</option><option>ICSE</option></select></label></div>
+<div class="field"><label>Subject<select name="subject" required><option>Mathematics</option><option>Applied Mathematics</option><option>Information Technology</option><option>Computer Applications</option><option>Computer Science</option><option>Informatics Practices</option></select></label></div>
+<div class="field"><label>Class<select name="class_level"><option>9</option><option>10</option><option>11</option><option>12</option></select></label></div>
+<div class="field"><label>Board<select name="board"><option value="">Any</option><option>CBSE</option><option>ICSE</option><option>ISC</option></select></label></div>
 <div class="field"><label>Date<input type="date" name="test_date"></label></div>
 <div class="field"><label>Duration (minutes)<input type="number" name="duration_minutes" min="1" value="60" required></label></div>
 <div class="field"><label>Test type<select name="test_type"><option>weekly</option><option>diagnostic</option><option>practice</option><option>monthly</option></select></label></div>
