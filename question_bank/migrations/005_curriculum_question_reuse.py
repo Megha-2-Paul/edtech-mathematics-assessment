@@ -9,7 +9,7 @@ import argparse, json, os, re
 from pathlib import Path
 from sqlalchemy import create_engine, text
 
-VERSION="2026.27.5"
+VERSION="2026.27.7"
 ALIASES={
 "Statistics":"statistics","Probability":"probability","Trigonometry":"trigonometry",
 "Introduction to Trigonometry":"trigonometry","Trigonometric Functions":"trigonometry",
@@ -118,10 +118,16 @@ def apply(url,taxonomy):
               {"id":s["subject_id"],"name":s["name"],"code":s["subject_code"]})
         concept_subject={}
         for c in data["curricula"]:
+            subject_id=c["subject_id"]
             for u in c["units"]:
                 for ch in u["chapters"]:
                     cid=slug(ch["official_chapter_name"])
-                    concept_subject.setdefault(cid,None)
+                    previous=concept_subject.get(cid)
+                    if previous is None and cid not in concept_subject:
+                        concept_subject[cid]=subject_id
+                    elif previous != subject_id:
+                        # Same canonical concept is intentionally shared across subjects.
+                        concept_subject[cid]=None
         for cid,sid in concept_subject.items():
             db.execute(text("""INSERT INTO canonical_concepts(concept_id,concept_name,subject_id,active)
               VALUES(:id,:name,:subject,1) ON DUPLICATE KEY UPDATE concept_name=VALUES(concept_name),subject_id=VALUES(subject),active=1"""),
