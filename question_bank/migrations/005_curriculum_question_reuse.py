@@ -174,8 +174,21 @@ def apply(url,taxonomy):
           WHERE q.board IS NOT NULL AND q.class_level IS NOT NULL AND q.chapter IS NOT NULL"""))
     print("Applied curriculum/question-reuse schema",VERSION)
 if __name__=="__main__":
-    p=argparse.ArgumentParser(); p.add_argument("--database-url",default=os.getenv("DATABASE_URL")); p.add_argument("--taxonomy",default="curriculum_taxonomy_2026_27.json"); p.add_argument("--apply",action="store_true")
+    p=argparse.ArgumentParser()
+    p.add_argument("--database-url",default=os.getenv("DATABASE_URL"))
+    p.add_argument("--taxonomy",default="curriculum_taxonomy_2026_27.json")
+    mode=p.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--apply",action="store_true")
+    mode.add_argument("--dry-run",action="store_true")
     a=p.parse_args()
-    if not a.apply: p.error("Use --apply explicitly.")
     if not a.database_url: p.error("No database URL supplied.")
-    apply(a.database_url,a.taxonomy)
+    if a.dry_run:
+        from pathlib import Path as _Path
+        import importlib.util as _importlib_util
+        audit_path=_Path(__file__).with_name("005_curriculum_question_reuse_audit.py")
+        spec=_importlib_util.spec_from_file_location("curriculum_migration_audit",audit_path)
+        audit_module=_importlib_util.module_from_spec(spec)
+        spec.loader.exec_module(audit_module)
+        audit_module.print_report(audit_module.audit(a.database_url,a.taxonomy))
+    else:
+        apply(a.database_url,a.taxonomy)
