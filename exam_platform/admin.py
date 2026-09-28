@@ -17,8 +17,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/teacher")
 QUESTION_ASSET_DIR = Path(__file__).parent.parent / "uploads" / "question_assets"
 QUESTION_ASSET_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
-SUBJECTS = ["Mathematics", "Applied Mathematics", "Physics", "Chemistry", "Computer"]
-BOARDS = ["CBSE", "ICSE"]
+BOARDS = ["CBSE", "ICSE", "ISC"]
 QUESTION_TYPES = [
     ("mcq", "MCQ"),
     ("vsaq", "VSAQ"),
