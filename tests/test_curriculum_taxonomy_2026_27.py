@@ -60,3 +60,19 @@ def test_board_specific_mathematics_codes():
     assert by[("CBSE", 10, "mathematics")]["subject_code"] == "041"
     assert by[("ICSE", 10, "mathematics")]["subject_code"] == "51"
     assert by[("ISC", 11, "mathematics")]["subject_code"] == "860"
+
+
+def test_migration_audit_expected_counts():
+    import importlib.util
+    migration_path = ROOT / "question_bank" / "migrations" / "005_curriculum_question_reuse_audit.py"
+    spec = importlib.util.spec_from_file_location("curriculum_migration_audit", migration_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    data = load_taxonomy()
+    curricula, chapters = module.expected_curriculum_counts(data)
+    assert curricula == len(data["curricula"])
+    assert chapters == sum(
+        len(unit["chapters"])
+        for curriculum in data["curricula"]
+        for unit in curriculum["units"]
+    )
