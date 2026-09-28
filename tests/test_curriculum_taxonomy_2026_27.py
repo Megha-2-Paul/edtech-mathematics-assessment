@@ -43,3 +43,12 @@ def test_official_names_preserve_board_specific_wording():
 def test_no_generic_computer_subject():
     names={s["name"] for s in load_taxonomy()["subjects"]}
     assert "Computer" not in names
+
+
+def test_migration_version_matches_taxonomy():
+    import importlib.util
+    migration_path = ROOT / "question_bank" / "migrations" / "005_curriculum_question_reuse.py"
+    spec = importlib.util.spec_from_file_location("curriculum_migration", migration_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.VERSION == load_taxonomy()["taxonomy_version"]
