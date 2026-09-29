@@ -78,8 +78,18 @@ def test_migration_audit_expected_counts():
     )
 
 
-def test_canonical_concept_upsert_uses_subject_id_column():
+def test_migration_upserts_use_real_target_columns():
     migration_path = ROOT / "question_bank" / "migrations" / "005_curriculum_question_reuse.py"
     source = migration_path.read_text(encoding="utf-8")
-    assert "subject_id=VALUES(subject_id)" in source
-    assert "subject_id=VALUES(subject)," not in source
+
+    # Avoid VALUES(<column>) aliases entirely: they are easy to mistype and have
+    # already caused production failures against the real Aiven schema.
+    assert "VALUES(subject)" not in source
+    assert "VALUES(canonical_concept)" not in source
+    assert "VALUES(canonical_concept_id)" not in source
+
+    assert "subject_name=:name,subject_code=:code,active=1" in source
+    assert "concept_name=:name,subject_id=:subject,active=1" in source
+    assert "subject_code=:code,status='VERIFIED'" in source
+    assert "unit_name=:name,unit_order=:order" in source
+    assert "official_chapter_name=:name,canonical_concept_id=:concept,status='VERIFIED'" in source
