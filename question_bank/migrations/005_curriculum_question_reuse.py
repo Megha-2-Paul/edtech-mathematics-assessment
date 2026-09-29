@@ -137,7 +137,9 @@ def apply(url,taxonomy):
           UNIQUE KEY uq_student_enrollment(student_id,board,class_level,subject_id,academic_year),
           INDEX idx_active_enrollment(student_id,status,board,class_level,subject_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"""))
-        validate_schema(db)\n\n        for s in data["subjects"]:
+        validate_schema(db)
+
+        for s in data["subjects"]:
             db.execute(text("""INSERT INTO subject_catalog(subject_id,subject_name,subject_code,active)
               VALUES(:id,:name,:code,1)
               ON DUPLICATE KEY UPDATE subject_name=:name,subject_code=:code,active=1"""),
