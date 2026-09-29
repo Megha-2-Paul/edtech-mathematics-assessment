@@ -32,6 +32,16 @@ REQUIRED_LEGACY_COLUMNS = {
     "questions": {"question_id", "subject", "board", "class_level", "chapter"},
 }
 
+REQUIRED_TARGET_COLUMNS = {
+    "subject_catalog": {"subject_id", "subject_name", "subject_code", "active"},
+    "curriculum_catalog": {"curriculum_id", "board", "class_level", "subject_id", "subject_code", "academic_year", "status"},
+    "curriculum_units": {"unit_id", "curriculum_id", "unit_order", "unit_name"},
+    "canonical_concepts": {"concept_id", "concept_name", "subject_id", "active"},
+    "curriculum_chapters": {"curriculum_chapter_id", "unit_id", "chapter_order", "official_chapter_name", "canonical_concept_id", "status"},
+    "question_curriculum_map": {"question_id", "curriculum_chapter_id", "compatibility_status", "notes", "reviewed_by", "reviewed_at"},
+    "student_subject_enrollments": {"enrollment_id", "student_id", "board", "class_level", "subject_id", "subject_code", "academic_year", "status", "created_at", "updated_at"},
+}
+
 def load_taxonomy(path: str) -> dict:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if data.get("taxonomy_version") != VERSION:
@@ -69,9 +79,10 @@ def audit(url: str, taxonomy_path: str) -> dict:
         report["database"]["tables"] = len(tables)
         report["schema"]["missing_tables"] = sorted(TARGET_TABLES and (set(TARGET_TABLES) - tables))
 
-        for table, required in REQUIRED_LEGACY_COLUMNS.items():
+        for table, required in {**REQUIRED_LEGACY_COLUMNS, **REQUIRED_TARGET_COLUMNS}.items():
             if table not in tables:
-                report["schema"]["missing_columns"][table] = sorted(required)
+                if table in REQUIRED_LEGACY_COLUMNS:
+                    report["schema"]["missing_columns"][table] = sorted(required)
                 continue
             actual = {c["name"] for c in inspector.get_columns(table)}
             missing = required - actual
