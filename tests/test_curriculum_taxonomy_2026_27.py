@@ -76,3 +76,10 @@ def test_migration_audit_expected_counts():
         for curriculum in data["curricula"]
         for unit in curriculum["units"]
     )
+
+
+def test_canonical_concept_upsert_uses_subject_id_column():
+    migration_path = ROOT / "question_bank" / "migrations" / "005_curriculum_question_reuse.py"
+    source = migration_path.read_text(encoding="utf-8")
+    assert "subject_id=VALUES(subject_id)" in source
+    assert "subject_id=VALUES(subject)," not in source
