@@ -7,7 +7,7 @@ Usage:
 from __future__ import annotations
 import argparse, json, os, re
 from pathlib import Path
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 
 VERSION="2026.27.7"
 ALIASES={
@@ -50,6 +50,32 @@ def slug(name):
     if s: return s
     s=re.sub(r"[^a-z0-9]+","_",name.lower()).strip("_")
     return s[:100] or "unclassified"
+EXPECTED_COLUMNS = {
+    "students": {"student_id", "board", "class_level", "subject", "status"},
+    "questions": {"question_id", "subject", "board", "class_level", "chapter"},
+    "subject_catalog": {"subject_id", "subject_name", "subject_code", "active"},
+    "curriculum_catalog": {"curriculum_id", "board", "class_level", "subject_id", "subject_code", "academic_year", "status"},
+    "curriculum_units": {"unit_id", "curriculum_id", "unit_order", "unit_name"},
+    "canonical_concepts": {"concept_id", "concept_name", "subject_id", "active"},
+    "curriculum_chapters": {"curriculum_chapter_id", "unit_id", "chapter_order", "official_chapter_name", "canonical_concept_id", "status"},
+    "question_curriculum_map": {"question_id", "curriculum_chapter_id", "compatibility_status", "notes", "reviewed_by", "reviewed_at"},
+    "student_subject_enrollments": {"enrollment_id", "student_id", "board", "class_level", "subject_id", "subject_code", "academic_year", "status", "created_at", "updated_at"},
+}
+
+
+def validate_schema(db):
+    inspector = inspect(db)
+    missing = {}
+    for table, required in EXPECTED_COLUMNS.items():
+        actual = {c["name"] for c in inspector.get_columns(table)}
+        absent = sorted(required - actual)
+        if absent:
+            missing[table] = absent
+    if missing:
+        details = "; ".join(f"{table}: {', '.join(cols)}" for table, cols in missing.items())
+        raise RuntimeError(f"Migration 005 schema preflight failed: missing columns -> {details}")
+
+
 def load(path):
     data=json.loads(Path(path).read_text(encoding="utf-8"))
     if data.get("taxonomy_version")!=VERSION: raise ValueError("Unexpected taxonomy version")
@@ -111,7 +137,7 @@ def apply(url,taxonomy):
           UNIQUE KEY uq_student_enrollment(student_id,board,class_level,subject_id,academic_year),
           INDEX idx_active_enrollment(student_id,status,board,class_level,subject_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"""))
-        for s in data["subjects"]:
+        validate_schema(db)\n\n        for s in data["subjects"]:
             db.execute(text("""INSERT INTO subject_catalog(subject_id,subject_name,subject_code,active)
               VALUES(:id,:name,:code,1)
               ON DUPLICATE KEY UPDATE subject_name=:name,subject_code=:code,active=1"""),
