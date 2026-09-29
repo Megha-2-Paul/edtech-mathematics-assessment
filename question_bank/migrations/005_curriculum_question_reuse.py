@@ -114,7 +114,7 @@ def apply(url,taxonomy):
         for s in data["subjects"]:
             db.execute(text("""INSERT INTO subject_catalog(subject_id,subject_name,subject_code,active)
               VALUES(:id,:name,:code,1)
-              ON DUPLICATE KEY UPDATE subject_name=VALUES(subject_name),subject_code=VALUES(subject_code),active=1"""),
+              ON DUPLICATE KEY UPDATE subject_name=:name,subject_code=:code,active=1"""),
               {"id":s["subject_id"],"name":s["name"],"code":s["subject_code"]})
         concept_subject={}
         for c in data["curricula"]:
@@ -130,24 +130,24 @@ def apply(url,taxonomy):
                         concept_subject[cid]=None
         for cid,sid in concept_subject.items():
             db.execute(text("""INSERT INTO canonical_concepts(concept_id,concept_name,subject_id,active)
-              VALUES(:id,:name,:subject,1) ON DUPLICATE KEY UPDATE concept_name=VALUES(concept_name),subject_id=VALUES(subject_id),active=1"""),
+              VALUES(:id,:name,:subject,1) ON DUPLICATE KEY UPDATE concept_name=:name,subject_id=:subject,active=1"""),
               {"id":cid,"name":cid.replace("_"," ").title(),"subject":sid})
         for c in data["curricula"]:
             db.execute(text("""INSERT INTO curriculum_catalog(curriculum_id,board,class_level,subject_id,subject_code,academic_year,status)
               VALUES(:id,:board,:class,:subject,:code,:year,'VERIFIED')
-              ON DUPLICATE KEY UPDATE subject_code=VALUES(subject_code),status='VERIFIED'"""),
+              ON DUPLICATE KEY UPDATE subject_code=:code,status='VERIFIED'"""),
               {"id":c["curriculum_id"],"board":c["board"],"class":c["class_level"],"subject":c["subject_id"],"code":c["subject_code"],"year":c["academic_year"]})
             for ui,u in enumerate(c["units"],1):
                 uid=f"{c['curriculum_id']}__u{ui}"
                 db.execute(text("""INSERT INTO curriculum_units(unit_id,curriculum_id,unit_order,unit_name)
                   VALUES(:id,:curr,:order,:name)
-                  ON DUPLICATE KEY UPDATE unit_name=VALUES(unit_name),unit_order=VALUES(unit_order)"""),
+                  ON DUPLICATE KEY UPDATE unit_name=:name,unit_order=:order"""),
                   {"id":uid,"curr":c["curriculum_id"],"order":ui,"name":u["unit_name"]})
                 for ci,ch in enumerate(u["chapters"],1):
                     ccid=slug(ch["official_chapter_name"]); chid=f"{uid}__c{ci}"
                     db.execute(text("""INSERT INTO curriculum_chapters(curriculum_chapter_id,unit_id,chapter_order,official_chapter_name,canonical_concept_id,status)
                       VALUES(:id,:unit,:order,:name,:concept,'VERIFIED')
-                      ON DUPLICATE KEY UPDATE official_chapter_name=VALUES(official_chapter_name),canonical_concept_id=VALUES(canonical_concept),status='VERIFIED'"""),
+                      ON DUPLICATE KEY UPDATE official_chapter_name=:name,canonical_concept_id=:concept,status='VERIFIED'"""),
                       {"id":chid,"unit":uid,"order":ci,"name":ch["official_chapter_name"],"concept":ccid})
         # Backfill existing subject registrations into the new enrollment model.
         db.execute(text("""INSERT IGNORE INTO student_subject_enrollments(student_id,board,class_level,subject_id,subject_code,academic_year,status)
