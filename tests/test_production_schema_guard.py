@@ -43,4 +43,4 @@ def test_render_never_seeds_demo_data_or_enables_retake_mode(monkeypatch):
 
     original = mock_data.storage.get_student_test_attempt
     mock_data.load_mock_data()
-    assert mock_data.storage.get_student_test_attempt is original
+    assert mock_data.storage.get_student_test_attempt == original
