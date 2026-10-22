@@ -182,6 +182,18 @@ def _attempt_metrics(questions, responses, official_total_marks=None):
         qid for qid, response in response_map.items()
         if response.marks_awarded is None
     )
+    invalid_status_ids = sorted(
+        qid for qid, response in response_map.items()
+        if str(response.answer_status).lower() not in {"answered", "partial", "unanswered"}
+    )
+    invalid_mark_ids = sorted(
+        qid for qid, response in response_map.items()
+        if response.marks_awarded is not None
+        and (
+            _num(response.marks_awarded) < 0
+            or _num(response.marks_awarded) > _num(question_map[qid].marks) + 0.01
+        )
+    )
     reconciliation_ok = abs(question_marks - total_marks) < 0.01
     return {
         "question_marks": round(question_marks, 2),
@@ -206,6 +218,9 @@ def _attempt_metrics(questions, responses, official_total_marks=None):
         "evaluated_responses": evaluated,
         "missing_response_ids": missing_response_ids,
         "unevaluated_question_ids": unevaluated_ids,
+        "invalid_status_question_ids": invalid_status_ids,
+        "invalid_mark_question_ids": invalid_mark_ids,
+        "marks_within_bounds": not invalid_mark_ids,
         "marks_reconciliation_ok": reconciliation_ok,
         "evaluation_complete": (
             len(questions) > 0 and evaluated == len(questions)
@@ -214,6 +229,7 @@ def _attempt_metrics(questions, responses, official_total_marks=None):
         "report_ready": (
             len(questions) > 0 and evaluated == len(questions)
             and not missing_response_ids and not unevaluated_ids
+            and not invalid_status_ids and not invalid_mark_ids
             and reconciliation_ok and total_marks > 0
         ),
     }
