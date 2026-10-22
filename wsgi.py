@@ -11,14 +11,14 @@ from datetime import datetime
 from pathlib import Path
 import uuid
 
-from flask import Response, jsonify, request, send_from_directory
+from flask import Response, jsonify, request, send_from_directory, url_for
 from PIL import Image
 from werkzeug.utils import secure_filename
 
 from exam_platform.app import app, ensure_attempt_access
 from exam_platform.db_source import storage
 from exam_platform.media import delete_image as delete_stored_image
-from exam_platform.media import media_url, store_image
+from exam_platform.media import store_image
 from exam_platform.models import AnswerImage
 
 
@@ -73,23 +73,20 @@ def _cloud_answer_filename(filename):
 
 
 def hosted_uploaded_file(filename):
-    """Serve local assets or redirect hosted answer images."""
+    """Serve public question assets, never raw student answer-image URLs."""
+    requested_stem = Path(filename).stem
+    for image in storage.images.values():
+        stored_path = str(image.file_path or "")
+        stored_name = Path(stored_path).name
+        if filename == stored_name or requested_stem == stored_name:
+            return Response(
+                "Answer images must be accessed through an authenticated assessment route.",
+                status=403,
+            )
+
     local_path = Path(app.config["UPLOAD_FOLDER"]) / filename
     if local_path.exists():
         return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
-
-    if os.getenv("CLOUDINARY_URL"):
-        from cloudinary import CloudinaryImage
-
-        return Response(
-            "",
-            status=302,
-            headers={
-                "Location": CloudinaryImage(
-                    _cloud_answer_filename(filename)
-                ).build(secure=True)
-            },
-        )
 
     return "File not found", 404
 
@@ -169,13 +166,16 @@ def hosted_get_question_images(attempt_id, question_id):
 
     result = []
     for image in storage.get_attempt_images(attempt_id, question_id):
-        hosted_url = media_url(image.file_path)
         result.append(
             {
                 "image_id": image.image_id,
                 "page_number": image.page_number,
                 "filename": image.original_filename,
-                "url": hosted_url or f"/uploads/{Path(image.file_path).name}",
+                "url": url_for(
+                    "student_answer_image",
+                    attempt_id=attempt_id,
+                    image_id=image.image_id,
+                ),
             }
         )
     return jsonify(result)
