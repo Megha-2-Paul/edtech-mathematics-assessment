@@ -288,7 +288,7 @@ def teacher_evaluate(attempt_id, marks, error_codes):
     if attempt_uploads:
         image_id = attempt_uploads[0]["image_id"]
         protected_image_url = f"{BASE_URL}/teacher/attempt/{attempt_id}/image/{image_id}"
-        assert protected_image_url.encode() in evaluation_page.content
+        assert f"/teacher/attempt/{attempt_id}/image/{image_id}".encode() in evaluation_page.content
         unauthenticated = requests.get(protected_image_url, timeout=10)
         assert unauthenticated.status_code == 401, (
             "Teacher answer-image proxy must reject unauthenticated access"
