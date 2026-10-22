@@ -83,6 +83,8 @@ STUDENT_PROTECTED_PREFIXES = (
     "/api/test/",
     "/api/attempt/",
     "/submission/",
+    "/report/",
+    "/result/",
     "/student/report/",
     "/student/result/",
 )
