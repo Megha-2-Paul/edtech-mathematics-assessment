@@ -60,3 +60,36 @@ def test_board_specific_mathematics_codes():
     assert by[("CBSE", 10, "mathematics")]["subject_code"] == "041"
     assert by[("ICSE", 10, "mathematics")]["subject_code"] == "51"
     assert by[("ISC", 11, "mathematics")]["subject_code"] == "860"
+
+
+def test_migration_audit_expected_counts():
+    import importlib.util
+    migration_path = ROOT / "question_bank" / "migrations" / "005_curriculum_question_reuse_audit.py"
+    spec = importlib.util.spec_from_file_location("curriculum_migration_audit", migration_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    data = load_taxonomy()
+    curricula, chapters = module.expected_curriculum_counts(data)
+    assert curricula == len(data["curricula"])
+    assert chapters == sum(
+        len(unit["chapters"])
+        for curriculum in data["curricula"]
+        for unit in curriculum["units"]
+    )
+
+
+def test_migration_upserts_use_real_target_columns():
+    migration_path = ROOT / "question_bank" / "migrations" / "005_curriculum_question_reuse.py"
+    source = migration_path.read_text(encoding="utf-8")
+
+    # Avoid VALUES(<column>) aliases entirely: they are easy to mistype and have
+    # already caused production failures against the real Aiven schema.
+    assert "VALUES(subject)" not in source
+    assert "VALUES(canonical_concept)" not in source
+    assert "VALUES(canonical_concept_id)" not in source
+
+    assert "subject_name=:name,subject_code=:code,active=1" in source
+    assert "concept_name=:name,subject_id=:subject,active=1" in source
+    assert "subject_code=:code,status='VERIFIED'" in source
+    assert "unit_name=:name,unit_order=:order" in source
+    assert "official_chapter_name=:name,canonical_concept_id=:concept,status='VERIFIED'" in source

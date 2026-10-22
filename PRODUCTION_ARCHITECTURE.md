@@ -1,224 +1,110 @@
-# Production Architecture and Registration Plan
+# Improvia Production Architecture and Release Boundaries
 
-## Verified production topology
+## Purpose and release status
 
-As of the current deployment audit, the Render service uses:
+This document describes the intended architecture after the V1 hardening changes in PR #31. It is **not proof that the live Render/Aiven environment has been migrated or verified**. The live deployment commit, environment variables, schema, Cloudinary behavior, and auto-deploy setting must be checked in the provider dashboards before release.
 
-- `DATABASE_URL` — configured and points to Aiven MySQL.
-- `CLOUDINARY_URL` — configured for hosted object/image storage.
-- `SECRET_KEY` — configured.
-- `TEACHER_ACCESS_USERNAME` / `TEACHER_ACCESS_PASSWORD` — configured.
-- `TESTING_MODE` — configured.
-- `QUESTION_BANK_SYNC_DATABASE_URL` — not configured in the inspected Render environment.
-
-Therefore Aiven is currently the **primary production database**, not a secondary student database.
+## Intended production topology
 
 ```text
-                         PRODUCTION
-
-Student Browser
-      ↓
-Render / Flask Application
-      ↓
-DATABASE_URL
-      ↓
-Aiven MySQL
-      ├── Students
-      ├── Tests
-      ├── Questions
-      ├── Attempts
-      ├── Responses
-      ├── Evaluations
-      └── Longitudinal history
+Student browser
+   |
+   v
+Render / Flask application
+   |-- student login, assessment, submission, results, report
+   |-- authenticated teacher/operator endpoints
+   |-- private answer-image proxy
+   |
+   +--> DATABASE_URL --> Aiven MySQL
+   |       students and enrollments
+   |       tests, questions, attempts, responses
+   |       evaluation errors and performance history
+   |       student credentials and one-time activation tokens
+   |
+   +--> CLOUDINARY_URL --> private hosted answer-image storage
 ```
 
-## Development vs production
+Aiven is the intended production source of truth for student and assessment records. The optional `QUESTION_BANK_SYNC_DATABASE_URL` mechanism is only for question-bank synchronization; it is not student-data replication.
 
-Local development and production are separate environments:
+## Student registration and access lifecycle
+
+1. A registration is received and reviewed through the current registration workflow.
+2. The registration pipeline validates the approved student's board, class, subject, and academic-year curriculum.
+3. The pipeline creates or reuses a permanent Student ID and persists the active enrollment idempotently.
+4. An authenticated teacher/operator issues a time-limited activation link for that enrolled student.
+5. The student activates the account with a password of at least 12 characters. The activation token is single-use and only its hash is stored.
+6. The student logs in to access their own assessments, submissions, results, reports, and answer images.
+7. Failed login attempts are temporarily locked after repeated failures. Logout clears the session.
+8. Anonymous/guest access must not create a permanent student identity or expose assessment records.
+
+The access-link endpoint returns a sensitive activation URL. Deliver it privately to the intended student; do not post it in public channels, tickets, or logs. Do not ask students to send passwords over WhatsApp.
+
+## Assessment and evaluation lifecycle
 
 ```text
-LOCAL
-Developer machine
-  ↓
-Local MySQL
-  ↓
-Development / testing
-
-PRODUCTION
-Render
-  ↓
-Aiven MySQL
-  ↓
-Real student/application data
+Enrolled student
+   -> authenticated assessment access
+   -> save answers / upload required handwritten work
+   -> submit attempt (submission becomes immutable)
+   -> teacher reviews every response
+   -> marks + structured error codes + comments
+   -> readiness/completeness validation
+   -> result and two-page PDF report
+   -> next assessment updates longitudinal error history
 ```
 
-There is no requirement for continuous local ↔ Aiven synchronization.
+The report must not be presented as final while evaluation is incomplete or inconsistent with the test's official maximum marks. The report should explain score, attempt rate, accuracy, chapter evidence, error patterns, strengths/weaknesses, and changes from an earlier assessment in student-friendly language.
 
-A developer can test changes against local MySQL and deploy the application to Render when the changes are ready.
-
-## Question-bank sync clarification
-
-The repository contains `exam_platform/question_sync.py`, which supports an optional primary-to-secondary question-bank sync through:
-
-```text
-QUESTION_BANK_SYNC_DATABASE_URL
-```
-
-This mechanism is specifically for question-bank data. It should not be treated as a general database replication mechanism.
-
-Because the inspected Render environment does not currently define that variable, the optional secondary question-bank sync is not part of the current production topology.
-
-## Student registration: current prototype vs launch flow
-
-### Current prototype behavior
-
-The current Flask prototype can create a session-based Student_ID and a `Guest Student` record when an exam flow is exercised without an existing student record.
-
-That is useful for prototype testing but should not be the permanent registration mechanism for the controlled launch.
-
-### Controlled-launch target
-
-The registration process should be:
-
-```text
-Google Form
-      ↓
-Google Sheets
-      ↓
-Registration validation / confirmation
-      ↓
-Create or reuse permanent Student_ID
-      ↓
-Aiven MySQL
-      ↓
-Grant assessment access
-      ↓
-Student uses Flask assessment site
-```
-
-Google Sheets is appropriate for the current registration and customer-validation stage because it allows the founder to review submissions before creating production student records.
-
-The raw Form Responses sheet should remain intact.
-
-## What belongs in Google Sheets
-
-The current registration form collects both operational registration fields and validation/customer-research answers.
-
-Operational fields include:
-
-- Student name
-- Email
-- WhatsApp/phone
-- Class
-- Board
-- Mathematics / Applied Mathematics
-- Registration context
-
-Validation/research fields can include:
-
-- Preparation level
-- Frequency of losing marks
-- Whether the student understands why marks were lost
-- Common mistake types
-- Recent score range
-- Improvement priorities
-- Study/practice behaviour
-- Report usefulness expectations
-- Future assessment intent
-- Acquisition source
-- Communication consent
-
-The research answers do not need to be copied into the core `students` table merely because they were collected during registration.
-
-## What belongs in Aiven
-
-Once a student is confirmed for the assessment, the production database should contain the information needed to operate the platform:
-
-- Permanent `Student_ID`
-- Name
-- Email
-- Phone
-- Class
-- Board
-- School where applicable
-- Registration date
-- Registration source
-- Status
-- Assessment/test history
-- Attempts
-- Responses
-- Evaluations
-- Performance profile/history
-
-The existing student table already has fields for the core registration information. No schema change is currently required for this plan.
-
-## Student identity rule
-
-The important rule is:
-
-> Do not create a new Student_ID every time the same registered student starts an assessment.
-
-The enrollment logic should first attempt to identify an existing student using the registration identity available to the platform. If the student already exists, reuse the permanent Student_ID. If not, create one.
-
-The existing storage layer currently creates/updates by Student_ID and does not itself perform an email/phone identity lookup before creating a student. That lookup should therefore be handled deliberately when the registration/enrollment flow is implemented.
-
-## Failure handling
-
-When registration is eventually automated, treat production enrollment as a small workflow rather than a blind database insert:
-
-```text
-Validate registration
-      ↓
-Create/reuse Student_ID in Aiven
-      ↓
-Confirm database write
-      ↓
-Mark registration as enrolled
-      ↓
-Send assessment access / confirmation
-```
-
-If a downstream step fails after the database write, the process should be retryable and idempotent. It should not create duplicate Student_IDs.
-
-## Source-of-truth policy
-
-For the controlled launch:
+## Data ownership and storage
 
 | Data | Source of truth |
 |---|---|
-| Raw registration / validation responses | Google Sheets |
-| Production student/account record | Aiven MySQL |
-| Production assessment data | Aiven MySQL |
-| Local development data | Local MySQL |
-| Question-bank secondary copy, if enabled later | Optional secondary DB only |
+| Raw registration and customer-validation responses | Current registration workflow / Google Sheets, where used |
+| Production student identity and enrollment | Aiven MySQL |
+| Tests, questions, attempts, responses, marks, errors, history | Aiven MySQL |
+| Uploaded handwritten answer images | Private hosted storage; access through authenticated application routes |
+| Local development and CI test data | Isolated local/CI databases only |
 
-Aiven should remain the production source of truth for the platform.
+Do not create a second continuously synchronized student database. Do not use production data as a test fixture.
 
-Google Sheets should not become a second continuously synchronized production database.
+## Deployment and schema safety
 
-## What should NOT be changed yet
+- Hosted startup must fail clearly when required production configuration or schema is missing. It must not silently fall back to local database defaults.
+- Production startup validates schema read-only; schema creation and data backfills belong in explicit reviewed migrations.
+- Migration 005 (curriculum/enrollment mapping) must be audited against the actual Aiven database before applying it.
+- Migration 006 (student credentials and activation tokens) must be audited and then applied only after an approved, restorable backup.
+- CI migration success proves behavior only against the disposable CI database; it does not prove production schema compatibility.
+- Confirm the current Render deployment SHA, current environment variables, persistent storage configuration, Cloudinary credentials/access behavior, and whether auto-deploy is enabled.
+- Do not merge a release candidate if merging may deploy it before the production migration and release checks are ready.
+- Any production migration or live deployment requires the owner's explicit approval after the audit and rollback plan are presented.
 
-Do not introduce:
+## Backup and rollback
 
-- Local ↔ Aiven two-way replication
-- A second student database
-- A new student-table schema solely for Google Forms
-- AI grading
-- Complex authentication architecture solely for registration
-- Automatic Google Sheets → database sync before the registration workflow is validated
+Before any production schema/data change:
 
-The next implementation should be the smallest reliable bridge from a reviewed registration row to an existing `students` record in Aiven.
+1. Record the currently deployed commit and the current schema state.
+2. Create an Aiven backup/snapshot and verify the provider-supported restore procedure.
+3. Run the read-only migration audits and save sanitized output.
+4. Review every expected schema/data change, including enrollment backfill counts and unmatched question mappings.
+5. Obtain explicit approval before applying a migration.
+6. Verify tables, required columns, representative read/write paths, and application health after the change.
+7. Keep the previous application version available for rollback. Do not automatically drop new access tables during rollback because they may contain real account data.
 
-## Recommended implementation sequence
+Stop the release if schema assumptions, row counts, image delivery, or report generation differ from expectations. Never improvise destructive SQL against live student records.
 
-1. Continue collecting registrations in Google Sheets.
-2. Review/confirm the first cohort manually.
-3. Define the exact identity matching rule for returning students.
-4. Implement a small registration/enrollment service that creates or reuses `Student_ID`.
-5. Write the confirmed student to Aiven.
-6. Replace the prototype Guest Student path for real assessments.
-7. Give only enrolled students access to the assessment.
-8. Test the complete flow with a small cohort.
-9. Only then automate the Sheet → Aiven step through n8n or another controlled integration.
+## Current verification checklist
 
-This keeps the current database schema and application architecture stable while moving from prototype registration to real student enrollment.
+The repository's isolated CI workflow covers the end-to-end exam workflow and regression suite. The following are separate production gates and remain unverified until checked against the actual provider environment:
+
+- [ ] Confirm deployed commit and Render auto-deploy behavior.
+- [ ] Confirm required production environment variables without exposing their values.
+- [ ] Run migration 005 read-only audit against Aiven.
+- [ ] Run migration 006 read-only audit against Aiven.
+- [ ] Verify backup and restore procedure.
+- [ ] Review audit output and approve any migration.
+- [ ] Apply approved migrations and verify schema.
+- [ ] Deploy only after the migration and release gates pass.
+- [ ] Verify registration/access, test submission, private image access, teacher evaluation, report/PDF, and second-assessment history on the deployed site.
+- [ ] Record deployed SHA and sanitized acceptance evidence.
+
+Mark any check that cannot be run against the real environment as **unverified**, not passed.

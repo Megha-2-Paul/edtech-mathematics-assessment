@@ -4,8 +4,8 @@ from .db_source import storage
 
 
 def _enable_testing_retake_mode() -> None:
-    """Allow repeated test runs during local testing without changing production behavior."""
-    if os.getenv("TESTING_MODE", "0") != "1":
+    """Allow repeated test runs only in explicitly enabled non-production environments."""
+    if os.getenv("RENDER") or os.getenv("TESTING_MODE", "0") != "1":
         return
 
     original_get_attempt = storage.get_student_test_attempt
@@ -27,7 +27,9 @@ def _enable_testing_retake_mode() -> None:
 
 
 def load_mock_data() -> None:
-    """Load demo data only when explicitly enabled for development."""
+    """Load demo data only when explicitly enabled outside production."""
+    if os.getenv("RENDER"):
+        return
     _enable_testing_retake_mode()
 
     if os.getenv("LOAD_DEMO_DATA", "0") != "1":

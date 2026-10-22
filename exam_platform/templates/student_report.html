@@ -15,7 +15,7 @@
     <div class="result-status-icon">⏳</div>
     <span class="badge badge-blue">Report pending</span>
     <h2>Your report is being prepared</h2>
-    <p class="muted">Your submission has been received. The detailed diagnosis will appear after teacher evaluation.</p>
+    <p class="muted">Your report will be available after all responses are evaluated and the assessment data passes validation.</p>
     <a class="btn btn-secondary" href="{{ url_for('test_listing') }}">Back to Tests</a>
 </div>
 {% else %}
@@ -27,7 +27,7 @@
         <span class="report-score-percent">{{ report.diagnosis.percentage }}%</span>
     </div>
     <div class="report-summary-stat"><span>Attempt rate</span><strong>{{ report.diagnosis.attempt_rate }}%</strong><small>{{ report.diagnosis.attempted }} of {{ report.diagnosis.total_questions }} questions</small></div>
-    <div class="report-summary-stat"><span>Accuracy</span><strong>{{ report.diagnosis.accuracy or 0 }}%</strong><small>Among attempted responses</small></div>
+    <div class="report-summary-stat"><span>Attempted-work accuracy</span><strong>{% if report.diagnosis.accuracy is not none %}{{ report.diagnosis.accuracy }}%{% else %}N/A{% endif %}</strong><small>Marks earned / marks available on attempted work</small></div>
     <div class="report-summary-stat"><span>Marks lost</span><strong>{{ report.diagnosis.marks_lost }}</strong><small>Potential marks to recover</small></div>
 </div>
 
@@ -50,13 +50,12 @@
 
 <div class="card report-error-card">
     <div class="section-heading">
-        <div><span class="badge badge-coral">Error diagnosis</span><h2>Why marks were lost</h2><p class="muted">Teacher-coded patterns from your evaluated responses.</p></div>
-        <strong class="report-lost-mark-label">{{ report.diagnosis.marks_lost }} marks lost</strong>
+        <div><span class="badge badge-coral">Error diagnosis</span><h2>Recorded error patterns</h2><p class="muted">Teacher-coded patterns from evaluated answers. Frequency does not prove marks lost per error.</p></div>
     </div>
     {% if report.diagnosis.error_counts %}
     <div class="report-error-grid">
         {% for e in report.diagnosis.error_counts %}
-        <div class="report-error-item {% if loop.first %}report-error-primary{% endif %}"><span class="report-error-code">{{ e.code }}</span><div><strong>{{ e.label }}</strong><small>{% if e.count == 1 %}1 occurrence{% else %}{{ e.count }} occurrences{% endif %}</small></div></div>
+        <div class="report-error-item {% if loop.first %}report-error-primary{% endif %}"><span class="report-error-code">{{ e.code }}</span><div><strong>{{ e.label }}</strong><small>{% if e.count == 1 %}1 question tagged{% else %}{{ e.count }} questions tagged{% endif %}</small></div></div>
         {% endfor %}
     </div>
     {% else %}<div class="notice notice-success">No teacher-coded errors were recorded.</div>{% endif %}
@@ -78,8 +77,9 @@
 <div class="card">
     <div class="section-heading"><div><span class="badge badge-blue">Progress</span><h2>Your improvement over time</h2></div></div>
     {% if report.diagnosis.previous_attempt_count %}
+    <p class="muted">{{ report.diagnosis.comparison_note }}</p>
     <div class="progress-compare report-progress-compare">
-        <div><span>Previous test</span><strong>{{ report.diagnosis.previous_score }}</strong></div><div class="progress-arrow">→</div><div><span>This test</span><strong>{{ report.diagnosis.score }}</strong></div><div><span>Change</span><strong>{% if report.diagnosis.score_change >= 0 %}+{% endif %}{{ report.diagnosis.score_change }} marks</strong></div>
+        <div><span>Previous test</span><strong>{{ report.diagnosis.previous_score }}</strong></div><div class="progress-arrow">→</div><div><span>This test</span><strong>{{ report.diagnosis.score }}</strong></div><div><span>Change</span><strong>{% if report.diagnosis.marks_change is not none and report.diagnosis.marks_change >= 0 %}+{% endif %}{{ report.diagnosis.marks_change if report.diagnosis.marks_change is not none else 'N/A' }} marks</strong></div>
     </div>
     {% if report.diagnosis.recurring_errors %}<div class="notice notice-warning"><strong>Recurring patterns:</strong> {% for e in report.diagnosis.recurring_errors %}{{ e.label }}{% if not loop.last %}, {% endif %}{% endfor %}. Focus on these before the next assessment.</div>{% endif %}
     {% else %}
@@ -95,6 +95,6 @@
     {% endif %}
 </div>
 
-<div class="report-footer-actions"><a class="btn btn-secondary" href="{{ url_for('evaluation.student_result', attempt_id=report.attempt_id) }}">← Back to Result</a><a class="btn btn-primary" href="{{ url_for('test_listing') }}">Back to Tests</a></div>
+<div class="report-footer-actions"><a class="btn btn-secondary" href="{{ url_for('evaluation.student_result', attempt_id=report.attempt_id) }}">← Back to Result</a><a class="btn btn-secondary" href="{{ url_for('evaluation.student_report_pdf', attempt_id=report.attempt_id) }}">Download 2-page PDF</a><a class="btn btn-primary" href="{{ url_for('test_listing') }}">Back to Tests</a></div>
 {% endif %}
 {% endblock %}

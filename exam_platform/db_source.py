@@ -6,6 +6,7 @@ exam and teacher flows while delegating existing write operations to that servic
 """
 
 import json
+import uuid
 from datetime import datetime
 
 from sqlalchemy import text
@@ -370,6 +371,55 @@ class DatabaseFirstStorage:
                 {"id": aid},
             ).mappings().first()
             return _attempt(row) if row else None
+
+    def finalize_attempt(self, attempt_id, student_id, question_ids, submitted_at):
+        """Atomically materialize unanswered responses and submit an owned attempt."""
+        with engine.begin() as db:
+            row = db.execute(
+                text(
+                    "SELECT student_id,status FROM attempts "
+                    "WHERE attempt_id=:attempt_id FOR UPDATE"
+                ),
+                {"attempt_id": attempt_id},
+            ).mappings().first()
+            if not row:
+                return "not_found"
+            if row["student_id"] != student_id:
+                return "forbidden"
+            if row["status"] != "in_progress":
+                return "already_submitted" if row["status"] == "submitted" else "not_in_progress"
+
+            for question_id in question_ids:
+                db.execute(
+                    text(
+                        "INSERT INTO responses "
+                        "(response_id,attempt_id,question_id,selected_answer,answer_status) "
+                        "SELECT :response_id,:attempt_id,:question_id,NULL,'unanswered' "
+                        "WHERE NOT EXISTS ("
+                        "SELECT 1 FROM responses "
+                        "WHERE attempt_id=:attempt_id AND question_id=:question_id)"
+                    ),
+                    {
+                        "response_id": f"RESP{uuid.uuid4().hex[:12].upper()}",
+                        "attempt_id": attempt_id,
+                        "question_id": question_id,
+                    },
+                )
+
+            updated = db.execute(
+                text(
+                    "UPDATE attempts SET submitted_at=:submitted_at,status='submitted' "
+                    "WHERE attempt_id=:attempt_id AND student_id=:student_id AND status='in_progress'"
+                ),
+                {
+                    "submitted_at": submitted_at,
+                    "attempt_id": attempt_id,
+                    "student_id": student_id,
+                },
+            )
+            if updated.rowcount != 1:
+                raise RuntimeError("Attempt state changed while submitting; retry safely.")
+        return "submitted"
 
     def get_student_test_attempt(self, sid, tid):
         with engine.connect() as db:

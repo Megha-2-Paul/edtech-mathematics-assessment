@@ -13,7 +13,7 @@ import io
 import re
 import uuid
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Iterable, Mapping
 from urllib.parse import parse_qs, urlparse
 from urllib.request import Request, urlopen
@@ -245,8 +245,59 @@ def enroll_student(student: Student) -> Student:
         student.student_id = _new_student_id()
 
     from .storage import storage
+    from sqlalchemy import text
+    from database import engine
 
+    # Resolve exactly one verified board/class/subject curriculum before writing
+    # the student. This prevents a valid-looking registration from receiving
+    # access to a curriculum the platform cannot actually serve.
+    with engine.connect() as db:
+        curricula = db.execute(
+            text(
+                "SELECT c.subject_id,c.subject_code "
+                "FROM curriculum_catalog c "
+                "JOIN subject_catalog s ON s.subject_id=c.subject_id "
+                "WHERE c.board=:board AND c.class_level=:class_level "
+                "AND s.subject_name=:subject AND s.active=1 "
+                "AND c.academic_year='2026-27' AND c.status='VERIFIED'"
+            ),
+            {
+                "board": student.board,
+                "class_level": student.class_level,
+                "subject": student.subject,
+            },
+        ).mappings().all()
+
+    if len(curricula) != 1:
+        raise ValueError(
+            "No unique verified curriculum exists for this board, class, and subject. "
+            "The registration was not enrolled; review the curriculum mapping."
+        )
+
+    curriculum = curricula[0]
     storage.register_student(student)
+
+    # Enrollment writes are idempotent. If this step fails after the student
+    # row is written, retrying the same registration reuses the same Student_ID.
+    now = datetime.now()
+    with engine.begin() as db:
+        db.execute(
+            text(
+                "INSERT INTO student_subject_enrollments "
+                "(student_id,board,class_level,subject_id,subject_code,academic_year,status) "
+                "VALUES(:student_id,:board,:class_level,:subject_id,:subject_code,'2026-27','ACTIVE') "
+                "ON DUPLICATE KEY UPDATE subject_id=:subject_id,subject_code=:subject_code,"
+                "status='ACTIVE',updated_at=:updated_at"
+            ),
+            {
+                "student_id": student.student_id,
+                "board": student.board,
+                "class_level": student.class_level,
+                "subject_id": curriculum["subject_id"],
+                "subject_code": curriculum["subject_code"],
+                "updated_at": now,
+            },
+        )
     return student
 
 
