@@ -1,6 +1,7 @@
 """Teacher evaluation workflow, diagnosis, and student result calculations."""
 
 import os
+from io import BytesIO
 from datetime import datetime
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, send_file, send_from_directory, url_for
@@ -33,6 +34,36 @@ def _attempt_or_404(attempt_id):
     if not attempt:
         abort(404)
     return attempt
+
+@evaluation_bp.route("/teacher/attempt/<attempt_id>/image/<image_id>")
+def teacher_answer_image(attempt_id, image_id):
+    """Serve an answer image only through the authenticated teacher route."""
+    attempt = _attempt_or_404(attempt_id)
+    image = next(
+        (
+            item for item in storage.images.values()
+            if item.image_id == image_id and item.attempt_id == attempt_id
+        ),
+        None,
+    )
+    if not image:
+        abort(404)
+
+    try:
+        from .media import read_stored_image
+
+        data, content_type = read_stored_image(image.file_path)
+    except FileNotFoundError:
+        abort(404, description="Stored answer image is missing")
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).exception(
+            "Failed to retrieve teacher answer image for attempt %s", attempt_id
+        )
+        abort(503, description="Stored answer image is temporarily unavailable")
+
+    return send_file(BytesIO(data), mimetype=content_type, max_age=0)
 
 
 def _evaluation_errors(response_id):
@@ -250,8 +281,9 @@ def evaluate(attempt_id):
                 "images": [
                     {
                         "url": url_for(
-                            "uploaded_file",
-                            filename=os.path.basename(image.file_path),
+                            "evaluation.teacher_answer_image",
+                            attempt_id=attempt_id,
+                            image_id=image.image_id,
                         ),
                         "page_number": image.page_number,
                         "name": image.original_filename,
