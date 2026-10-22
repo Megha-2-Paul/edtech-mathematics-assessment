@@ -8,19 +8,23 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).parent))
 
 BASE_URL = "http://127.0.0.1:5000"
+TEACHER_AUTH = ("teacher", "ci-only-teacher-password")
+REGISTRATION_SECRET = "ci-only-registration-secret"
 HTTP = requests.Session()
 
 
 def test_homepage():
-    """Test that homepage loads and establishes a browser session."""
+    """The public landing route should redirect to the student workflow."""
     response = HTTP.get(f"{BASE_URL}/", allow_redirects=False, timeout=10)
-    assert response.status_code in (200, 302), f"Homepage failed: {response.status_code}"
-    assert HTTP.cookies, "Homepage did not establish a session cookie"
-    print("[OK] Homepage loads and establishes a session")
+    assert response.status_code == 302, f"Homepage failed: {response.status_code}"
+    login_page = HTTP.get(f"{BASE_URL}/student/login", timeout=10)
+    assert login_page.status_code == 200
+    assert b"Student ID" in login_page.content
+    print("[OK] Homepage and student login page load")
 
 
 def test_teacher_access_is_protected():
-    """Teacher pages must reject unauthenticated requests in the deployment adapter."""
+    """Teacher pages must reject unauthenticated requests."""
     response = requests.get(f"{BASE_URL}/teacher/tests", timeout=10)
     assert response.status_code == 401, (
         f"Expected unauthenticated teacher access to return 401, got {response.status_code}"
@@ -28,18 +32,102 @@ def test_teacher_access_is_protected():
     print("[OK] Teacher route rejects unauthenticated access")
 
 
+def test_registration_and_student_activation():
+    """A registration receives a permanent ID and access requires a one-time activation."""
+    row = {
+        "Full name": "CI Registered Student",
+        "Email": "ci.student@example.com",
+        "Phone number": "9876501234",
+        "Class": "10",
+        "Board": "CBSE",
+        "Subject": "Mathematics",
+        "Enrollment Status": "APPROVED",
+    }
+    denied = requests.post(
+        f"{BASE_URL}/api/registrations/google-form",
+        json={"row": row},
+        headers={"X-Improvia-Webhook-Secret": "wrong-secret"},
+        timeout=10,
+    )
+    assert denied.status_code == 401, "Registration webhook must reject an invalid secret"
+
+    response = requests.post(
+        f"{BASE_URL}/api/registrations/google-form",
+        json={"row": row},
+        headers={"X-Improvia-Webhook-Secret": REGISTRATION_SECRET},
+        timeout=10,
+    )
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload.get("status") == "ENROLLED", payload
+    student_id = payload.get("student_id")
+    assert student_id and student_id.startswith("STU")
+
+    repeated = requests.post(
+        f"{BASE_URL}/api/registrations/google-form",
+        json={"row": row},
+        headers={"X-Improvia-Webhook-Secret": REGISTRATION_SECRET},
+        timeout=10,
+    )
+    assert repeated.status_code == 200, repeated.text
+    assert repeated.json().get("student_id") == student_id, (
+        "Retrying the same registration must reuse the permanent Student ID"
+    )
+
+    link_response = requests.post(
+        f"{BASE_URL}/teacher/students/{student_id}/access-link",
+        auth=TEACHER_AUTH,
+        timeout=10,
+    )
+    assert link_response.status_code == 201, link_response.text
+    activation_url = link_response.json().get("activation_url")
+    assert activation_url
+
+    activation_page = HTTP.get(activation_url, timeout=10)
+    assert activation_page.status_code == 200, activation_page.text
+    password = "CI-Only-Strong-Password-2026!"
+    activated = HTTP.post(
+        activation_url,
+        data={"password": password, "confirm_password": password},
+        allow_redirects=True,
+        timeout=10,
+    )
+    assert activated.status_code == 200, activated.text
+    assert "/tests" in activated.url
+
+    reused = HTTP.post(
+        activation_url,
+        data={"password": password, "confirm_password": password},
+        timeout=10,
+    )
+    assert reused.status_code == 400, "Activation token must be single-use"
+
+    # Log out and prove that credentials authenticate the registered student.
+    HTTP.post(f"{BASE_URL}/student/logout", timeout=10)
+    login = HTTP.post(
+        f"{BASE_URL}/student/login",
+        data={"student_id": student_id, "password": password},
+        allow_redirects=True,
+        timeout=10,
+    )
+    assert login.status_code == 200, login.text
+    assert "/tests" in login.url
+    print("[OK] Registration, permanent ID, one-time activation and student login work")
+    return student_id, password
+
+
 def test_test_listing():
     """Test the student assessment listing."""
     response = HTTP.get(f"{BASE_URL}/tests", timeout=10)
     assert response.status_code == 200
-    assert b"Available Tests" in response.content or b"Mock Mathematics" in response.content or b"Interface Demo" in response.content
+    assert b"Available Tests" in response.content or b"Interface Demo" in response.content
     print("[OK] Test listing page works")
 
 
 def test_instructions():
     """Test the test instructions page."""
     response = HTTP.get(f"{BASE_URL}/test/TEST001/instructions", timeout=10)
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
     assert b"Instructions" in response.content
     print("[OK] Test instructions page works")
 
@@ -69,7 +157,6 @@ def test_get_questions(attempt_id):
 
 
 def test_save_mcq_response(attempt_id):
-    """Test saving an MCQ response."""
     response = HTTP.post(
         f"{BASE_URL}/api/attempt/{attempt_id}/response",
         json={"question_id": "Q001", "selected_answer": "B"},
@@ -80,7 +167,6 @@ def test_save_mcq_response(attempt_id):
 
 
 def test_save_subjective_response(attempt_id):
-    """Test saving a subjective final-answer selection."""
     response = HTTP.post(
         f"{BASE_URL}/api/attempt/{attempt_id}/response",
         json={"question_id": "Q005", "selected_answer": "A"},
@@ -91,7 +177,7 @@ def test_save_subjective_response(attempt_id):
 
 
 def test_upload_required_images(attempt_id, questions):
-    """Upload valid image bytes for every question that requires handwritten work."""
+    """Upload valid image bytes for every question requiring handwritten work."""
     required = [
         question for question in questions
         if question.get("handwritten_upload_mode") == "required"
@@ -117,32 +203,23 @@ def test_upload_required_images(attempt_id, questions):
 
 
 def test_submission_preview(attempt_id):
-    """Test submission preview and required-upload completeness."""
-    response = HTTP.get(
-        f"{BASE_URL}/api/attempt/{attempt_id}/submit-preview", timeout=10
-    )
+    response = HTTP.get(f"{BASE_URL}/api/attempt/{attempt_id}/submit-preview", timeout=10)
     assert response.status_code == 200, response.text
     payload = response.json()
     assert "total_questions" in payload
     assert "answered" in payload
     assert payload.get("required_uploads_complete") is True
-    print(
-        f"[OK] Submission preview works "
-        f"(Answered: {payload['answered']}/{payload['total_questions']})"
-    )
+    print(f"[OK] Submission preview works (Answered: {payload['answered']}/{payload['total_questions']})")
 
 
 def test_submit_attempt(attempt_id):
-    """Test final submission."""
     response = HTTP.post(f"{BASE_URL}/api/attempt/{attempt_id}/submit", timeout=10)
     assert response.status_code == 200, response.text
-    payload = response.json()
-    assert payload["status"] == "submitted"
+    assert response.json()["status"] == "submitted"
     print("[OK] Test submitted successfully")
 
 
 def test_confirmation_page(attempt_id):
-    """Test the confirmation page."""
     response = HTTP.get(f"{BASE_URL}/submission/{attempt_id}", timeout=10)
     assert response.status_code == 200, response.text
     assert b"submitted" in response.content.lower()
@@ -150,31 +227,63 @@ def test_confirmation_page(attempt_id):
 
 
 def test_duplicate_submission_is_rejected(attempt_id):
-    """A submitted attempt must not be submitted or edited again."""
     response = HTTP.post(f"{BASE_URL}/api/attempt/{attempt_id}/submit", timeout=10)
     assert response.status_code == 409, (
         f"Expected duplicate submission to return 409, got {response.status_code}: {response.text}"
     )
-
     response = HTTP.post(
         f"{BASE_URL}/api/attempt/{attempt_id}/response",
         json={"question_id": "Q001", "selected_answer": "A"},
         timeout=10,
     )
     assert response.status_code == 409, (
-        f"Expected post-submission response edit to return 409, got {response.status_code}: {response.text}"
+        f"Expected post-submission edit to return 409, got {response.status_code}: {response.text}"
     )
     print("[OK] Duplicate submission and post-submission edits are rejected")
 
 
-def test_cross_student_access_is_rejected(attempt_id):
-    """A separate browser session must not be able to access another student's attempt."""
-    other_student = requests.Session()
-    homepage = other_student.get(f"{BASE_URL}/", timeout=10)
-    assert homepage.status_code in (200, 302)
+def test_cross_student_access_is_rejected():
+    """A different authenticated student must not access another student's attempt."""
+    other_row = {
+        "Full name": "CI Second Student",
+        "Email": "ci.student2@example.com",
+        "Phone number": "9876501235",
+        "Class": "10",
+        "Board": "CBSE",
+        "Subject": "Mathematics",
+        "Enrollment Status": "APPROVED",
+    }
+    registration = requests.post(
+        f"{BASE_URL}/api/registrations/google-form",
+        json={"row": other_row},
+        headers={"X-Improvia-Webhook-Secret": REGISTRATION_SECRET},
+        timeout=10,
+    )
+    assert registration.status_code == 200, registration.text
+    second_id = registration.json().get("student_id")
+    assert second_id
 
-    response = other_student.get(
-        f"{BASE_URL}/api/attempt/{attempt_id}/questions", timeout=10
+    link = requests.post(
+        f"{BASE_URL}/teacher/students/{second_id}/access-link",
+        auth=TEACHER_AUTH,
+        timeout=10,
+    )
+    assert link.status_code == 201, link.text
+
+    second_session = requests.Session()
+    activation_url = link.json()["activation_url"]
+    assert second_session.get(activation_url, timeout=10).status_code == 200
+    password = "CI-Only-Second-Strong-Password-2026!"
+    assert second_session.post(
+        activation_url,
+        data={"password": password, "confirm_password": password},
+        allow_redirects=True,
+        timeout=10,
+    ).status_code == 200
+
+    # The first student's attempt ID is provided by the caller through module state.
+    response = second_session.get(
+        f"{BASE_URL}/api/attempt/{CURRENT_ATTEMPT_ID}/questions", timeout=10
     )
     assert response.status_code == 403, (
         f"Expected cross-student access to return 403, got {response.status_code}"
@@ -182,26 +291,28 @@ def test_cross_student_access_is_rejected(attempt_id):
     print("[OK] Cross-student attempt access is rejected")
 
 
+CURRENT_ATTEMPT_ID = None
+
+
 def run_all_tests():
-    """Run the complete HTTP smoke workflow against an isolated CI database."""
+    global CURRENT_ATTEMPT_ID
     print("\n=== IMPROVIA END-TO-END SMOKE SUITE ===\n")
     try:
         test_homepage()
         test_teacher_access_is_protected()
+        test_registration_and_student_activation()
         test_test_listing()
         test_instructions()
-
-        attempt_id = test_start_test()
-        questions = test_get_questions(attempt_id)
-        test_save_mcq_response(attempt_id)
-        test_save_subjective_response(attempt_id)
-        test_upload_required_images(attempt_id, questions)
-        test_submission_preview(attempt_id)
-        test_submit_attempt(attempt_id)
-        test_confirmation_page(attempt_id)
-        test_duplicate_submission_is_rejected(attempt_id)
-        test_cross_student_access_is_rejected(attempt_id)
-
+        CURRENT_ATTEMPT_ID = test_start_test()
+        questions = test_get_questions(CURRENT_ATTEMPT_ID)
+        test_save_mcq_response(CURRENT_ATTEMPT_ID)
+        test_save_subjective_response(CURRENT_ATTEMPT_ID)
+        test_upload_required_images(CURRENT_ATTEMPT_ID, questions)
+        test_submission_preview(CURRENT_ATTEMPT_ID)
+        test_submit_attempt(CURRENT_ATTEMPT_ID)
+        test_confirmation_page(CURRENT_ATTEMPT_ID)
+        test_duplicate_submission_is_rejected(CURRENT_ATTEMPT_ID)
+        test_cross_student_access_is_rejected()
         print("\n=== ALL END-TO-END SMOKE TESTS PASSED ===\n")
         return True
     except Exception as exc:
