@@ -1,6 +1,12 @@
 from types import SimpleNamespace
 
-from exam_platform.diagnosis import _attempt_metrics
+from collections import Counter
+
+from exam_platform.diagnosis import (
+    _attempt_metrics,
+    _build_recurring_errors,
+    _unique_error_rows,
+)
 
 
 def question(qid, marks):
@@ -80,3 +86,31 @@ def test_official_total_must_reconcile_with_question_marks():
 
     assert result["marks_reconciliation_ok"] is False
     assert result["report_ready"] is False
+
+
+
+def test_duplicate_error_tags_do_not_inflate_question_code_frequency():
+    rows = [
+        {"question_id": "Q1", "error_code": "C01", "comment": "Arithmetic"},
+        {"question_id": "Q1", "error_code": "C01", "comment": "Duplicate tag"},
+        {"question_id": "Q1", "error_code": "C04", "comment": "Sign"},
+        {"question_id": "Q2", "error_code": "C01", "comment": "Arithmetic"},
+    ]
+
+    unique = _unique_error_rows(rows)
+
+    assert len(unique) == 3
+    assert Counter(row["error_code"] for row in unique) == {"C01": 2, "C04": 1}
+
+
+def test_recurring_error_requires_a_distinct_prior_assessment():
+    current = Counter({"C01": 3, "C02": 2})
+    previous = {
+        "C01": {"question_count": 4, "assessment_count": 0},
+        "C02": {"question_count": 2, "assessment_count": 1},
+    }
+
+    recurring = _build_recurring_errors(current, previous)
+
+    assert [item["code"] for item in recurring] == ["C02"]
+    assert recurring[0]["prior_assessments"] == 1
