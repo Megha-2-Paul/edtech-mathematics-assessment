@@ -9,12 +9,14 @@ from pathlib import Path
 
 from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 from PIL import Image
+from sqlalchemy import text
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from exam_platform.admin import register_admin
+from database import engine
 from exam_platform.db_source import storage
 from exam_platform.mock_data import load_mock_data
 from exam_platform.eligibility import is_test_eligible
