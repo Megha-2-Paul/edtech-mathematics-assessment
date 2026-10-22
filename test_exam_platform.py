@@ -150,7 +150,7 @@ def test_test_listing():
 def test_instructions(test_id="TEST001"):
     response = HTTP.get(f"{BASE_URL}/test/{test_id}/instructions", timeout=10)
     assert response.status_code == 200, response.text
-    assert b"Instructions" in response.content
+    assert b"Before you start" in response.content
     print(f"[OK] Instructions page works for {test_id}")
 
 
