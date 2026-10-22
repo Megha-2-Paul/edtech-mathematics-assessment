@@ -54,7 +54,7 @@ The pilot does **not** by itself prove demand across every class, board or subje
 - Manual subjective evaluation
 - Structured error diagnosis
 - MySQL as the persistent source of truth
-- Student result and performance-report views
+- Student result and performance-report views, including a validated two-page downloadable PDF
 - Cumulative question/performance history foundation
 - Production deployment on Render using Aiven MySQL as the primary database
 - Canonical subject/syllabus taxonomy
@@ -104,7 +104,7 @@ The production application does **not** currently require local-MySQL ↔ Aiven 
 
 The repository also contains an optional question-bank sync layer controlled by `QUESTION_BANK_SYNC_DATABASE_URL`. This is a separate primary-to-secondary question-bank mechanism; it is not the student-registration architecture.
 
-See `PRODUCT_WORKFLOW.md` for the current expanded product scope and pilot workflow, and `PRODUCTION_ARCHITECTURE.md` for the production registration architecture.
+See `PRODUCT_WORKFLOW.md` for the current expanded product scope and pilot workflow, `docs/IMPROVIA_REPORT_V1_SPEC.md` for the two-page performance report specification and acceptance checklist, and `PRODUCTION_ARCHITECTURE.md` for the production registration architecture.
 
 ## Architecture
 
