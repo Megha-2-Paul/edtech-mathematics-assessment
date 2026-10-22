@@ -1,5 +1,6 @@
 """Teacher evaluation workflow, diagnosis, and student result calculations."""
 
+import math
 import os
 from io import BytesIO
 from pathlib import Path
@@ -239,29 +240,60 @@ def evaluate(attempt_id):
     responses = {r.question_id: r for r in storage.get_attempt_responses(attempt_id)}
 
     if request.method == "POST":
+        # Validate the entire evaluation before writing anything. An omitted
+        # marks field must never silently become zero and make a partial
+        # evaluation look complete to the student report.
+        prepared = {}
+        allowed_error_codes = {code for code, _ in ERROR_CODES}
         for q in questions:
             r = responses.get(q.question_id)
             if not r:
-                continue
+                flash(
+                    f"Evaluation incomplete: response for {q.question_id} is missing. Nothing was saved.",
+                    "error",
+                )
+                return redirect(url_for("evaluation.evaluate", attempt_id=attempt_id))
 
             if q.question_type == "mcq":
                 marks = float(q.marks) if r.selected_answer == q.correct_answer else 0.0
                 codes = []
             else:
-                marks = request.form.get(f"marks_{q.question_id}", "0") or "0"
+                raw_marks = request.form.get(f"marks_{q.question_id}")
+                if raw_marks is None or not raw_marks.strip():
+                    flash(
+                        f"Evaluation incomplete: enter marks for every written-response question. Nothing was saved ({q.question_id} is missing).",
+                        "error",
+                    )
+                    return redirect(url_for("evaluation.evaluate", attempt_id=attempt_id))
+                try:
+                    marks = float(raw_marks)
+                except (TypeError, ValueError):
+                    flash(
+                        f"Invalid marks for {q.question_id}. Use a number within the allowed range. Nothing was saved.",
+                        "error",
+                    )
+                    return redirect(url_for("evaluation.evaluate", attempt_id=attempt_id))
+                if not math.isfinite(marks) or marks < 0 or marks > float(q.marks):
+                    flash(
+                        f"Invalid marks for {q.question_id}. Marks must be between 0 and {q.marks}. Nothing was saved.",
+                        "error",
+                    )
+                    return redirect(url_for("evaluation.evaluate", attempt_id=attempt_id))
                 codes = [
-                    c
-                    for c, _ in ERROR_CODES
-                    if c in request.form.getlist(f"errors_{q.question_id}")
+                    c for c in request.form.getlist(f"errors_{q.question_id}")
+                    if c in allowed_error_codes
                 ]
 
-            _save_response_evaluation(
+            prepared[q.question_id] = (
                 r,
                 q,
                 marks,
                 codes,
                 request.form.get(f"comment_{q.question_id}", "").strip(),
             )
+
+        for r, q, marks, codes, comment in prepared.values():
+            _save_response_evaluation(r, q, marks, codes, comment)
 
         attempt = _evaluate_attempt(attempt_id)
         storage.update_attempt(attempt)
