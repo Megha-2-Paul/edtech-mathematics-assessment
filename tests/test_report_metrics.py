@@ -114,3 +114,15 @@ def test_recurring_error_requires_a_distinct_prior_assessment():
 
     assert [item["code"] for item in recurring] == ["C02"]
     assert recurring[0]["prior_assessments"] == 1
+
+
+
+def test_marks_above_question_maximum_block_final_report():
+    questions = [question("Q1", 5)]
+    responses = [response("Q1", "answered", 6, True)]
+
+    result = _attempt_metrics(questions, responses, official_total_marks=5)
+
+    assert result["marks_within_bounds"] is False
+    assert result["invalid_mark_question_ids"] == ["Q1"]
+    assert result["report_ready"] is False
