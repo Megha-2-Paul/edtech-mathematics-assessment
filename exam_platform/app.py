@@ -160,6 +160,19 @@ def ensure_attempt_access(attempt_id):
             403,
         )
 
+    # Submitted attempts are immutable. Apply this guard in the shared access
+    # helper so both local routes and the deployment adapter reject late writes.
+    if attempt.status == AttemptStatus.SUBMITTED.value and request.method in {
+        "POST", "PUT", "PATCH", "DELETE"
+    }:
+        return None, (
+            jsonify({
+                "error": "This assessment has already been submitted and cannot be changed.",
+                "status": "submitted",
+            }),
+            409,
+        )
+
     if attempt_is_expired(attempt):
         attempt.status = AttemptStatus.EXPIRED.value
         attempt.submitted_at = attempt.submitted_at or datetime.now()
