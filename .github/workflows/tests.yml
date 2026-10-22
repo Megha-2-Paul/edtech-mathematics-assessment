@@ -9,6 +9,28 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: edtech_assessment
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      PYTHONPATH: .
+      DATABASE_URL: mysql+pymysql://root:root@127.0.0.1:3306/edtech_assessment?charset=utf8mb4
+      SECRET_KEY: ci-only-secret-key-not-for-production
+      TEACHER_ACCESS_USERNAME: teacher
+      TEACHER_ACCESS_PASSWORD: ci-only-teacher-password
+      TESTING_MODE: "1"
+      LOAD_DEMO_DATA: "1"
 
     steps:
       - name: Checkout repository
@@ -26,7 +48,30 @@ jobs:
           pip install -r requirements.txt
           pip install "pytest<9" requests beautifulsoup4
 
-      - name: Run tests
-        env:
-          PYTHONPATH: .
+      - name: Start application for end-to-end smoke tests
+        run: |
+          python -m flask --app wsgi:application run --host 127.0.0.1 --port 5000 > /tmp/improvia-server.log 2>&1 &
+          echo $! > /tmp/improvia-server.pid
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:5000/ > /dev/null; then
+              echo "Improvia started successfully."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Application failed to start. Server log:"
+          cat /tmp/improvia-server.log
+          exit 1
+
+      - name: Run complete exam workflow smoke tests
+        run: python test_exam_platform.py
+
+      - name: Run automated unit and regression tests
         run: pytest -q --ignore=test_exam_platform.py
+
+      - name: Show application log if a prior step failed
+        if: failure()
+        run: |
+          if [ -f /tmp/improvia-server.log ]; then
+            cat /tmp/improvia-server.log
+          fi
