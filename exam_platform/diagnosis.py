@@ -116,6 +116,29 @@ def _previous_error_history(student_id, current_attempt_id, current_test):
     }
 
 
+def _unique_error_rows(errors):
+    """Deduplicate error tags by question and code, not by marks awarded."""
+    return list({
+        (row["question_id"], row["error_code"]): row
+        for row in errors
+    }.values())
+
+
+def _build_recurring_errors(error_counts, previous_history):
+    """Only call a pattern recurring when it appears in a prior assessment."""
+    return [
+        {
+            "code": code,
+            "label": ERROR_LABELS.get(code, code),
+            "current_count": count,
+            "previous_count": previous_history.get(code, {}).get("question_count", 0),
+            "prior_assessments": previous_history.get(code, {}).get("assessment_count", 0),
+        }
+        for code, count in error_counts.most_common()
+        if previous_history.get(code, {}).get("assessment_count", 0) > 0
+    ]
+
+
 def _attempt_metrics(questions, responses, official_total_marks=None):
     """Calculate report metrics from explicit response status and evaluated marks.
 
@@ -206,10 +229,7 @@ def diagnose_attempt(attempt, test, questions, responses):
     marks_lost = max(0.0, total_marks - awarded)
 
     # Count unique question/code pairs so duplicate evaluator rows do not inflate frequency.
-    unique_errors = {
-        (row["question_id"], row["error_code"]): row for row in errors
-    }
-    errors = list(unique_errors.values())
+    errors = _unique_error_rows(errors)
     error_counts = Counter(row["error_code"] for row in errors)
     error_details = [
         {
@@ -289,13 +309,17 @@ def diagnose_attempt(attempt, test, questions, responses):
             key=lambda item: item["percentage"],
             reverse=True,
         )
-        if item["max_marks"] > 0 and item["percentage"] >= 75
+        if item["max_marks"] > 0
+        and item["percentage"] >= 75
+        and item["evidence_status"] == "sufficient"
     ][:3]
 
     weaknesses = [
         item
         for item in chapter_analysis
-        if item["max_marks"] > 0 and item["percentage"] < 60
+        if item["max_marks"] > 0
+        and item["percentage"] < 60
+        and item["evidence_status"] == "sufficient"
     ][:3]
 
     previous = _previous_attempts(
@@ -309,17 +333,9 @@ def diagnose_attempt(attempt, test, questions, responses):
         test,
     )
 
-    recurring_errors = [
-        {
-            "code": code,
-            "label": ERROR_LABELS.get(code, code),
-            "current_count": count,
-            "previous_count": previous_error_history.get(code, {}).get("question_count", 0),
-            "prior_assessments": previous_error_history.get(code, {}).get("assessment_count", 0),
-        }
-        for code, count in error_counts.most_common()
-        if previous_error_history.get(code, {}).get("assessment_count", 0) > 0
-    ]
+    recurring_errors = _build_recurring_errors(
+        error_counts, previous_error_history
+    )
 
     previous_score = previous[0]["score"] if previous else None
     marks_change = (
