@@ -117,8 +117,9 @@
 <div class="card progress-result-card">
     <div class="section-heading">
         <div><span class="badge badge-blue">Progress</span><h2>Compared with your previous test</h2></div>
-        <span class="progress-change {% if diagnosis.score_change is not none and diagnosis.score_change >= 0 %}progress-positive{% endif %}">{% if diagnosis.score_change is not none and diagnosis.score_change >= 0 %}+{% endif %}{{ diagnosis.score_change or 0 }} marks</span>
+        <span class="progress-change {% if diagnosis.marks_change is not none and diagnosis.marks_change >= 0 %}progress-positive{% endif %}">{% if diagnosis.marks_change is not none and diagnosis.marks_change >= 0 %}+{% endif %}{{ diagnosis.marks_change if diagnosis.marks_change is not none else 'N/A' }} marks</span>
     </div>
+    <p class="muted">{{ diagnosis.comparison_note }}</p>
     <div class="progress-compare">
         <div><span>Previous score</span><strong>{{ diagnosis.previous_score }}</strong></div>
         <div class="progress-arrow">→</div>
