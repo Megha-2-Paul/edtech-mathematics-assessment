@@ -212,6 +212,30 @@ def upload_required_images(attempt_id, questions):
     ]
     assert required, "Demo assessment must exercise required handwritten uploads"
 
+    missing_submission = HTTP.post(
+        f"{BASE_URL}/api/attempt/{attempt_id}/submit", timeout=10
+    )
+    assert missing_submission.status_code == 400, (
+        "Submission must be blocked while required handwritten work is missing"
+    )
+
+    question_id = required[0]["question_id"]
+    unsupported = HTTP.post(
+        f"{BASE_URL}/api/attempt/{attempt_id}/upload",
+        data={"question_id": question_id},
+        files={"file": ("answer.txt", b"not an image", "text/plain")},
+        timeout=10,
+    )
+    assert unsupported.status_code == 400, "Unsupported upload extensions must be rejected"
+
+    invalid_image = HTTP.post(
+        f"{BASE_URL}/api/attempt/{attempt_id}/upload",
+        data={"question_id": question_id},
+        files={"file": ("fake.png", b"not a valid PNG image", "image/png")},
+        timeout=10,
+    )
+    assert invalid_image.status_code == 400, "Invalid image content must be rejected"
+
     image_bytes = io.BytesIO()
     Image.new("RGB", (3, 3), (255, 255, 255)).save(image_bytes, format="PNG")
     image_content = image_bytes.getvalue()
@@ -373,6 +397,36 @@ def create_second_test():
     return "TEST002"
 
 
+def test_reissued_access_link_invalidates_old_link(student_id):
+    """Only the newest outstanding account activation/reset link may be used."""
+    first = requests.post(
+        f"{BASE_URL}/teacher/students/{student_id}/access-link",
+        auth=TEACHER_AUTH,
+        timeout=10,
+    )
+    second = requests.post(
+        f"{BASE_URL}/teacher/students/{student_id}/access-link",
+        auth=TEACHER_AUTH,
+        timeout=10,
+    )
+    assert first.status_code == 201 and second.status_code == 201
+    old_page = HTTP.get(first.json()["activation_url"], timeout=10)
+    assert old_page.status_code == 400, "Reissuing access must invalidate the older link"
+
+    new_url = second.json()["activation_url"]
+    new_page = HTTP.get(new_url, timeout=10)
+    assert new_page.status_code == 200
+    password = "CI-Only-Strong-Password-2026!"
+    reset = HTTP.post(
+        new_url,
+        data={"password": password, "confirm_password": password},
+        allow_redirects=True,
+        timeout=10,
+    )
+    assert reset.status_code == 200
+    print("[OK] Reissued access link invalidates stale links")
+
+
 def test_cross_student_access_is_rejected():
     """A second authenticated student must not read the first student's attempt or report."""
     second_id = register_student(
@@ -447,6 +501,7 @@ def run_all_tests():
             "Second assessment did not surface recurring-error history"
         )
         test_report_and_pdf(second_attempt_id, student_id)
+        test_reissued_access_link_invalidates_old_link(student_id)
         test_cross_student_access_is_rejected()
         print("\n=== ALL END-TO-END SMOKE TESTS PASSED ===\n")
         return True
