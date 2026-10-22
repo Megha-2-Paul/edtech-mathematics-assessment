@@ -27,6 +27,7 @@ def test_render_startup_only_validates_schema(monkeypatch):
 def test_render_never_seeds_demo_data_or_enables_retake_mode(monkeypatch):
     from exam_platform import mock_data
 
+    original = mock_data.storage.get_student_test_attempt
     monkeypatch.setenv("RENDER", "true")
     monkeypatch.setenv("LOAD_DEMO_DATA", "1")
     monkeypatch.setenv("TESTING_MODE", "1")
@@ -41,6 +42,5 @@ def test_render_never_seeds_demo_data_or_enables_retake_mode(monkeypatch):
         lambda *_: pytest.fail("Demo tests must never be inserted on Render"),
     )
 
-    original = mock_data.storage.get_student_test_attempt
     mock_data.load_mock_data()
     assert mock_data.storage.get_student_test_attempt == original
