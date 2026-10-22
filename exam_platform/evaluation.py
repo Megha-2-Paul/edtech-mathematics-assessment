@@ -3,7 +3,7 @@
 import os
 from datetime import datetime
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, send_from_directory, url_for
+from flask import Blueprint, abort, flash, redirect, render_template, request, session, send_file, send_from_directory, url_for
 from sqlalchemy import text
 
 from database import engine
@@ -54,15 +54,37 @@ def _evaluate_attempt(attempt_id):
     questions = storage.get_questions(test.questions)
     responses = storage.get_attempt_responses(attempt_id)
 
-    total = sum(float(q.marks) for q in questions)
-    awarded = sum(float(r.marks_awarded or 0) for r in responses)
-    attempted = sum(1 for r in responses if r.answer_status == "answered")
-    correct = sum(1 for r in responses if r.is_correct is True)
+    question_map = {q.question_id: q for q in questions}
+    response_map = {
+        r.question_id: r for r in responses if r.question_id in question_map
+    }
+    total = float(getattr(test, "total_marks", 0) or 0)
+    question_total = sum(float(q.marks) for q in questions)
+    if total <= 0:
+        total = question_total
+    awarded = sum(
+        float(response_map[qid].marks_awarded or 0)
+        for qid in question_map
+        if qid in response_map and response_map[qid].marks_awarded is not None
+    )
+    attempted_ids = {
+        qid for qid, response in response_map.items()
+        if str(response.answer_status).lower() in {"answered", "partial"}
+    }
+    attempted_available = sum(float(question_map[qid].marks) for qid in attempted_ids)
+    attempted_awarded = sum(
+        float(response_map[qid].marks_awarded or 0)
+        for qid in attempted_ids
+        if response_map[qid].marks_awarded is not None
+    )
 
     attempt.score = round(awarded, 2)
-    attempt.percentage = round(awarded / total * 100, 2) if total else 0
-    attempt.attempt_rate = round(attempted / len(questions) * 100, 2) if questions else 0
-    attempt.accuracy = round(correct / attempted * 100, 2) if attempted else 0
+    attempt.percentage = round(awarded / total * 100, 2) if total > 0 else None
+    attempt.attempt_rate = round(len(attempted_ids) / len(questions) * 100, 2) if questions else None
+    attempt.accuracy = (
+        round(attempted_awarded / attempted_available * 100, 2)
+        if attempted_available > 0 else None
+    )
 
     if attempt.submitted_at:
         attempt.time_taken_seconds = max(
@@ -317,10 +339,41 @@ def student_report(attempt_id):
         return redirect(url_for("test_listing"))
 
     report = _student_report(attempt_id)
-    if not report["diagnosis"]["evaluation_complete"]:
+    if not report["diagnosis"]["report_ready"]:
         return render_template("student_report.html", report=report, awaiting=True)
 
     return render_template("student_report.html", report=report, awaiting=False)
+
+
+@evaluation_bp.route("/report/<attempt_id>/pdf")
+def student_report_pdf(attempt_id):
+    attempt = _attempt_or_404(attempt_id)
+    if attempt.student_id != session.get("student_id"):
+        return "Access denied", 403
+    if attempt.status != "submitted":
+        return redirect(url_for("test_listing"))
+
+    report = _student_report(attempt_id)
+    if not report["diagnosis"]["report_ready"]:
+        return "Report is not ready: evaluation or data validation is incomplete.", 409
+
+    from .report_pdf import render_report_pdf
+
+    try:
+        pdf_buffer = render_report_pdf(report)
+    except (ValueError, RuntimeError):
+        app_logger = __import__("logging").getLogger(__name__)
+        app_logger.exception("Failed to generate student report PDF for attempt %s", attempt_id)
+        return "Report could not be generated. Please try again later.", 500
+
+    filename = f"Improvia_Report_{attempt.student_id}_{attempt.test_id}.pdf"
+    return send_file(
+        pdf_buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename,
+        max_age=0,
+    )
 
 
 def register_evaluation(app):
