@@ -138,21 +138,28 @@ def hosted_upload_answer_image(attempt_id):
     )
 
     file_path = store_image(file, filename)
-    storage.create_image(
-        AnswerImage(
-            image_id=f"IMG{uuid.uuid4().hex[:12].upper()}",
-            attempt_id=attempt_id,
-            question_id=question_id,
-            page_number=page_number,
-            original_filename=secure_filename(file.filename),
-            file_path=file_path,
-            uploaded_at=datetime.now(),
-        )
+    image = AnswerImage(
+        image_id=f"IMG{uuid.uuid4().hex[:12].upper()}",
+        attempt_id=attempt_id,
+        question_id=question_id,
+        page_number=page_number,
+        original_filename=secure_filename(file.filename),
+        file_path=file_path,
+        uploaded_at=datetime.now(),
     )
+    try:
+        storage.create_image(image)
+    except Exception:
+        # Avoid orphaned files when persistent metadata cannot be written.
+        try:
+            delete_stored_image(file_path)
+        except Exception:
+            app.logger.exception("Failed to clean up answer image after metadata write failure")
+        raise
 
     return jsonify(
         {
-            "image_id": storage.get_attempt_images(attempt_id, question_id)[-1].image_id,
+            "image_id": image.image_id,
             "page_number": page_number,
             "filename": filename,
         }
