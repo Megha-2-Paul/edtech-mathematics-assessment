@@ -221,7 +221,7 @@ def diagnose_attempt(attempt, test, questions, responses):
         max_marks = _num(question.marks)
         marks = _num(response.marks_awarded) if response else 0.0
         was_attempted = bool(
-            response and response.answer_status == "answered"
+            response and str(response.answer_status).lower() in {"answered", "partial"}
         )
 
         for bucket, key in (
@@ -245,6 +245,11 @@ def diagnose_attempt(attempt, test, questions, responses):
                 {
                     "name": name,
                     "percentage": round(percentage, 1),
+                    "evidence_status": (
+                        "insufficient_evidence"
+                        if value["attempted"] == 0 or value["attempted"] < 2
+                        else "sufficient"
+                    ),
                     **value,
                 }
             )
