@@ -5,6 +5,8 @@ from pathlib import Path
 import requests
 from PIL import Image
 from pypdf import PdfReader
+from sqlalchemy import text
+from database import engine
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -68,6 +70,16 @@ def register_student(name, email, phone):
     assert payload.get("status") == "ENROLLED", payload
     student_id = payload.get("student_id")
     assert student_id and student_id.startswith("STU")
+    with engine.connect() as db:
+        enrollment = db.execute(
+            text(
+                "SELECT 1 FROM student_subject_enrollments "
+                "WHERE student_id=:student_id AND board='CBSE' AND class_level=10 "
+                "AND academic_year='2026-27' AND status='ACTIVE' LIMIT 1"
+            ),
+            {"student_id": student_id},
+        ).first()
+    assert enrollment, "Approved registration must persist the verified curriculum enrollment"
 
     repeated = requests.post(
         f"{BASE_URL}/api/registrations/google-form",
