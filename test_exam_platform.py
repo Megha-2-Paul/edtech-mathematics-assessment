@@ -1,4 +1,5 @@
 import io
+import re
 import sys
 from pathlib import Path
 
@@ -339,11 +340,38 @@ def teacher_evaluate(attempt_id, marks, error_codes):
             f"Raw answer-image URL must not be public, got {raw_response.status_code}"
         )
 
-    form_data = []
-    for question_id, mark in marks.items():
-        form_data.append((f"marks_{question_id}", str(mark)))
-    for question_id, codes in error_codes.items():
-        for code in codes:
+    # A partial evaluation must be rejected without saving any response.
+    partial = [
+        (f"marks_{question_id}", str(mark))
+        for question_id, mark in marks.items()
+    ]
+    rejected = requests.post(
+        f"{BASE_URL}/teacher/evaluate/{attempt_id}",
+        auth=TEACHER_AUTH,
+        data=partial,
+        allow_redirects=False,
+        timeout=15,
+    )
+    assert rejected.status_code == 302, (
+        f"Incomplete evaluation should redirect with a validation message, got {rejected.status_code}: {rejected.text[:300]}"
+    )
+    with engine.connect() as db:
+        saved_before_complete = db.execute(
+            text("SELECT COUNT(*) FROM responses WHERE attempt_id=:attempt_id AND marks_awarded IS NOT NULL"),
+            {"attempt_id": attempt_id},
+        ).scalar_one()
+    assert saved_before_complete == 0, (
+        "A rejected partial evaluation must not save marks for any response"
+    )
+
+    manual_question_ids = re.findall(r'name="marks_([^"]+)"', evaluation_page.text)
+    assert manual_question_ids, "Expected manual-mark fields for written-response questions"
+    form_data = [
+        (f"marks_{question_id}", str(marks.get(question_id, 0)))
+        for question_id in manual_question_ids
+    ]
+    for question_id in manual_question_ids:
+        for code in error_codes.get(question_id, []):
             form_data.append((f"errors_{question_id}", code))
         form_data.append((f"comment_{question_id}", "CI evaluation evidence"))
     response = requests.post(
