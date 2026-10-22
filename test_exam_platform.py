@@ -14,6 +14,7 @@ REGISTRATION_SECRET = "ci-only-registration-secret"
 HTTP = requests.Session()
 CURRENT_STUDENT_ID = None
 CURRENT_ATTEMPT_ID = None
+UPLOADS_BY_ATTEMPT = {}
 
 
 def test_homepage():
@@ -213,7 +214,18 @@ def upload_required_images(attempt_id, questions):
         assert response.status_code == 200, (
             f"Upload failed for {question['question_id']}: {response.status_code} {response.text}"
         )
-        assert response.json().get("image_id")
+        payload = response.json()
+        assert payload.get("image_id")
+        UPLOADS_BY_ATTEMPT.setdefault(attempt_id, []).append(
+            {"image_id": payload["image_id"], "filename": payload["filename"], "question_id": question["question_id"]}
+        )
+        student_image = HTTP.get(
+            f"{BASE_URL}/api/attempt/{attempt_id}/image/{payload['image_id']}", timeout=10
+        )
+        assert student_image.status_code == 200, (
+            f"Owner could not retrieve uploaded image: {student_image.status_code}"
+        )
+        assert student_image.headers.get("Content-Type", "").startswith("image/")
     print(f"[OK] Required handwritten uploads persisted ({len(required)} questions)")
 
 
@@ -257,7 +269,7 @@ def test_duplicate_submission_is_rejected(attempt_id):
 
 
 def teacher_evaluate(attempt_id, marks, error_codes):
-    """Evaluate a submitted attempt using the same form contract as the teacher UI."""
+    """Verify teacher image access and evaluate a submitted attempt."""
     response = requests.get(
         f"{BASE_URL}/teacher/submissions",
         auth=TEACHER_AUTH,
@@ -265,6 +277,31 @@ def teacher_evaluate(attempt_id, marks, error_codes):
     )
     assert response.status_code == 200, response.text
     assert attempt_id.encode() in response.content
+
+    evaluation_page = requests.get(
+        f"{BASE_URL}/teacher/evaluate/{attempt_id}",
+        auth=TEACHER_AUTH,
+        timeout=10,
+    )
+    assert evaluation_page.status_code == 200, evaluation_page.text
+    attempt_uploads = UPLOADS_BY_ATTEMPT.get(attempt_id, [])
+    if attempt_uploads:
+        image_id = attempt_uploads[0]["image_id"]
+        protected_image_url = f"{BASE_URL}/teacher/attempt/{attempt_id}/image/{image_id}"
+        assert protected_image_url.encode() in evaluation_page.content
+        unauthenticated = requests.get(protected_image_url, timeout=10)
+        assert unauthenticated.status_code == 401, (
+            "Teacher answer-image proxy must reject unauthenticated access"
+        )
+        authorized = requests.get(protected_image_url, auth=TEACHER_AUTH, timeout=10)
+        assert authorized.status_code == 200, authorized.text[:200]
+        assert authorized.headers.get("Content-Type", "").startswith("image/")
+
+        raw_url = f"{BASE_URL}/uploads/{attempt_uploads[0]['filename']}"
+        raw_response = requests.get(raw_url, timeout=10)
+        assert raw_response.status_code == 403, (
+            f"Raw answer-image URL must not be public, got {raw_response.status_code}"
+        )
 
     form_data = []
     for question_id, mark in marks.items():
@@ -341,6 +378,18 @@ def test_cross_student_access_is_rejected():
     assert response.status_code == 403, (
         f"Expected cross-student attempt access 403, got {response.status_code}"
     )
+    for uploaded in UPLOADS_BY_ATTEMPT.get(CURRENT_ATTEMPT_ID, []):
+        image_response = second_session.get(
+            f"{BASE_URL}/api/attempt/{CURRENT_ATTEMPT_ID}/image/{uploaded['image_id']}",
+            timeout=10,
+        )
+        assert image_response.status_code == 403, (
+            "Another student must not retrieve handwritten answer images"
+        )
+        raw_response = requests.get(
+            f"{BASE_URL}/uploads/{uploaded['filename']}", timeout=10
+        )
+        assert raw_response.status_code == 403, "Raw answer-image URL must not be public"
     response = second_session.get(
         f"{BASE_URL}/report/{CURRENT_ATTEMPT_ID}", timeout=10
     )
