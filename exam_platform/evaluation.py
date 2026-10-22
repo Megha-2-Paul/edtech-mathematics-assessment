@@ -128,7 +128,7 @@ def _evaluate_attempt(attempt_id):
     return attempt
 
 
-def _save_response_evaluation(response, question, marks, error_codes, comment):
+def _save_response_evaluation(db, response, question, marks, error_codes, comment):
     marks = max(0.0, min(float(marks), float(question.marks)))
     is_correct = (
         (response.selected_answer == question.correct_answer)
@@ -140,39 +140,38 @@ def _save_response_evaluation(response, question, marks, error_codes, comment):
         )
     )
 
-    with engine.begin() as db:
+    db.execute(
+        text(
+            "UPDATE responses "
+            "SET marks_awarded=:marks,is_correct=:correct "
+            "WHERE response_id=:id"
+        ),
+        {
+            "marks": marks,
+            "correct": is_correct,
+            "id": response.response_id,
+        },
+    )
+    db.execute(
+        text("DELETE FROM evaluation_errors WHERE response_id=:id"),
+        {"id": response.response_id},
+    )
+
+    lost = max(0.0, float(question.marks) - marks)
+    for code in error_codes:
         db.execute(
             text(
-                "UPDATE responses "
-                "SET marks_awarded=:marks,is_correct=:correct "
-                "WHERE response_id=:id"
+                "INSERT INTO evaluation_errors "
+                "(response_id,error_code,comment,marks_lost) "
+                "VALUES(:response,:code,:comment,:lost)"
             ),
             {
-                "marks": marks,
-                "correct": is_correct,
-                "id": response.response_id,
+                "response": response.response_id,
+                "code": code,
+                "comment": comment or None,
+                "lost": lost if len(error_codes) == 1 else None,
             },
         )
-        db.execute(
-            text("DELETE FROM evaluation_errors WHERE response_id=:id"),
-            {"id": response.response_id},
-        )
-
-        lost = max(0.0, float(question.marks) - marks)
-        for code in error_codes:
-            db.execute(
-                text(
-                    "INSERT INTO evaluation_errors "
-                    "(response_id,error_code,comment,marks_lost) "
-                    "VALUES(:response,:code,:comment,:lost)"
-                ),
-                {
-                    "response": response.response_id,
-                    "code": code,
-                    "comment": comment or None,
-                    "lost": lost if len(error_codes) == 1 else None,
-                },
-            )
 
 
 def _update_question_history(attempt_id, increment_counts=True):
@@ -296,8 +295,11 @@ def evaluate(attempt_id):
         was_previously_evaluated = bool(responses) and all(
             r.marks_awarded is not None for r in responses.values()
         )
-        for r, q, marks, codes, comment in prepared.values():
-            _save_response_evaluation(r, q, marks, codes, comment)
+        # Persist all marks and error codes in one transaction. A database
+        # failure must not leave a partly evaluated submission behind.
+        with engine.begin() as db:
+            for r, q, marks, codes, comment in prepared.values():
+                _save_response_evaluation(db, r, q, marks, codes, comment)
 
         attempt = _evaluate_attempt(attempt_id)
         storage.update_attempt(attempt)
