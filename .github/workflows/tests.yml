@@ -49,6 +49,9 @@ jobs:
           pip install -r requirements.txt
           pip install "pytest<9" requests beautifulsoup4
 
+      - name: Initialize isolated CI schema
+        run: python -c "from database import initialize_database; initialize_database()"
+
       - name: Apply reviewed migrations to the disposable CI database
         run: |
           python question_bank/migrations/005_curriculum_question_reuse.py --database-url "$DATABASE_URL" --taxonomy curriculum_taxonomy_2026_27.json --apply
