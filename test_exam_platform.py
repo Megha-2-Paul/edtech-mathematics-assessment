@@ -398,8 +398,8 @@ def teacher_evaluate(attempt_id, marks, error_codes):
             text(
                 "SELECT qh.question_id,qh.attempt_count,qh.correct_count "
                 "FROM question_history qh "
-                "JOIN attempts a ON a.student_id=qh.student_id "
-                "WHERE a.attempt_id=:attempt_id ORDER BY qh.question_id"
+                "WHERE qh.student_id=(SELECT student_id FROM attempts "
+                "WHERE attempt_id=:attempt_id) ORDER BY qh.question_id"
             ),
             {"attempt_id": attempt_id},
         ).all()
