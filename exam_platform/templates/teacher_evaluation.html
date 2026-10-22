@@ -49,7 +49,7 @@
             <div class="auto-evaluation"><strong>Automatic objective evaluation</strong><span>Correct answer: {{ q.correct_answer }} · Awarded: {{ q.marks if r and r.selected_answer==q.correct_answer else 0 }} / {{ q.marks }}</span></div>
         {% else %}
             <div class="manual-evaluation">
-                <div class="marks-field"><label>Marks awarded<input type="number" name="marks_{{ q.question_id }}" min="0" max="{{ q.marks }}" step="0.5" value="{{ r.marks_awarded if r and r.marks_awarded is not none else 0 }}"></label><span>Max {{ q.marks }} marks</span></div>
+                <div class="marks-field"><label>Marks awarded<input type="number" name="marks_{{ q.question_id }}" min="0" max="{{ q.marks }}" step="0.5" value="{{ r.marks_awarded if r and r.marks_awarded is not none else '' }}"></label><span>Max {{ q.marks }} marks</span></div>
                 <div><strong class="field-title">Error diagnosis</strong><p class="small">Select every error pattern that applies. These codes power the student's report.</p><div class="error-code-grid">{% for code,label in error_codes %}<label class="error-code-option"><input type="checkbox" name="errors_{{ q.question_id }}" value="{{ code }}" {% if item.errors and code in item.errors|map(attribute='error_code')|list %}checked{% endif %}><span><strong>{{ code }}</strong> {{ label }}</span></label>{% endfor %}</div></div>
                 <label>Teacher feedback<textarea name="comment_{{ q.question_id }}" rows="3" placeholder="Example: Check the sign change in the second step.">{% if item.errors %}{{ item.errors[0].comment or '' }}{% endif %}</textarea></label>
             </div>
