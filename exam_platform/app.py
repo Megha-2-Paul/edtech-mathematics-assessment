@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+from io import BytesIO
 import os
 import secrets
 import sys
@@ -7,7 +8,7 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session, url_for
+from flask import Flask, jsonify, redirect, render_template, request, send_file, send_from_directory, session, url_for
 from PIL import Image
 from sqlalchemy import text
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -808,11 +809,44 @@ def get_question_images(attempt_id, question_id):
                 "image_id": image.image_id,
                 "page_number": image.page_number,
                 "filename": image.original_filename,
-                "url": f"/uploads/{Path(image.file_path).name}",
+                "url": url_for(
+                    "student_answer_image",
+                    attempt_id=attempt_id,
+                    image_id=image.image_id,
+                ),
             }
             for image in storage.get_attempt_images(attempt_id, question_id)
         ]
     )
+
+
+@app.route("/api/attempt/<attempt_id>/image/<image_id>", methods=["GET"])
+def student_answer_image(attempt_id, image_id):
+    """Serve a handwritten answer only to the student who owns the attempt."""
+    attempt, error = ensure_attempt_access(attempt_id)
+    if error:
+        return error
+    image = next(
+        (
+            item for item in storage.images.values()
+            if item.image_id == image_id and item.attempt_id == attempt_id
+        ),
+        None,
+    )
+    if not image:
+        return jsonify({"error": "Image not found"}), 404
+
+    try:
+        from exam_platform.media import read_stored_image
+
+        data, content_type = read_stored_image(image.file_path)
+    except FileNotFoundError:
+        return jsonify({"error": "Stored image is missing"}), 404
+    except Exception:
+        app.logger.exception("Failed to retrieve handwritten image for attempt %s", attempt_id)
+        return jsonify({"error": "Image is temporarily unavailable"}), 503
+
+    return send_file(BytesIO(data), mimetype=content_type, max_age=0)
 
 
 @app.route("/api/attempt/<attempt_id>/delete-image/<image_id>", methods=["DELETE"])
