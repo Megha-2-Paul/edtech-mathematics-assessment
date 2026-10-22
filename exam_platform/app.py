@@ -905,14 +905,26 @@ def submit_attempt(attempt_id):
             }
         ), 400
 
-    attempt.submitted_at = datetime.now()
-    attempt.status = AttemptStatus.SUBMITTED.value
-    storage.update_attempt(attempt)
+    submitted_at = datetime.now()
+    finalization = storage.finalize_attempt(
+        attempt_id,
+        attempt.student_id,
+        [question.question_id for question in questions],
+        submitted_at,
+    )
+    if finalization == "not_found":
+        return jsonify({"error": "Attempt not found"}), 404
+    if finalization == "forbidden":
+        return jsonify({"error": "You do not have access to this attempt"}), 403
+    if finalization == "already_submitted":
+        return jsonify({"error": "This assessment has already been submitted", "status": "submitted"}), 409
+    if finalization != "submitted":
+        return jsonify({"error": "Attempt cannot be submitted in its current state", "status": finalization}), 409
 
     return jsonify(
         {
             "status": "submitted",
-            "submitted_at": attempt.submitted_at.isoformat(),
+            "submitted_at": submitted_at.isoformat(),
             "redirect_url": url_for(
                 "submission_confirmation",
                 attempt_id=attempt_id,
