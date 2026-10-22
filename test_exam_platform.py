@@ -99,16 +99,22 @@ def activate_student(student_id, session, password):
     link_response = requests.post(
         f"{BASE_URL}/teacher/students/{student_id}/access-link",
         auth=TEACHER_AUTH,
+        headers={"X-Forwarded-Proto": "https"},
         timeout=10,
     )
     assert link_response.status_code == 201, link_response.text
     activation_url = link_response.json().get("activation_url")
-    assert activation_url
+    assert activation_url and activation_url.startswith("https://"), (
+        f"Activation URLs must honor the original HTTPS scheme behind Render's proxy: {activation_url!r}"
+    )
 
-    activation_page = session.get(activation_url, timeout=10)
+    # CI serves the app over local HTTP. We assert the production-facing URL
+    # scheme above, then use the same token against the local HTTP test server.
+    local_activation_url = activation_url.replace("https://", "http://", 1)
+    activation_page = session.get(local_activation_url, timeout=10)
     assert activation_page.status_code == 200, activation_page.text
     activated = session.post(
-        activation_url,
+        local_activation_url,
         data={"password": password, "confirm_password": password},
         allow_redirects=True,
         timeout=10,
@@ -117,7 +123,7 @@ def activate_student(student_id, session, password):
     assert "/tests" in activated.url
 
     reused = session.post(
-        activation_url,
+        local_activation_url,
         data={"password": password, "confirm_password": password},
         timeout=10,
     )
