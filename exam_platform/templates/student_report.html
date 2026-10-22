@@ -77,8 +77,9 @@
 <div class="card">
     <div class="section-heading"><div><span class="badge badge-blue">Progress</span><h2>Your improvement over time</h2></div></div>
     {% if report.diagnosis.previous_attempt_count %}
+    <p class="muted">{{ report.diagnosis.comparison_note }}</p>
     <div class="progress-compare report-progress-compare">
-        <div><span>Previous test</span><strong>{{ report.diagnosis.previous_score }}</strong></div><div class="progress-arrow">→</div><div><span>This test</span><strong>{{ report.diagnosis.score }}</strong></div><div><span>Change</span><strong>{% if report.diagnosis.score_change >= 0 %}+{% endif %}{{ report.diagnosis.score_change }} marks</strong></div>
+        <div><span>Previous test</span><strong>{{ report.diagnosis.previous_score }}</strong></div><div class="progress-arrow">→</div><div><span>This test</span><strong>{{ report.diagnosis.score }}</strong></div><div><span>Change</span><strong>{% if report.diagnosis.marks_change is not none and report.diagnosis.marks_change >= 0 %}+{% endif %}{{ report.diagnosis.marks_change if report.diagnosis.marks_change is not none else 'N/A' }} marks</strong></div>
     </div>
     {% if report.diagnosis.recurring_errors %}<div class="notice notice-warning"><strong>Recurring patterns:</strong> {% for e in report.diagnosis.recurring_errors %}{{ e.label }}{% if not loop.last %}, {% endif %}{% endfor %}. Focus on these before the next assessment.</div>{% endif %}
     {% else %}
