@@ -69,12 +69,15 @@ def _previous_attempts(student_id, current_attempt_id):
         ).mappings().all()
 
 
-def _previous_error_counts(student_id, current_attempt_id):
+def _previous_error_history(student_id, current_attempt_id):
+    """Return error counts and distinct prior assessment coverage per code."""
     with engine.connect() as db:
         rows = db.execute(
             text(
                 """
-                SELECT e.error_code, COUNT(*) AS error_count
+                SELECT e.error_code,
+                       COUNT(DISTINCT r.question_id) AS question_count,
+                       COUNT(DISTINCT a.attempt_id) AS assessment_count
                 FROM evaluation_errors e
                 JOIN responses r ON r.response_id = e.response_id
                 JOIN attempts a ON a.attempt_id = r.attempt_id
@@ -82,7 +85,6 @@ def _previous_error_counts(student_id, current_attempt_id):
                   AND a.attempt_id <> :current_attempt_id
                   AND a.status = 'submitted'
                 GROUP BY e.error_code
-                ORDER BY error_count DESC
                 """
             ),
             {
@@ -90,31 +92,103 @@ def _previous_error_counts(student_id, current_attempt_id):
                 "current_attempt_id": current_attempt_id,
             },
         ).mappings().all()
+    return {
+        row["error_code"]: {
+            "question_count": int(row["question_count"]),
+            "assessment_count": int(row["assessment_count"]),
+        }
+        for row in rows
+    }
 
-    return {row["error_code"]: int(row["error_count"]) for row in rows}
+
+def _attempt_metrics(questions, responses, official_total_marks=None):
+    """Calculate report metrics from explicit response status and evaluated marks.
+
+    Missing response rows or missing awarded marks are not treated as evaluated.
+    Attempted-work accuracy is marks earned / marks available on attempted work.
+    """
+    question_map = {q.question_id: q for q in questions}
+    response_map = {
+        r.question_id: r for r in responses if r.question_id in question_map
+    }
+    question_marks = sum(_num(q.marks) for q in questions)
+    total_marks = _num(official_total_marks, question_marks)
+    if total_marks <= 0:
+        total_marks = question_marks
+    earned = sum(
+        _num(response_map[qid].marks_awarded)
+        for qid in question_map
+        if qid in response_map and response_map[qid].marks_awarded is not None
+    )
+    attempted_ids = {
+        qid for qid, response in response_map.items()
+        if str(response.answer_status).lower() in {"answered", "partial"}
+    }
+    attempted_available = sum(_num(question_map[qid].marks) for qid in attempted_ids)
+    attempted_earned = sum(
+        _num(response_map[qid].marks_awarded)
+        for qid in attempted_ids
+        if response_map[qid].marks_awarded is not None
+    )
+    evaluated = sum(
+        1 for qid in question_map
+        if qid in response_map and response_map[qid].marks_awarded is not None
+    )
+    missing_response_ids = sorted(set(question_map) - set(response_map))
+    unevaluated_ids = sorted(
+        qid for qid, response in response_map.items()
+        if response.marks_awarded is None
+    )
+    reconciliation_ok = abs(question_marks - total_marks) < 0.01
+    return {
+        "question_marks": round(question_marks, 2),
+        "total_marks": round(total_marks, 2),
+        "score": round(earned, 2),
+        "percentage": round(earned / total_marks * 100, 2) if total_marks > 0 else None,
+        "attempted": len(attempted_ids),
+        "unattempted": sum(
+            1 for r in response_map.values()
+            if str(r.answer_status).lower() == "unanswered"
+        ),
+        "total_questions": len(questions),
+        "attempt_rate": round(len(attempted_ids) / len(questions) * 100, 2) if questions else None,
+        "attempted_available_marks": round(attempted_available, 2),
+        "attempted_marks_awarded": round(attempted_earned, 2),
+        "accuracy": round(attempted_earned / attempted_available * 100, 2) if attempted_available > 0 else None,
+        "fully_correct_rate": round(
+            sum(1 for qid in attempted_ids if response_map[qid].is_correct is True)
+            / len(attempted_ids) * 100, 2
+        ) if attempted_ids else None,
+        "evaluated_responses": evaluated,
+        "missing_response_ids": missing_response_ids,
+        "unevaluated_question_ids": unevaluated_ids,
+        "marks_reconciliation_ok": reconciliation_ok,
+        "evaluation_complete": (
+            len(questions) > 0 and evaluated == len(questions)
+            and not missing_response_ids and not unevaluated_ids
+        ),
+        "report_ready": (
+            len(questions) > 0 and evaluated == len(questions)
+            and not missing_response_ids and not unevaluated_ids
+            and reconciliation_ok and total_marks > 0
+        ),
+    }
 
 
 def diagnose_attempt(attempt, test, questions, responses):
     """Return a template-friendly deterministic diagnostic dictionary."""
     response_map = {response.question_id: response for response in responses}
     errors = _error_rows(attempt.attempt_id)
-
-    total_marks = sum(_num(question.marks) for question in questions)
-    awarded = sum(_num(response.marks_awarded) for response in responses)
-    attempted = sum(
-        1
-        for response in responses
-        if response.answer_status == "answered"
-    )
-    correct = sum(1 for response in responses if response.is_correct is True)
-    evaluated = sum(
-        1
-        for question in questions
-        if not response_map.get(question.question_id)
-        or response_map[question.question_id].marks_awarded is not None
-    )
+    metrics = _attempt_metrics(questions, responses, getattr(test, "total_marks", None))
+    total_marks = metrics["total_marks"]
+    awarded = metrics["score"]
     marks_lost = max(0.0, total_marks - awarded)
 
+    # Count unique question/code pairs so duplicate evaluator rows do not inflate frequency.
+    unique_errors = {
+        (row["question_id"], row["error_code"]): row for row in errors
+    }
+    errors = list(unique_errors.values())
     error_counts = Counter(row["error_code"] for row in errors)
     error_details = [
         {
@@ -202,7 +276,7 @@ def diagnose_attempt(attempt, test, questions, responses):
         attempt.student_id,
         attempt.attempt_id,
     )
-    previous_errors = _previous_error_counts(
+    previous_error_history = _previous_error_history(
         attempt.student_id,
         attempt.attempt_id,
     )
@@ -212,10 +286,11 @@ def diagnose_attempt(attempt, test, questions, responses):
             "code": code,
             "label": ERROR_LABELS.get(code, code),
             "current_count": count,
-            "previous_count": previous_errors.get(code, 0),
+            "previous_count": previous_error_history.get(code, {}).get("question_count", 0),
+            "prior_assessments": previous_error_history.get(code, {}).get("assessment_count", 0),
         }
         for code, count in error_counts.most_common()
-        if previous_errors.get(code, 0) > 0
+        if previous_error_history.get(code, {}).get("assessment_count", 0) > 0
     ]
 
     previous_score = previous[0]["score"] if previous else None
@@ -234,24 +309,8 @@ def diagnose_attempt(attempt, test, questions, responses):
     )
 
     return {
-        "total_marks": round(total_marks, 2),
-        "score": round(awarded, 2),
-        "percentage": (
-            round(awarded / total_marks * 100, 2)
-            if total_marks
-            else 0
-        ),
+        **metrics,
         "marks_lost": round(marks_lost, 2),
-        "attempted": attempted,
-        "total_questions": len(questions),
-        "attempt_rate": (
-            round(attempted / len(questions) * 100, 2)
-            if questions
-            else 0
-        ),
-        "accuracy": round(correct / attempted * 100, 2) if attempted else 0,
-        "evaluated_responses": evaluated,
-        "evaluation_complete": evaluated >= len(questions),
         "error_counts": error_details,
         "chapter_analysis": chapter_analysis,
         "topic_analysis": topic_analysis,
