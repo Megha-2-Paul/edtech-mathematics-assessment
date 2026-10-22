@@ -2,6 +2,7 @@
 
 import os
 from io import BytesIO
+from pathlib import Path
 from datetime import datetime
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, send_file, send_from_directory, url_for
@@ -415,6 +416,11 @@ def register_evaluation(app):
         upload_folder = app.config["UPLOAD_FOLDER"]
 
         def serve_uploaded_file(filename):
+            requested_stem = Path(filename).stem
+            for image in storage.images.values():
+                stored_name = Path(str(image.file_path or "")).name
+                if filename == stored_name or requested_stem == stored_name:
+                    return "Answer images must be accessed through an authenticated assessment route.", 403
             return send_from_directory(upload_folder, filename)
 
         app.view_functions["uploaded_file"] = serve_uploaded_file
