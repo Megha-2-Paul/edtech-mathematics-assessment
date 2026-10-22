@@ -175,7 +175,7 @@ def _save_response_evaluation(response, question, marks, error_codes, comment):
             )
 
 
-def _update_question_history(attempt_id):
+def _update_question_history(attempt_id, increment_counts=True):
     attempt = storage.get_attempt(attempt_id)
     responses = storage.get_attempt_responses(attempt_id)
 
@@ -195,7 +195,7 @@ def _update_question_history(attempt_id):
                     """INSERT INTO question_history(
 student_id,question_id,attempt_count,correct_count,last_attempted_at,last_correct_at,last_marks_awarded,last_error_summary)
 VALUES(:student,:question,1,:correct,:attempted,:correct_at,:marks,:summary)
-ON DUPLICATE KEY UPDATE attempt_count=attempt_count+1,correct_count=correct_count+VALUES(correct_count),last_attempted_at=VALUES(last_attempted_at),last_correct_at=IF(VALUES(correct_count)=1,VALUES(last_correct_at),last_correct_at),last_marks_awarded=VALUES(last_marks_awarded),last_error_summary=VALUES(last_error_summary)"""
+ON DUPLICATE KEY UPDATE attempt_count=attempt_count+IF(:increment_counts,1,0),correct_count=correct_count+IF(:increment_counts,VALUES(correct_count),0),last_attempted_at=VALUES(last_attempted_at),last_correct_at=IF(VALUES(correct_count)=1,VALUES(last_correct_at),last_correct_at),last_marks_awarded=VALUES(last_marks_awarded),last_error_summary=VALUES(last_error_summary)"""
                 ),
                 {
                     "student": attempt.student_id,
@@ -205,6 +205,7 @@ ON DUPLICATE KEY UPDATE attempt_count=attempt_count+1,correct_count=correct_coun
                     "correct_at": attempt.submitted_at if response.is_correct else None,
                     "marks": response.marks_awarded,
                     "summary": summary,
+                    "increment_counts": 1 if increment_counts else 0,
                 },
             )
 
@@ -292,12 +293,19 @@ def evaluate(attempt_id):
                 request.form.get(f"comment_{q.question_id}", "").strip(),
             )
 
+        was_previously_evaluated = bool(responses) and all(
+            r.marks_awarded is not None for r in responses.values()
+        )
         for r, q, marks, codes, comment in prepared.values():
             _save_response_evaluation(r, q, marks, codes, comment)
 
         attempt = _evaluate_attempt(attempt_id)
         storage.update_attempt(attempt)
-        _update_question_history(attempt_id)
+        # Revisions update the latest diagnosis but must not count the same
+        # submitted attempt as another historical attempt.
+        _update_question_history(
+            attempt_id, increment_counts=not was_previously_evaluated
+        )
         flash("Evaluation saved and result calculated.", "success")
         return redirect(url_for("evaluation.evaluate", attempt_id=attempt_id))
 
