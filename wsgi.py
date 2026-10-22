@@ -13,6 +13,7 @@ import uuid
 
 from flask import Response, jsonify, request, send_from_directory, url_for
 from PIL import Image
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 
 from exam_platform.app import app, ensure_attempt_access
@@ -31,6 +32,11 @@ if os.getenv("RENDER") and not secret_key:
     raise RuntimeError("SECRET_KEY must be configured on the hosted service.")
 if secret_key:
     app.secret_key = secret_key
+
+# Render terminates HTTPS at its proxy and forwards the original scheme.
+# Trust only the forwarded scheme from the single configured proxy hop so
+# external activation URLs use HTTPS without trusting forwarded host headers.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_for=0, x_host=0, x_port=0, x_prefix=0)
 
 
 @app.before_request
