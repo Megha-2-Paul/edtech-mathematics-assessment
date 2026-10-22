@@ -340,10 +340,15 @@ def teacher_evaluate(attempt_id, marks, error_codes):
             f"Raw answer-image URL must not be public, got {raw_response.status_code}"
         )
 
-    # A partial evaluation must be rejected without saving any response.
+    manual_question_ids = re.findall(r'name="marks_([^"]+)"', evaluation_page.text)
+    assert manual_question_ids, "Expected manual-mark fields for written-response questions"
+
+    # Omit at least one written-response mark. The two-question follow-up test
+    # has only one manual field, so submit no manual marks for that case.
+    partial_ids = manual_question_ids[:-1] if len(manual_question_ids) > 1 else []
     partial = [
-        (f"marks_{question_id}", str(mark))
-        for question_id, mark in marks.items()
+        (f"marks_{question_id}", str(marks.get(question_id, 0)))
+        for question_id in partial_ids
     ]
     rejected = requests.post(
         f"{BASE_URL}/teacher/evaluate/{attempt_id}",
@@ -356,16 +361,21 @@ def teacher_evaluate(attempt_id, marks, error_codes):
         f"Incomplete evaluation should redirect with a validation message, got {rejected.status_code}: {rejected.text[:300]}"
     )
     with engine.connect() as db:
-        saved_before_complete = db.execute(
-            text("SELECT COUNT(*) FROM responses WHERE attempt_id=:attempt_id AND marks_awarded IS NOT NULL"),
-            {"attempt_id": attempt_id},
-        ).scalar_one()
+        saved_before_complete = sum(
+            db.execute(
+                text(
+                    "SELECT COUNT(*) FROM responses "
+                    "WHERE attempt_id=:attempt_id AND question_id=:question_id "
+                    "AND marks_awarded IS NOT NULL"
+                ),
+                {"attempt_id": attempt_id, "question_id": question_id},
+            ).scalar_one()
+            for question_id in manual_question_ids
+        )
     assert saved_before_complete == 0, (
-        "A rejected partial evaluation must not save marks for any response"
+        "A rejected partial evaluation must not save marks for any written response"
     )
 
-    manual_question_ids = re.findall(r'name="marks_([^"]+)"', evaluation_page.text)
-    assert manual_question_ids, "Expected manual-mark fields for written-response questions"
     form_data = [
         (f"marks_{question_id}", str(marks.get(question_id, 0)))
         for question_id in manual_question_ids
