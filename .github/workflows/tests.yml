@@ -49,6 +49,11 @@ jobs:
           pip install -r requirements.txt
           pip install "pytest<9" requests beautifulsoup4
 
+      - name: Apply reviewed migrations to the disposable CI database
+        run: |
+          python question_bank/migrations/005_curriculum_question_reuse.py --database-url "$DATABASE_URL" --taxonomy curriculum_taxonomy_2026_27.json --apply
+          python question_bank/migrations/006_student_access.py --database-url "$DATABASE_URL" --apply
+
       - name: Start application for end-to-end smoke tests
         run: |
           python -m flask --app wsgi:application run --host 127.0.0.1 --port 5000 > /tmp/improvia-server.log 2>&1 &
