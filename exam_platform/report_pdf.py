@@ -260,8 +260,8 @@ def render_report_pdf(report):
         comparison = (
             f"Previous score: {_number(prev_score)} marks / {_number(prev_pct, '%')}. "
             f"Current score: {_number(diagnosis.get('score'))} marks / {_number(diagnosis.get('percentage'), '%')}. "
-            f"Score change: {('+' if score_change is not None and score_change >= 0 else '')}{_number(score_change)} marks; "
-            f"percentage change: {('+' if pct_change is not None and pct_change >= 0 else '')}{_number(pct_change)} percentage points."
+            f"Marks change: {('+' if diagnosis.get('marks_change') is not None and diagnosis.get('marks_change') >= 0 else '')}{_number(diagnosis.get('marks_change'))} marks; "
+            f"percentage-point change: {('+' if pct_change is not None and pct_change >= 0 else '')}{_number(pct_change)} percentage points. " + _text(diagnosis.get('comparison_note', ''))
         )
         story.append(Paragraph(_text(comparison), styles["BodySmall"]))
     else:
