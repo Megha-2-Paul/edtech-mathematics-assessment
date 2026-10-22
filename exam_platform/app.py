@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from flask import Flask, Response, jsonify, redirect, render_template, request, send_file, send_from_directory, session, url_for
+from flask import Flask, Response as FlaskResponse, jsonify, redirect, render_template, request, send_file, send_from_directory, session, url_for
 from PIL import Image
 from sqlalchemy import text
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -100,7 +100,7 @@ def enforce_teacher_access():
     expected_password = os.getenv("TEACHER_ACCESS_PASSWORD", "").strip()
     if not expected_username or not expected_password:
         if os.getenv("RENDER"):
-            return Response("Teacher access is not configured.", status=503)
+            return FlaskResponse("Teacher access is not configured.", status=503)
         return None
     auth = request.authorization
     if (
@@ -108,7 +108,7 @@ def enforce_teacher_access():
         or not hmac.compare_digest(auth.username or "", expected_username)
         or not hmac.compare_digest(auth.password or "", expected_password)
     ):
-        return Response(
+        return FlaskResponse(
             "Authentication required.",
             status=401,
             headers={"WWW-Authenticate": 'Basic realm="Improvia Teacher"'},
