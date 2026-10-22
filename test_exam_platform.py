@@ -392,7 +392,39 @@ def teacher_evaluate(attempt_id, marks, error_codes):
         timeout=15,
     )
     assert response.status_code == 200, response.text
-    print(f"[OK] Teacher evaluation saved for {attempt_id}")
+
+    with engine.connect() as db:
+        history_before = db.execute(
+            text(
+                "SELECT qh.question_id,qh.attempt_count,qh.correct_count "
+                "FROM question_history qh "
+                "JOIN attempts a ON a.student_id=qh.student_id "
+                "WHERE a.attempt_id=:attempt_id ORDER BY qh.question_id"
+            ),
+            {"attempt_id": attempt_id},
+        ).all()
+    repeated = requests.post(
+        f"{BASE_URL}/teacher/evaluate/{attempt_id}",
+        auth=TEACHER_AUTH,
+        data=form_data,
+        allow_redirects=True,
+        timeout=15,
+    )
+    assert repeated.status_code == 200, repeated.text
+    with engine.connect() as db:
+        history_after = db.execute(
+            text(
+                "SELECT qh.question_id,qh.attempt_count,qh.correct_count "
+                "FROM question_history qh "
+                "JOIN attempts a ON a.student_id=qh.student_id "
+                "WHERE a.attempt_id=:attempt_id ORDER BY qh.question_id"
+            ),
+            {"attempt_id": attempt_id},
+        ).all()
+    assert history_after == history_before, (
+        "Re-saving the same evaluation must not inflate question-history counts"
+    )
+    print(f"[OK] Teacher evaluation saved and re-evaluation is idempotent for {attempt_id}")
 
 
 def test_report_and_pdf(attempt_id, student_id):
