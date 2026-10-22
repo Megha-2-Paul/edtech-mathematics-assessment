@@ -315,6 +315,14 @@ def create_student_access_link(student_id):
     now = datetime.now()
     expires_at = now + timedelta(hours=24)
     with engine.begin() as db:
+        # Only one outstanding activation/reset link may exist for a student.
+        db.execute(
+            text(
+                "UPDATE student_access_tokens SET used_at=:now "
+                "WHERE student_id=:student_id AND used_at IS NULL"
+            ),
+            {"student_id": student_id, "now": now},
+        )
         db.execute(
             text(
                 "INSERT INTO student_access_tokens "
