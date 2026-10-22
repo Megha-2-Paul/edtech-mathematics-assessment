@@ -2,7 +2,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 load_dotenv(PROJECT_ROOT / ".env")
@@ -11,6 +11,9 @@ DB_PORT = os.getenv("DB_PORT", "3306")
 DB_NAME = os.getenv("DB_NAME", "edtech_assessment")
 DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+if os.getenv("RENDER") and not os.getenv("DATABASE_URL"):
+    raise RuntimeError("DATABASE_URL must be configured on the hosted service; refusing to fall back to local database defaults.")
+
 DATABASE_URL = os.getenv("DATABASE_URL") or f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
 
@@ -43,7 +46,9 @@ SCHEMA = [
 """CREATE TABLE IF NOT EXISTS responses (response_id VARCHAR(50) PRIMARY KEY,attempt_id VARCHAR(50) NOT NULL,question_id VARCHAR(40) NOT NULL,selected_answer VARCHAR(255),answer_status VARCHAR(30) NOT NULL,marks_awarded DECIMAL(10,2),is_correct BOOLEAN,answered_at DATETIME,UNIQUE KEY uq_attempt_question(attempt_id,question_id),FOREIGN KEY(attempt_id) REFERENCES attempts(attempt_id) ON DELETE CASCADE,FOREIGN KEY(question_id) REFERENCES questions(question_id),INDEX idx_response_attempt(attempt_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS answer_images (image_id VARCHAR(50) PRIMARY KEY,attempt_id VARCHAR(50) NOT NULL,question_id VARCHAR(40) NOT NULL,page_number INT NOT NULL,original_filename VARCHAR(255) NOT NULL,file_path TEXT NOT NULL,uploaded_at DATETIME NOT NULL,FOREIGN KEY(attempt_id) REFERENCES attempts(attempt_id) ON DELETE CASCADE,FOREIGN KEY(question_id) REFERENCES questions(question_id),INDEX idx_image_attempt_question(attempt_id,question_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS evaluation_errors (evaluation_error_id BIGINT AUTO_INCREMENT PRIMARY KEY,response_id VARCHAR(50) NOT NULL,error_code VARCHAR(10) NOT NULL,comment TEXT,marks_lost DECIMAL(10,2),created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(response_id) REFERENCES responses(response_id) ON DELETE CASCADE,INDEX idx_error_response(response_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
-"""CREATE TABLE IF NOT EXISTS question_history (student_id VARCHAR(32) NOT NULL,question_id VARCHAR(40) NOT NULL,attempt_count INT NOT NULL DEFAULT 0,correct_count INT NOT NULL DEFAULT 0,last_attempted_at DATETIME,last_correct_at DATETIME,last_marks_awarded DECIMAL(10,2),last_error_summary TEXT,PRIMARY KEY(student_id,question_id),FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,INDEX idx_history_student(student_id,last_attempted_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS question_history (student_id VARCHAR(32) NOT NULL,question_id VARCHAR(40) NOT NULL,attempt_count INT NOT NULL DEFAULT 0,correct_count INT NOT NULL DEFAULT 0,last_attempted_at DATETIME,last_correct_at DATETIME,last_marks_awarded DECIMAL(10,2),last_error_summary TEXT,PRIMARY KEY(student_id,question_id),FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,INDEX idx_history_student(student_id,last_attempted_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",,
+"""CREATE TABLE IF NOT EXISTS student_access_credentials (student_id VARCHAR(32) PRIMARY KEY,password_hash VARCHAR(255) NOT NULL,failed_login_count INT NOT NULL DEFAULT 0,locked_until DATETIME NULL,last_login_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS student_access_tokens (token_hash CHAR(64) PRIMARY KEY,student_id VARCHAR(32) NOT NULL,expires_at DATETIME NOT NULL,used_at DATETIME NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,INDEX idx_student_access_token_student(student_id),INDEX idx_student_access_token_expiry(expires_at)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"""
 ]
 
 SUBJECTS = {"maths": ("Mathematics",), "physics": ("Physics",), "chemistry": ("Chemistry",), "computer": ("Computer",)}
@@ -53,7 +58,60 @@ ICSE_MATH_CHAPTERS = {10: ["Commercial Mathematics", "Algebra", "Geometry", "Men
 BOARD_MATH_CHAPTERS = {"CBSE": CBSE_MATH_CHAPTERS, "ICSE": ICSE_MATH_CHAPTERS}
 
 
+def _validate_production_schema():
+    """Read-only startup check; production schema changes must use reviewed migrations."""
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    required_tables = {
+        "students", "tests", "questions", "attempts", "responses",
+        "answer_images", "question_assets", "evaluation_errors",
+        "question_history", "subjects", "chapters", "competencies",
+        "test_questions", "subject_catalog", "curriculum_catalog",
+        "curriculum_units", "canonical_concepts", "curriculum_chapters",
+        "question_curriculum_map", "student_subject_enrollments",
+        "student_access_credentials", "student_access_tokens",
+    }
+    missing_tables = sorted(required_tables - tables)
+    required_columns = {
+        "students": {"student_id", "name", "email", "phone", "class_level", "board", "subject", "status"},
+        "tests": {"test_id", "title", "duration_minutes", "total_marks", "questions_json", "monitoring_mode"},
+        "questions": {"question_id", "question_content_json", "answer_choices_json", "marks", "source_type", "verification_status", "canonical_question_id"},
+        "attempts": {"attempt_id", "student_id", "test_id", "started_at", "status"},
+        "responses": {"response_id", "attempt_id", "question_id", "answer_status", "marks_awarded"},
+        "answer_images": {"image_id", "attempt_id", "question_id", "file_path"},
+        "student_access_credentials": {"student_id", "password_hash", "failed_login_count", "locked_until"},
+        "student_access_tokens": {"token_hash", "student_id", "expires_at", "used_at"},
+    }
+    missing_columns = {}
+    for table, required in required_columns.items():
+        if table not in tables:
+            continue
+        actual = {column["name"] for column in inspector.get_columns(table)}
+        absent = sorted(required - actual)
+        if absent:
+            missing_columns[table] = absent
+    if missing_tables or missing_columns:
+        details = []
+        if missing_tables:
+            details.append("missing tables: " + ", ".join(missing_tables))
+        if missing_columns:
+            details.append("missing columns: " + "; ".join(
+                f"{table} ({', '.join(columns)})"
+                for table, columns in missing_columns.items()
+            ))
+        raise RuntimeError(
+            "Production database schema is not ready. No automatic DDL or data repair was attempted; "
+            + " | ".join(details)
+            + ". Review and apply the approved migration runbook, then restart the service."
+        )
+
+
 def initialize_database():
+    """Bootstrap local/test databases; validate production without modifying it."""
+    if os.getenv("RENDER"):
+        _validate_production_schema()
+        return
+
     with engine.begin() as connection:
         for statement in SCHEMA:
             connection.execute(text(statement))
