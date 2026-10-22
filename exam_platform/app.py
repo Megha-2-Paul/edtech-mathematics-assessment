@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from flask import Flask, jsonify, redirect, render_template, request, send_file, send_from_directory, session, url_for
+from flask import Flask, Response, jsonify, redirect, render_template, request, send_file, send_from_directory, session, url_for
 from PIL import Image
 from sqlalchemy import text
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -89,6 +89,31 @@ STUDENT_PROTECTED_PREFIXES = (
     "/student/report/",
     "/student/result/",
 )
+
+
+@app.before_request
+def enforce_teacher_access():
+    """Protect administrative routes even if the app is mounted outside wsgi.py."""
+    if not request.path.startswith("/teacher"):
+        return None
+    expected_username = os.getenv("TEACHER_ACCESS_USERNAME", "").strip()
+    expected_password = os.getenv("TEACHER_ACCESS_PASSWORD", "").strip()
+    if not expected_username or not expected_password:
+        if os.getenv("RENDER"):
+            return Response("Teacher access is not configured.", status=503)
+        return None
+    auth = request.authorization
+    if (
+        not auth
+        or not hmac.compare_digest(auth.username or "", expected_username)
+        or not hmac.compare_digest(auth.password or "", expected_password)
+    ):
+        return Response(
+            "Authentication required.",
+            status=401,
+            headers={"WWW-Authenticate": 'Basic realm="Improvia Teacher"'},
+        )
+    return None
 
 
 @app.before_request
