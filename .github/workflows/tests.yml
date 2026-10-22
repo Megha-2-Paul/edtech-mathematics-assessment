@@ -31,6 +31,7 @@ jobs:
       TEACHER_ACCESS_PASSWORD: ci-only-teacher-password
       TESTING_MODE: "1"
       LOAD_DEMO_DATA: "1"
+      GOOGLE_REGISTRATION_WEBHOOK_SECRET: ci-only-registration-secret
 
     steps:
       - name: Checkout repository
