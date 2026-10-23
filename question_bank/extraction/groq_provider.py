@@ -98,13 +98,13 @@ class GroqProvider:
             "extraction_model": self.model,
             "questions": [
                 {
-                    "question_number": null,
+                    "question_number": None,
                     "question_text": "",
                     "question_parts": [],
                     "answer_choices": [],
-                    "correct_answer": null,
-                    "marks": null,
-                    "question_type": null,
+                    "correct_answer": None,
+                    "marks": None,
+                    "question_type": None,
                     "source_page": source_page,
                     "source_pages": [source_page],
                     "extraction_confidence": "medium",
