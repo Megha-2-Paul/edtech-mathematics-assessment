@@ -65,6 +65,10 @@ def run_extraction(
     provider: GroqProvider | None = None,
 ) -> dict:
     """Extract, persist local JSON, and validate without publishing."""
+    if output_path.exists():
+        raise FileExistsError(
+            f"Output already exists: {output_path}. Choose a new --output path to avoid overwriting it."
+        )
     pages = extract_pdf_text_pages(pdf_path, max_pages=max_pages)
     client = provider or GroqProvider()
     run_id = str(uuid4())
