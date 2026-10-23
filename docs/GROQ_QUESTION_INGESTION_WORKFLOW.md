@@ -24,7 +24,7 @@ Source → acquisition → PDF/HTML/image preprocessing → question boundary de
 Use a replaceable provider layer. Groq should be one provider alongside possible future OpenAI, Gemini, or other providers. All providers should emit the same Improvia extraction contract.
 
 Proposed future modules:
-- question_bank/providers/groq_provider.py
+- question_bank/extraction/groq_provider.py
 - question_bank/extraction/groq_extractor.py
 - question_bank/extraction/source_downloader.py
 - question_bank/extraction/pdf_chunker.py
@@ -145,14 +145,25 @@ Store GROQ_API_KEY only in environment variables or a secure secret store. Never
 - rights checks
 - monitoring
 
-## First implementation target
-After migration completion, start with one local PDF and a CLI such as:
+## G1 prototype usage
 
-python -m question_bank.ingest_groq pdf sample-paper.pdf
+Configure `GROQ_API_KEY` in the local environment (never paste it into chat or commit it). Optionally set `GROQ_MODEL`; the default is `openai/gpt-oss-120b`.
 
-Expected result: PDF → Groq extraction → strict JSON → AIJSONQuestionExtractor → validated candidates → reviewable output.
+Run the focused mocked tests first:
 
-Only after this is reliable should URL ingestion and large-scale bulk enrichment be added.
+```bash
+python -m pytest -q tests/test_groq_ingestion.py tests/test_groq_benchmark.py
+```
+
+Then use a permitted, text-based PDF and start with no more than two pages:
+
+```bash
+python -m question_bank.ingest_groq pdf sample-paper.pdf --max-pages 2 --board ICSE --class-level 10
+```
+
+The default output is `sample-paper.groq_candidates.json` beside the PDF. The command writes a local JSON candidate file and prints a validation summary; it never writes to the database. Inspect and retain the output only for sources Improvia is permitted to process. Missing/uncertain marks are flagged for human verification; the legacy normalizer may still default absent marks for candidate scoring, so those values must not be trusted without checking the source.
+
+After the focused tests, run the relevant existing regression tests. A passing mocked test is not proof that Groq extraction quality is acceptable. Benchmark question boundaries, notation, subquestions, MCQ options, marks, page provenance, invalid outputs, and human correction time before any bulk processing.
 
 ## Non-goals
 - Automatically publish AI-extracted questions.
