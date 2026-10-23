@@ -1,7 +1,7 @@
 # Future Workflow — Groq-Assisted Question Ingestion
 
 ## Status
-**Planned / Deferred.** Documented now; implementation starts only after the current curriculum/database migration is completed and verified.
+**G1 local prototype added on branch `docs/groq-question-ingestion-workflow`.** Mocked tests are included. The implementation has not yet been verified by a successful CI run or a real permitted-PDF API experiment. No database write or publication is performed.
 
 ## Goal
 Enrich the Improvia question bank from legitimate PDFs, URLs, images, and documents while preserving the existing ingestion, taxonomy, review, provenance, duplicate-detection, publication, and cloud-sync boundaries.
