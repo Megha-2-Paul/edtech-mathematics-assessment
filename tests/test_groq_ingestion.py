@@ -159,3 +159,19 @@ def test_run_extraction_saves_review_only_payload_and_uses_shared_importer(tmp_p
     assert summary["extracted_questions"] == 1
     assert summary["publication"].startswith("NOT PUBLISHED")
     assert summary["output_path"] == str(output_path)
+
+
+def test_run_extraction_refuses_to_overwrite_existing_output(tmp_path):
+    pdf_path = tmp_path / "not-needed.pdf"
+    output_path = tmp_path / "existing.json"
+    output_path.write_text('{"keep": true}', encoding="utf-8")
+
+    with pytest.raises(FileExistsError, match="Choose a new --output path"):
+        run_extraction(
+            pdf_path,
+            output_path=output_path,
+            max_pages=1,
+            provider=object(),
+        )
+
+    assert json.loads(output_path.read_text(encoding="utf-8")) == {"keep": True}
