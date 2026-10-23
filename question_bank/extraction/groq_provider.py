@@ -188,5 +188,12 @@ class GroqProvider:
                 raise GroqExtractionError("Each item in questions must be an object.")
             item["source_page"] = source_page
             item["source_pages"] = [source_page]
-            item.setdefault("extraction_warnings", [])
+            warnings = item.get("extraction_warnings")
+            if not isinstance(warnings, list):
+                warnings = ["invalid_extraction_warnings_shape"]
+            if item.get("marks") is None:
+                warnings.append("marks_not_found_or_uncertain; verify against source before use")
+            if not item.get("question_text"):
+                warnings.append("question_text_missing_or_uncertain; reject unless source can resolve it")
+            item["extraction_warnings"] = warnings
         return payload
