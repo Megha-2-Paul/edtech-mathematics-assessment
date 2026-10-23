@@ -98,16 +98,16 @@ class GroqProvider:
             "extraction_model": self.model,
             "questions": [
                 {
-                    "question_number": "string or number from source, otherwise null",
-                    "question_text": "verbatim question text",
+                    "question_number": null,
+                    "question_text": "",
                     "question_parts": [],
                     "answer_choices": [],
-                    "correct_answer": "only if explicitly printed in this source chunk; otherwise null",
-                    "marks": "number if explicitly printed; otherwise null",
-                    "question_type": "mcq, vsaq, saq, or laq only when clear; otherwise null",
+                    "correct_answer": null,
+                    "marks": null,
+                    "question_type": null,
                     "source_page": source_page,
                     "source_pages": [source_page],
-                    "extraction_confidence": "high, medium, or low",
+                    "extraction_confidence": "medium",
                     "extraction_warnings": [],
                 }
             ],
