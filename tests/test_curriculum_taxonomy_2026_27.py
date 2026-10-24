@@ -93,3 +93,84 @@ def test_migration_upserts_use_real_target_columns():
     assert "subject_code=:code,status='VERIFIED'" in source
     assert "unit_name=:name,unit_order=:order" in source
     assert "official_chapter_name=:name,canonical_concept_id=:concept,status='VERIFIED'" in source
+
+
+
+def test_canonical_concept_ids_are_subject_scoped_but_keep_aliases():
+    import importlib.util
+    migration_path = ROOT / "question_bank" / "migrations" / "005_curriculum_question_reuse.py"
+    spec = importlib.util.spec_from_file_location("curriculum_migration", migration_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module.canonical_concept_id("mathematics", "Probability") != module.canonical_concept_id(
+        "applied_mathematics", "Probability"
+    )
+    assert module.canonical_concept_id("mathematics", "Trigonometry") == module.canonical_concept_id(
+        "mathematics", "Introduction to Trigonometry"
+    )
+
+
+def test_subject_context_resolves_duplicate_display_names_by_board_and_class():
+    import importlib.util
+    migration_path = ROOT / "question_bank" / "migrations" / "005_curriculum_question_reuse_audit.py"
+    spec = importlib.util.spec_from_file_location("curriculum_migration_audit", migration_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    index = module.subject_context_index(load_taxonomy())
+
+    assert module.resolve_subject_id(index, "CBSE", 10, "Computer Applications") == "cbse_computer_applications"
+    assert module.resolve_subject_id(index, "ICSE", 10, "Computer Applications") == "icse_computer_applications"
+    assert module.resolve_subject_id(index, "CBSE", 10, "Not a subject") is None
+
+
+def test_enrollment_audit_counts_only_missing_enrollments(tmp_path):
+    from sqlalchemy import create_engine, text
+    import importlib.util
+
+    migration_path = ROOT / "question_bank" / "migrations" / "005_curriculum_question_reuse_audit.py"
+    spec = importlib.util.spec_from_file_location("curriculum_migration_audit", migration_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    engine = create_engine(f"sqlite:///{tmp_path / 'enrollment-audit.sqlite'}")
+    with engine.begin() as db:
+        db.execute(text("""
+            CREATE TABLE students (
+                student_id TEXT PRIMARY KEY, board TEXT, class_level INTEGER,
+                subject TEXT, status TEXT
+            )
+        """))
+        db.execute(text("""
+            CREATE TABLE student_subject_enrollments (
+                enrollment_id INTEGER PRIMARY KEY AUTOINCREMENT, student_id TEXT,
+                board TEXT, class_level INTEGER, subject_id TEXT, academic_year TEXT,
+                status TEXT
+            )
+        """))
+        db.execute(text("""
+            INSERT INTO students(student_id,board,class_level,subject,status) VALUES
+            ('S1','CBSE',10,'Mathematics','active'),
+            ('S2','CBSE',10,'Mathematics','active'),
+            ('S3','CBSE',12,'Applied Mathematics','active'),
+            ('S4','CBSE',10,'Mathematics','inactive')
+        """))
+        db.execute(text("""
+            INSERT INTO student_subject_enrollments(student_id,board,class_level,subject_id,academic_year,status)
+            VALUES ('S1','CBSE',10,'mathematics','2026-27','ACTIVE')
+        """))
+        count = module.expected_enrollment_inserts(
+            db,
+            eligible_rows=3,
+            tables={"students", "student_subject_enrollments"},
+            missing_columns={},
+        )
+    assert count == 2
+    engine.dispose()
+
+
+def test_migration_question_mapping_is_scoped_by_board_class_and_subject():
+    migration_path = ROOT / "question_bank" / "migrations" / "005_curriculum_question_reuse.py"
+    source = migration_path.read_text(encoding="utf-8")
+    assert "sc.subject_id=cur.subject_id AND sc.subject_name=q.subject" in source
+    assert "COUNT(DISTINCT cur2.subject_id)" in source
+    assert "cur2.board=q.board AND cur2.class_level=q.class_level" in source
