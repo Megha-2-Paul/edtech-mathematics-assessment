@@ -16,8 +16,12 @@ if CLOUDINARY_ENABLED:
     cloudinary.config(secure=True)
 
 
-def store_image(file_obj, filename):
-    """Store an uploaded image and return the reference persisted in answer_images.file_path."""
+def store_image(file_obj, filename, upload_folder=None):
+    """Store an uploaded image and return the reference persisted in answer_images.file_path.
+
+    Cloud deployments use authenticated Cloudinary delivery. Local development uses
+    the configured upload folder, which should be persistent if used beyond testing.
+    """
     if CLOUDINARY_ENABLED:
         stem = Path(filename).stem
         public_id = f"improvia/answers/{stem}"
@@ -30,7 +34,7 @@ def store_image(file_obj, filename):
         )
         return f"cloudinary://{result['public_id']}"
 
-    upload_folder = Path(os.getenv("UPLOAD_FOLDER", "uploads"))
+    upload_folder = Path(upload_folder or os.getenv("UPLOAD_FOLDER", "uploads"))
     upload_folder.mkdir(parents=True, exist_ok=True)
     destination = upload_folder / Path(filename).name
     file_obj.save(destination)
