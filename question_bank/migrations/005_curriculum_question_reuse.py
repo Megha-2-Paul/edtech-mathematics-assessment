@@ -50,6 +50,14 @@ def slug(name):
     if s: return s
     s=re.sub(r"[^a-z0-9]+","_",name.lower()).strip("_")
     return s[:100] or "unclassified"
+
+
+def canonical_concept_id(subject_id, chapter_name):
+    """Scope concepts to a subject; equal chapter names are not proof of equivalence."""
+    subject = slug(subject_id)[:80]
+    suffix = f"__{subject}"
+    base_limit = max(1, 100 - len(suffix))
+    return f"{slug(chapter_name)[:base_limit]}{suffix}"
 EXPECTED_COLUMNS = {
     "students": {"student_id", "board", "class_level", "subject", "status"},
     "questions": {"question_id", "subject", "board", "class_level", "chapter"},
@@ -144,22 +152,17 @@ def apply(url,taxonomy):
               VALUES(:id,:name,:code,1)
               ON DUPLICATE KEY UPDATE subject_name=:name,subject_code=:code,active=1"""),
               {"id":s["subject_id"],"name":s["name"],"code":s["subject_code"]})
-        concept_subject={}
+        concepts = {}
         for c in data["curricula"]:
-            subject_id=c["subject_id"]
+            subject_id = c["subject_id"]
             for u in c["units"]:
                 for ch in u["chapters"]:
-                    cid=slug(ch["official_chapter_name"])
-                    previous=concept_subject.get(cid)
-                    if previous is None and cid not in concept_subject:
-                        concept_subject[cid]=subject_id
-                    elif previous != subject_id:
-                        # Same canonical concept is intentionally shared across subjects.
-                        concept_subject[cid]=None
-        for cid,sid in concept_subject.items():
+                    cid = canonical_concept_id(subject_id, ch["official_chapter_name"])
+                    concepts[cid] = (ch["official_chapter_name"], subject_id)
+        for cid, (concept_name, subject_id) in concepts.items():
             db.execute(text("""INSERT INTO canonical_concepts(concept_id,concept_name,subject_id,active)
               VALUES(:id,:name,:subject,1) ON DUPLICATE KEY UPDATE concept_name=:name,subject_id=:subject,active=1"""),
-              {"id":cid,"name":cid.replace("_"," ").title(),"subject":sid})
+              {"id":cid,"name":concept_name,"subject":subject_id})
         for c in data["curricula"]:
             db.execute(text("""INSERT INTO curriculum_catalog(curriculum_id,board,class_level,subject_id,subject_code,academic_year,status)
               VALUES(:id,:board,:class,:subject,:code,:year,'VERIFIED')
@@ -172,7 +175,7 @@ def apply(url,taxonomy):
                   ON DUPLICATE KEY UPDATE unit_name=:name,unit_order=:order"""),
                   {"id":uid,"curr":c["curriculum_id"],"order":ui,"name":u["unit_name"]})
                 for ci,ch in enumerate(u["chapters"],1):
-                    ccid=slug(ch["official_chapter_name"]); chid=f"{uid}__c{ci}"
+                    ccid=canonical_concept_id(c["subject_id"], ch["official_chapter_name"]); chid=f"{uid}__c{ci}"
                     db.execute(text("""INSERT INTO curriculum_chapters(curriculum_chapter_id,unit_id,chapter_order,official_chapter_name,canonical_concept_id,status)
                       VALUES(:id,:unit,:order,:name,:concept,'VERIFIED')
                       ON DUPLICATE KEY UPDATE official_chapter_name=:name,canonical_concept_id=:concept,status='VERIFIED'"""),
@@ -195,11 +198,21 @@ def apply(url,taxonomy):
         db.execute(text("""INSERT IGNORE INTO question_curriculum_map(question_id,curriculum_chapter_id,compatibility_status,notes)
           SELECT q.question_id,cc.curriculum_chapter_id,'EXACT','Backfilled from exact official chapter/board/class/subject match.'
           FROM questions q
-          JOIN subject_catalog sc ON sc.subject_name=q.subject
-          JOIN curriculum_catalog cur ON cur.board=q.board AND cur.class_level=q.class_level AND cur.subject_id=sc.subject_id
+          JOIN curriculum_catalog cur
+            ON cur.board=q.board AND cur.class_level=q.class_level AND cur.academic_year='2026-27'
+          JOIN subject_catalog sc
+            ON sc.subject_id=cur.subject_id AND sc.subject_name=q.subject
           JOIN curriculum_units cu ON cu.curriculum_id=cur.curriculum_id
-          JOIN curriculum_chapters cc ON cc.unit_id=cu.unit_id AND cc.official_chapter_name=q.chapter
-          WHERE q.board IS NOT NULL AND q.class_level IS NOT NULL AND q.chapter IS NOT NULL"""))
+          JOIN curriculum_chapters cc
+            ON cc.unit_id=cu.unit_id AND cc.official_chapter_name=q.chapter
+          WHERE q.board IS NOT NULL AND q.class_level IS NOT NULL AND q.chapter IS NOT NULL
+            AND (
+              SELECT COUNT(DISTINCT cur2.subject_id)
+              FROM curriculum_catalog cur2
+              JOIN subject_catalog sc2 ON sc2.subject_id=cur2.subject_id
+              WHERE cur2.board=q.board AND cur2.class_level=q.class_level
+                AND cur2.academic_year='2026-27' AND sc2.subject_name=q.subject
+            ) = 1"""))
     print("Applied curriculum/question-reuse schema",VERSION)
 if __name__=="__main__":
     p=argparse.ArgumentParser()
