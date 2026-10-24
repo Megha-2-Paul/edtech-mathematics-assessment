@@ -249,7 +249,11 @@ def print_report(report: dict) -> None:
     print("Student enrollment backfill")
     print("---------------------------")
     print(f"Eligible legacy registrations: {report['students'].get('eligible_registration_rows', 0)}")
-    print(f"Expected new enrollment inserts: {report['students'].get('expected_enrollment_inserts', 'unavailable (schema incomplete)')}")
+    expected_inserts = report["students"].get("expected_enrollment_inserts")
+    if expected_inserts is None:
+        print("Expected new enrollment inserts: UNAVAILABLE (enrollment schema incomplete)")
+    else:
+        print(f"Expected new enrollment inserts: {expected_inserts}")
     for r in report["students"].get("by_curriculum", []):
         print(f"  {r['board']} {r['class_level']} {r['subject']}: {r['count']}")
     print()
