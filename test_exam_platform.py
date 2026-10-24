@@ -342,8 +342,8 @@ def teacher_evaluate(attempt_id, marks, error_codes):
 
         raw_url = f"{BASE_URL}/uploads/{attempt_uploads[0]['filename']}"
         raw_response = requests.get(raw_url, timeout=10)
-        assert raw_response.status_code == 403, (
-            f"Raw answer-image URL must not be public, got {raw_response.status_code}"
+        assert raw_response.status_code == 404, (
+            f"Raw answer-image route must not exist, got {raw_response.status_code}"
         )
 
     manual_question_ids = re.findall(r'name="marks_([^"]+)"', evaluation_page.text)
@@ -531,7 +531,7 @@ def test_cross_student_access_is_rejected():
         raw_response = requests.get(
             f"{BASE_URL}/uploads/{uploaded['filename']}", timeout=10
         )
-        assert raw_response.status_code == 403, "Raw answer-image URL must not be public"
+        assert raw_response.status_code == 404, "Raw answer-image route must not exist"
     response = second_session.get(
         f"{BASE_URL}/report/{CURRENT_ATTEMPT_ID}", timeout=10
     )
