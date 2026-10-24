@@ -12,7 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 
 from sqlalchemy import create_engine, inspect, text
@@ -58,6 +58,52 @@ def expected_curriculum_counts(data: dict) -> tuple[int, int]:
         for unit in curriculum["units"]
     )
     return curricula, chapters
+
+
+def subject_context_index(data: dict) -> dict:
+    """Map (board, class, display name) to all possible canonical subject IDs."""
+    names_by_id = {s["subject_id"]: s["name"] for s in data["subjects"]}
+    index = defaultdict(set)
+    for curriculum in data["curricula"]:
+        subject_id = curriculum["subject_id"]
+        name = names_by_id.get(subject_id)
+        if name:
+            index[(curriculum["board"], int(curriculum["class_level"]), name)].add(subject_id)
+    return dict(index)
+
+
+def resolve_subject_id(index: dict, board: str, class_level: int, subject_name: str):
+    """Return a subject ID only when board/class/name identify exactly one subject."""
+    candidates = index.get((board, int(class_level), subject_name), set())
+    return next(iter(candidates)) if len(candidates) == 1 else None
+
+
+def expected_enrollment_inserts(db, eligible_rows: int, tables: set, missing_columns: dict):
+    """Count eligible active registrations without a matching 2026-27 enrollment."""
+    table = "student_subject_enrollments"
+    if table not in tables:
+        return eligible_rows
+    if missing_columns.get(table):
+        return None
+    return int(db.execute(text("""
+        SELECT COUNT(*)
+        FROM students s
+        WHERE s.status='active'
+          AND s.board IS NOT NULL AND s.class_level IS NOT NULL
+          AND s.subject IN ('Mathematics','Applied Mathematics')
+          AND NOT EXISTS (
+              SELECT 1
+              FROM student_subject_enrollments e
+              WHERE e.student_id=s.student_id
+                AND e.board=s.board
+                AND e.class_level=s.class_level
+                AND e.subject_id=CASE
+                    WHEN s.subject='Applied Mathematics' THEN 'applied_mathematics'
+                    ELSE 'mathematics'
+                END
+                AND e.academic_year='2026-27'
+          )
+    """)).scalar_one())
 
 def audit(url: str, taxonomy_path: str) -> dict:
     data = load_taxonomy(taxonomy_path)
@@ -113,7 +159,12 @@ def audit(url: str, taxonomy_path: str) -> dict:
                  "subject": r["subject"], "count": int(r["n"])}
                 for r in rows
             ]
-            report["students"]["expected_enrollment_inserts"] = report["students"]["eligible_registration_rows"]
+            report["students"]["expected_enrollment_inserts"] = expected_enrollment_inserts(
+                db,
+                report["students"]["eligible_registration_rows"],
+                tables,
+                report["schema"]["missing_columns"],
+            )
 
         if "questions" in tables and not report["schema"]["missing_columns"].get("questions"):
             rows = db.execute(text("""
@@ -122,31 +173,32 @@ def audit(url: str, taxonomy_path: str) -> dict:
                 WHERE board IS NOT NULL AND class_level IS NOT NULL AND chapter IS NOT NULL
             """)).mappings().all()
 
-            official = set()
-            for c in data["curricula"]:
-                for u in c["units"]:
-                    for ch in u["chapters"]:
-                        official.add((
-                            c["board"], int(c["class_level"]), c["subject_id"],
-                            c["subject_code"], ch["official_chapter_name"]
-                        ))
-
-            # The migration joins subject_catalog by subject_name. Mirror that behavior.
-            subject_ids_by_name = {
-                s["name"]: s["subject_id"] for s in data["subjects"]
+            official = {
+                (c["board"], int(c["class_level"]), c["subject_id"], ch["official_chapter_name"])
+                for c in data["curricula"]
+                for u in c["units"]
+                for ch in u["chapters"]
             }
+            subject_ids_by_context = subject_context_index(data)
             exact = []
             unmatched = Counter()
+            ambiguous_subject_contexts = Counter()
             for r in rows:
-                sid = subject_ids_by_name.get(r["subject"])
-                key = (r["board"], int(r["class_level"]), sid, None, r["chapter"])
-                if sid and any(
-                    x[0] == key[0] and x[1] == key[1] and x[2] == key[2] and x[4] == key[4]
-                    for x in official
-                ):
+                context = (r["board"], int(r["class_level"]), r["subject"])
+                candidates = subject_ids_by_context.get(context, set())
+                sid = resolve_subject_id(
+                    subject_ids_by_context, r["board"], int(r["class_level"]), r["subject"]
+                )
+                if len(candidates) > 1:
+                    ambiguous_subject_contexts[context] += 1
+                if sid and (context[0], context[1], sid, r["chapter"]) in official:
                     exact.append(dict(r))
                 else:
                     unmatched[(r["board"], int(r["class_level"]), r["subject"], r["chapter"])] += 1
+            report["questions"]["ambiguous_subject_contexts"] = [
+                {"board": k[0], "class_level": k[1], "subject": k[2], "count": n}
+                for k, n in sorted(ambiguous_subject_contexts.items(), key=lambda x: str(x[0]))
+            ]
 
             report["questions"]["eligible_rows"] = len(rows)
             report["questions"]["exact_mapping_rows"] = len(exact)
@@ -197,6 +249,7 @@ def print_report(report: dict) -> None:
     print("Student enrollment backfill")
     print("---------------------------")
     print(f"Eligible legacy registrations: {report['students'].get('eligible_registration_rows', 0)}")
+    print(f"Expected new enrollment inserts: {report['students'].get('expected_enrollment_inserts', 'unavailable (schema incomplete)')}")
     for r in report["students"].get("by_curriculum", []):
         print(f"  {r['board']} {r['class_level']} {r['subject']}: {r['count']}")
     print()
@@ -205,6 +258,10 @@ def print_report(report: dict) -> None:
     print(f"Eligible question rows: {report['questions'].get('eligible_rows', 0)}")
     print(f"Exact mappings predicted: {report['questions'].get('exact_mapping_rows', 0)}")
     print(f"Unmatched question rows: {report['questions'].get('unmatched_rows', 0)}")
+    if report["questions"].get("ambiguous_subject_contexts"):
+        print("Ambiguous board/class/subject contexts (not mapped):")
+        for r in report["questions"]["ambiguous_subject_contexts"]:
+            print(f"  {r['board']} {r['class_level']} {r['subject']}: {r['count']}")
     if report["questions"].get("unmatched_groups"):
         print("Largest unmatched groups:")
         for r in report["questions"]["unmatched_groups"][:25]:
