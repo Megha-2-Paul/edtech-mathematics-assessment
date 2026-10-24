@@ -73,7 +73,7 @@ The close comment records that the work is retained in PR #31 and that productio
 
 ## CI and validation status
 
-The code changes triggered GitHub Actions workflow **Tests**, run [#40138825786](https://github.com/Megha-2-Paul/edtech-mathematics-assessment/actions/runs/40138825786), on commit `c7d427127e05bfd18934a75ec2e61dd75789fbd6`. At the time of this document's initial commit, the run was still in progress at the MySQL service initialization step. Recheck the run before considering these changes validated; record the final conclusion and any follow-up run here.
+The code changes triggered GitHub Actions workflow **Tests**. The first run [#40138825786](https://github.com/Megha-2-Paul/edtech-mathematics-assessment/actions/runs/40138825786) passed on commit `c7d427127e05bfd18934a75ec2e61dd75789fbd6`. The latest run [#40138939766](https://github.com/Megha-2-Paul/edtech-mathematics-assessment/actions/runs/40138939766) also completed with **success** on commit `e7c8f0272d5a3bdfedef43ee132fa40bf9d8d5aa`, including the audit-output clarification. This is the current code-validation evidence for the fixes in this pass. Recheck the current PR status before merge because subsequent commits or environment changes can invalidate the result.
 
 CI against an isolated MySQL database does not verify:
 - live Aiven schema and existing data;
