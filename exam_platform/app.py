@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from flask import Flask, Response as FlaskResponse, jsonify, redirect, render_template, request, send_file, send_from_directory, session, url_for
+from flask import Flask, Response as FlaskResponse, jsonify, redirect, render_template, request, send_file, session, url_for
 from PIL import Image
 from sqlalchemy import text
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from exam_platform.admin import register_admin
 from database import engine
 from exam_platform.db_source import storage
+from exam_platform.media import delete_image as delete_stored_image, read_stored_image, store_image
 from exam_platform.mock_data import load_mock_data
 from exam_platform.eligibility import is_test_eligible
 from exam_platform.models import (
@@ -806,24 +807,38 @@ def upload_answer_image(attempt_id):
         f"{attempt_id}_{question_id}_page_{page_number}_"
         f"{uuid.uuid4().hex[:8]}.{ext}"
     )
-    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-    file.save(filepath)
-
-    storage.create_image(
-        AnswerImage(
-            image_id=f"IMG{uuid.uuid4().hex[:12].upper()}",
-            attempt_id=attempt_id,
-            question_id=question_id,
-            page_number=page_number,
-            original_filename=secure_filename(file.filename),
-            file_path=filepath,
-            uploaded_at=datetime.now(),
+    image_id = f"IMG{uuid.uuid4().hex[:12].upper()}"
+    filepath = None
+    try:
+        filepath = store_image(
+            file,
+            filename,
+            upload_folder=app.config["UPLOAD_FOLDER"],
         )
-    )
+        storage.create_image(
+            AnswerImage(
+                image_id=image_id,
+                attempt_id=attempt_id,
+                question_id=question_id,
+                page_number=page_number,
+                original_filename=secure_filename(file.filename),
+                file_path=filepath,
+                uploaded_at=datetime.now(),
+            )
+        )
+    except Exception:
+        # Avoid orphaned files when storage or database persistence fails.
+        if filepath:
+            try:
+                delete_stored_image(filepath)
+            except Exception:
+                app.logger.exception("Failed to clean up an incomplete answer-image upload")
+        app.logger.exception("Failed to persist handwritten image for attempt %s", attempt_id)
+        return jsonify({"error": "Unable to store answer image; please retry"}), 503
 
     return jsonify(
         {
-            "image_id": storage.get_attempt_images(attempt_id, question_id)[-1].image_id,
+            "image_id": image_id,
             "page_number": page_number,
             "filename": filename,
         }
@@ -870,8 +885,6 @@ def student_answer_image(attempt_id, image_id):
         return jsonify({"error": "Image not found"}), 404
 
     try:
-        from exam_platform.media import read_stored_image
-
         data, content_type = read_stored_image(image.file_path)
     except FileNotFoundError:
         return jsonify({"error": "Stored image is missing"}), 404
@@ -900,8 +913,11 @@ def delete_image(attempt_id, image_id):
     if not image:
         return jsonify({"error": "Image not found"}), 404
 
-    if os.path.exists(image.file_path):
-        os.remove(image.file_path)
+    try:
+        delete_stored_image(image.file_path)
+    except Exception:
+        app.logger.exception("Failed to delete handwritten image %s", image_id)
+        return jsonify({"error": "Image is temporarily unavailable for deletion"}), 503
 
     storage.delete_image(image_id)
     return jsonify({"status": "deleted"})
@@ -1016,13 +1032,8 @@ def submission_confirmation(attempt_id):
 
 
 # ---------------------------------------------------------------------------
-# Uploaded-file serving and local development entry point
+# Local development entry point
 # ---------------------------------------------------------------------------
-
-
-@app.route("/uploads/<path:filename>")
-def uploaded_file(filename):
-    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 
 if __name__ == "__main__":
