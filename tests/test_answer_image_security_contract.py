@@ -33,3 +33,13 @@ def test_submitted_attempts_reject_mutating_http_methods():
     assert '"POST", "PUT", "PATCH", "DELETE"' in helper
     assert "cannot be changed." in helper
     assert "409" in helper
+
+def test_wsgi_does_not_replace_private_image_routes_with_legacy_handlers():
+    wsgi_source = (
+        Path(__file__).resolve().parents[1] / "wsgi.py"
+    ).read_text(encoding="utf-8")
+
+    assert 'app.view_functions["uploaded_file"]' not in wsgi_source
+    assert 'app.view_functions["upload_answer_image"]' not in wsgi_source
+    assert 'app.view_functions["get_question_images"]' not in wsgi_source
+    assert "/uploads/" not in wsgi_source
