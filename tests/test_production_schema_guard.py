@@ -62,3 +62,18 @@ def test_render_mock_data_guard_precedes_demo_data_loading():
     assert loader.index('if os.getenv("RENDER"):') < loader.index(
         'if os.getenv("LOAD_DEMO_DATA", "0") != "1":'
     )
+
+def test_application_does_not_use_a_hard_coded_production_session_secret():
+    from pathlib import Path
+
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "exam_platform"
+        / "app.py"
+    ).read_text(encoding="utf-8")
+
+    assert "dev-secret-key-change-in-production" not in source
+    assert 'os.getenv("SECRET_KEY")' in source
+    assert 'SESSION_COOKIE_HTTPONLY=True' in source
+    assert 'SESSION_COOKIE_SAMESITE="Lax"' in source
+    assert 'SESSION_COOKIE_SECURE=bool(os.getenv("RENDER"))' in source
