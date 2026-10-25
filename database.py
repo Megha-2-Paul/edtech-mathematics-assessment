@@ -2,7 +2,7 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 load_dotenv(PROJECT_ROOT / ".env")
@@ -53,7 +53,60 @@ ICSE_MATH_CHAPTERS = {10: ["Commercial Mathematics", "Algebra", "Geometry", "Men
 BOARD_MATH_CHAPTERS = {"CBSE": CBSE_MATH_CHAPTERS, "ICSE": ICSE_MATH_CHAPTERS}
 
 
+def _validate_production_schema():
+    """Fail closed on Render instead of running DDL or seed writes at startup."""
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    required_tables = {
+        statement.split("CREATE TABLE IF NOT EXISTS ", 1)[1].split(" ", 1)[0]
+        for statement in SCHEMA
+        if "CREATE TABLE IF NOT EXISTS " in statement
+    }
+    missing_tables = sorted(required_tables - existing_tables)
+
+    required_columns = {
+        "students": {"student_id", "name", "email", "status"},
+        "tests": {"test_id", "title", "duration_minutes", "total_marks", "questions_json"},
+        "questions": {"question_id", "question_content_json", "answer_choices_json", "marks"},
+        "attempts": {"attempt_id", "student_id", "test_id", "started_at", "status"},
+        "responses": {"response_id", "attempt_id", "question_id", "answer_status"},
+        "answer_images": {"image_id", "attempt_id", "question_id", "file_path"},
+    }
+    missing_columns = {}
+    for table, required in required_columns.items():
+        if table not in existing_tables:
+            continue
+        actual = {column["name"] for column in inspector.get_columns(table)}
+        absent = sorted(required - actual)
+        if absent:
+            missing_columns[table] = absent
+
+    if missing_tables or missing_columns:
+        details = []
+        if missing_tables:
+            details.append("missing tables: " + ", ".join(missing_tables))
+        if missing_columns:
+            details.append(
+                "missing columns: "
+                + "; ".join(
+                    f"{table} ({', '.join(columns)})"
+                    for table, columns in missing_columns.items()
+                )
+            )
+        raise RuntimeError(
+            "Production database schema is not ready. No automatic DDL or data repair "
+            "was attempted; "
+            + " | ".join(details)
+            + ". Review the migration runbook, apply approved migrations, and restart."
+        )
+
+
 def initialize_database():
+    """Bootstrap local/test databases; validate production without modifying it."""
+    if os.getenv("RENDER", "").strip().lower() == "true":
+        _validate_production_schema()
+        return
+
     with engine.begin() as connection:
         for statement in SCHEMA:
             connection.execute(text(statement))
