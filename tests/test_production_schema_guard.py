@@ -45,3 +45,20 @@ def test_production_schema_guard_fails_when_required_tables_are_missing(monkeypa
 
     with pytest.raises(RuntimeError, match="No automatic DDL or data repair"):
         database._validate_production_schema()
+
+def test_render_mock_data_guard_precedes_demo_data_loading():
+    from pathlib import Path
+
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "exam_platform"
+        / "mock_data.py"
+    ).read_text(encoding="utf-8")
+    start = source.index("def load_mock_data()")
+    end = source.index("\n    questions = [", start)
+    loader = source[start:end]
+
+    assert 'if os.getenv("RENDER"):' in loader
+    assert loader.index('if os.getenv("RENDER"):') < loader.index(
+        'if os.getenv("LOAD_DEMO_DATA", "0") != "1":'
+    )
