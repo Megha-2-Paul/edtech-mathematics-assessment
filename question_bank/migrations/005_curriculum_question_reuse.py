@@ -7,7 +7,7 @@ Usage:
 from __future__ import annotations
 import argparse, json, os, re
 from pathlib import Path
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 
 VERSION="2026.27.7"
 ALIASES={
@@ -50,6 +50,40 @@ def slug(name):
     if s: return s
     s=re.sub(r"[^a-z0-9]+","_",name.lower()).strip("_")
     return s[:100] or "unclassified"
+
+
+def canonical_concept_id(subject_id, chapter_name):
+    """Scope concepts to a subject; equal chapter names are not proof of equivalence."""
+    subject = slug(subject_id)[:80]
+    suffix = f"__{subject}"
+    base_limit = max(1, 100 - len(suffix))
+    return f"{slug(chapter_name)[:base_limit]}{suffix}"
+EXPECTED_COLUMNS = {
+    "students": {"student_id", "board", "class_level", "subject", "status"},
+    "questions": {"question_id", "subject", "board", "class_level", "chapter"},
+    "subject_catalog": {"subject_id", "subject_name", "subject_code", "active"},
+    "curriculum_catalog": {"curriculum_id", "board", "class_level", "subject_id", "subject_code", "academic_year", "status"},
+    "curriculum_units": {"unit_id", "curriculum_id", "unit_order", "unit_name"},
+    "canonical_concepts": {"concept_id", "concept_name", "subject_id", "active"},
+    "curriculum_chapters": {"curriculum_chapter_id", "unit_id", "chapter_order", "official_chapter_name", "canonical_concept_id", "status"},
+    "question_curriculum_map": {"question_id", "curriculum_chapter_id", "compatibility_status", "notes", "reviewed_by", "reviewed_at"},
+    "student_subject_enrollments": {"enrollment_id", "student_id", "board", "class_level", "subject_id", "subject_code", "academic_year", "status", "created_at", "updated_at"},
+}
+
+
+def validate_schema(db):
+    inspector = inspect(db)
+    missing = {}
+    for table, required in EXPECTED_COLUMNS.items():
+        actual = {c["name"] for c in inspector.get_columns(table)}
+        absent = sorted(required - actual)
+        if absent:
+            missing[table] = absent
+    if missing:
+        details = "; ".join(f"{table}: {', '.join(cols)}" for table, cols in missing.items())
+        raise RuntimeError(f"Migration 005 schema preflight failed: missing columns -> {details}")
+
+
 def load(path):
     data=json.loads(Path(path).read_text(encoding="utf-8"))
     if data.get("taxonomy_version")!=VERSION: raise ValueError("Unexpected taxonomy version")
@@ -111,43 +145,40 @@ def apply(url,taxonomy):
           UNIQUE KEY uq_student_enrollment(student_id,board,class_level,subject_id,academic_year),
           INDEX idx_active_enrollment(student_id,status,board,class_level,subject_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"""))
+        validate_schema(db)
+
         for s in data["subjects"]:
             db.execute(text("""INSERT INTO subject_catalog(subject_id,subject_name,subject_code,active)
               VALUES(:id,:name,:code,1)
-              ON DUPLICATE KEY UPDATE subject_name=VALUES(subject_name),subject_code=VALUES(subject_code),active=1"""),
+              ON DUPLICATE KEY UPDATE subject_name=:name,subject_code=:code,active=1"""),
               {"id":s["subject_id"],"name":s["name"],"code":s["subject_code"]})
-        concept_subject={}
+        concepts = {}
         for c in data["curricula"]:
-            subject_id=c["subject_id"]
+            subject_id = c["subject_id"]
             for u in c["units"]:
                 for ch in u["chapters"]:
-                    cid=slug(ch["official_chapter_name"])
-                    previous=concept_subject.get(cid)
-                    if previous is None and cid not in concept_subject:
-                        concept_subject[cid]=subject_id
-                    elif previous != subject_id:
-                        # Same canonical concept is intentionally shared across subjects.
-                        concept_subject[cid]=None
-        for cid,sid in concept_subject.items():
+                    cid = canonical_concept_id(subject_id, ch["official_chapter_name"])
+                    concepts[cid] = (ch["official_chapter_name"], subject_id)
+        for cid, (concept_name, subject_id) in concepts.items():
             db.execute(text("""INSERT INTO canonical_concepts(concept_id,concept_name,subject_id,active)
-              VALUES(:id,:name,:subject,1) ON DUPLICATE KEY UPDATE concept_name=VALUES(concept_name),subject_id=VALUES(subject),active=1"""),
-              {"id":cid,"name":cid.replace("_"," ").title(),"subject":sid})
+              VALUES(:id,:name,:subject,1) ON DUPLICATE KEY UPDATE concept_name=:name,subject_id=:subject,active=1"""),
+              {"id":cid,"name":concept_name,"subject":subject_id})
         for c in data["curricula"]:
             db.execute(text("""INSERT INTO curriculum_catalog(curriculum_id,board,class_level,subject_id,subject_code,academic_year,status)
               VALUES(:id,:board,:class,:subject,:code,:year,'VERIFIED')
-              ON DUPLICATE KEY UPDATE subject_code=VALUES(subject_code),status='VERIFIED'"""),
+              ON DUPLICATE KEY UPDATE subject_code=:code,status='VERIFIED'"""),
               {"id":c["curriculum_id"],"board":c["board"],"class":c["class_level"],"subject":c["subject_id"],"code":c["subject_code"],"year":c["academic_year"]})
             for ui,u in enumerate(c["units"],1):
                 uid=f"{c['curriculum_id']}__u{ui}"
                 db.execute(text("""INSERT INTO curriculum_units(unit_id,curriculum_id,unit_order,unit_name)
                   VALUES(:id,:curr,:order,:name)
-                  ON DUPLICATE KEY UPDATE unit_name=VALUES(unit_name),unit_order=VALUES(unit_order)"""),
+                  ON DUPLICATE KEY UPDATE unit_name=:name,unit_order=:order"""),
                   {"id":uid,"curr":c["curriculum_id"],"order":ui,"name":u["unit_name"]})
                 for ci,ch in enumerate(u["chapters"],1):
-                    ccid=slug(ch["official_chapter_name"]); chid=f"{uid}__c{ci}"
+                    ccid=canonical_concept_id(c["subject_id"], ch["official_chapter_name"]); chid=f"{uid}__c{ci}"
                     db.execute(text("""INSERT INTO curriculum_chapters(curriculum_chapter_id,unit_id,chapter_order,official_chapter_name,canonical_concept_id,status)
                       VALUES(:id,:unit,:order,:name,:concept,'VERIFIED')
-                      ON DUPLICATE KEY UPDATE official_chapter_name=VALUES(official_chapter_name),canonical_concept_id=VALUES(canonical_concept),status='VERIFIED'"""),
+                      ON DUPLICATE KEY UPDATE official_chapter_name=:name,canonical_concept_id=:concept,status='VERIFIED'"""),
                       {"id":chid,"unit":uid,"order":ci,"name":ch["official_chapter_name"],"concept":ccid})
         # Backfill existing subject registrations into the new enrollment model.
         db.execute(text("""INSERT IGNORE INTO student_subject_enrollments(student_id,board,class_level,subject_id,subject_code,academic_year,status)
@@ -167,15 +198,38 @@ def apply(url,taxonomy):
         db.execute(text("""INSERT IGNORE INTO question_curriculum_map(question_id,curriculum_chapter_id,compatibility_status,notes)
           SELECT q.question_id,cc.curriculum_chapter_id,'EXACT','Backfilled from exact official chapter/board/class/subject match.'
           FROM questions q
-          JOIN subject_catalog sc ON sc.subject_name=q.subject
-          JOIN curriculum_catalog cur ON cur.board=q.board AND cur.class_level=q.class_level AND cur.subject_id=sc.subject_id
+          JOIN curriculum_catalog cur
+            ON cur.board=q.board AND cur.class_level=q.class_level AND cur.academic_year='2026-27'
+          JOIN subject_catalog sc
+            ON sc.subject_id=cur.subject_id AND sc.subject_name=q.subject
           JOIN curriculum_units cu ON cu.curriculum_id=cur.curriculum_id
-          JOIN curriculum_chapters cc ON cc.unit_id=cu.unit_id AND cc.official_chapter_name=q.chapter
-          WHERE q.board IS NOT NULL AND q.class_level IS NOT NULL AND q.chapter IS NOT NULL"""))
+          JOIN curriculum_chapters cc
+            ON cc.unit_id=cu.unit_id AND cc.official_chapter_name=q.chapter
+          WHERE q.board IS NOT NULL AND q.class_level IS NOT NULL AND q.chapter IS NOT NULL
+            AND (
+              SELECT COUNT(DISTINCT cur2.subject_id)
+              FROM curriculum_catalog cur2
+              JOIN subject_catalog sc2 ON sc2.subject_id=cur2.subject_id
+              WHERE cur2.board=q.board AND cur2.class_level=q.class_level
+                AND cur2.academic_year='2026-27' AND sc2.subject_name=q.subject
+            ) = 1"""))
     print("Applied curriculum/question-reuse schema",VERSION)
 if __name__=="__main__":
-    p=argparse.ArgumentParser(); p.add_argument("--database-url",default=os.getenv("DATABASE_URL")); p.add_argument("--taxonomy",default="curriculum_taxonomy_2026_27.json"); p.add_argument("--apply",action="store_true")
+    p=argparse.ArgumentParser()
+    p.add_argument("--database-url",default=os.getenv("DATABASE_URL"))
+    p.add_argument("--taxonomy",default="curriculum_taxonomy_2026_27.json")
+    mode=p.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--apply",action="store_true")
+    mode.add_argument("--dry-run",action="store_true")
     a=p.parse_args()
-    if not a.apply: p.error("Use --apply explicitly.")
     if not a.database_url: p.error("No database URL supplied.")
-    apply(a.database_url,a.taxonomy)
+    if a.dry_run:
+        from pathlib import Path as _Path
+        import importlib.util as _importlib_util
+        audit_path=_Path(__file__).with_name("005_curriculum_question_reuse_audit.py")
+        spec=_importlib_util.spec_from_file_location("curriculum_migration_audit",audit_path)
+        audit_module=_importlib_util.module_from_spec(spec)
+        spec.loader.exec_module(audit_module)
+        audit_module.print_report(audit_module.audit(a.database_url,a.taxonomy))
+    else:
+        apply(a.database_url,a.taxonomy)

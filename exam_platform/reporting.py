@@ -68,7 +68,10 @@ def build_recommendations(diagnosis):
                 ),
             }
         )
-    if errors.get("C09", 0) >= 1 or diagnosis["attempt_rate"] < 80:
+    if errors.get("C09", 0) >= 1 or (
+        diagnosis.get("attempt_rate") is not None
+        and diagnosis["attempt_rate"] < 80
+    ):
         recommendations.append(
             {
                 "priority": 1,
@@ -120,6 +123,12 @@ def build_report(diagnosis, student, test, attempt):
             if attempt.submitted_at
             else None
         ),
+        "class_level": getattr(test, "class_level", None)
+        or getattr(student, "class_level", None),
+        "board": getattr(test, "board", None) or getattr(student, "board", None),
+        "subject": getattr(test, "subject", None) or "Mathematics",
+        "duration_minutes": getattr(test, "duration_minutes", None),
+        "assessment_type": getattr(test, "test_type", None),
         "diagnosis": diagnosis,
         "recommendations": build_recommendations(diagnosis),
     }

@@ -1,18 +1,25 @@
+import hashlib
 import hmac
+from io import BytesIO
 import os
+import secrets
 import sys
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session, url_for
+from flask import Flask, Response as FlaskResponse, jsonify, redirect, render_template, request, send_file, session, url_for
 from PIL import Image
+from sqlalchemy import text
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from exam_platform.admin import register_admin
+from database import engine
 from exam_platform.db_source import storage
+from exam_platform.media import delete_image as delete_stored_image, read_stored_image, store_image
 from exam_platform.mock_data import load_mock_data
 from exam_platform.eligibility import is_test_eligible
 from exam_platform.models import (
@@ -31,11 +38,20 @@ from question_bank.extraction.review_app import register_extraction_review
 # ---------------------------------------------------------------------------
 
 app = Flask(__name__)
-app.secret_key = "dev-secret-key-change-in-production"
-app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
-app.config["MAX_IMAGE_SIZE"] = 10 * 1024 * 1024
-app.config["UPLOAD_FOLDER"] = str(Path(__file__).parent.parent / "uploads")
-app.config["EXAM_MONITORING_MODES"] = {"off", "optional", "required"}
+_configured_secret = os.getenv("SECRET_KEY")
+if os.getenv("RENDER") and not _configured_secret:
+    raise RuntimeError("SECRET_KEY must be configured on the hosted service.")
+app.secret_key = _configured_secret or secrets.token_hex(32)
+app.config.update(
+    MAX_CONTENT_LENGTH=50 * 1024 * 1024,
+    MAX_IMAGE_SIZE=10 * 1024 * 1024,
+    UPLOAD_FOLDER=str(Path(__file__).parent.parent / "uploads"),
+    EXAM_MONITORING_MODES={"off", "optional", "required"},
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=bool(os.getenv("RENDER")),
+)
+app.permanent_session_lifetime = timedelta(hours=12)
 Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
 
 register_admin(app)
@@ -54,23 +70,282 @@ def allowed_file(filename):
 
 
 def get_or_create_student_id():
-    student_id = session.get("student_id")
-    if not student_id:
-        student_id = f"STU{uuid.uuid4().hex[:8].upper()}"
-        session["student_id"] = student_id
-    return student_id
+    """Return the authenticated Student_ID; never invent an anonymous identity."""
+    return session.get("student_id")
 
 
 def ensure_student_record(student_id):
-    if not storage.get_student(student_id):
-        storage.create_student(
-            Student(
-                student_id=student_id,
-                name="Guest Student",
-                email="",
-                registration_source="prototype",
-            )
+    """Look up an enrolled student without creating a guest account."""
+    return storage.get_student(student_id)
+
+
+STUDENT_PROTECTED_PREFIXES = (
+    "/tests",
+    "/test/",
+    "/api/test/",
+    "/api/attempt/",
+    "/submission/",
+    "/report/",
+    "/result/",
+    "/student/report/",
+    "/student/result/",
+)
+
+
+@app.before_request
+def enforce_teacher_access():
+    """Protect administrative routes even if the app is mounted outside wsgi.py."""
+    if not request.path.startswith("/teacher"):
+        return None
+    expected_username = os.getenv("TEACHER_ACCESS_USERNAME", "").strip()
+    expected_password = os.getenv("TEACHER_ACCESS_PASSWORD", "").strip()
+    if not expected_username or not expected_password:
+        if os.getenv("RENDER"):
+            return FlaskResponse("Teacher access is not configured.", status=503)
+        return None
+    auth = request.authorization
+    if (
+        not auth
+        or not hmac.compare_digest(auth.username or "", expected_username)
+        or not hmac.compare_digest(auth.password or "", expected_password)
+    ):
+        return FlaskResponse(
+            "Authentication required.",
+            status=401,
+            headers={"WWW-Authenticate": 'Basic realm="Improvia Teacher"'},
         )
+    return None
+
+
+@app.before_request
+def enforce_student_access():
+    """Require a real active student account for every student assessment route."""
+    if request.path.startswith("/teacher"):
+        return None
+    if request.endpoint in {
+        "index",
+        "student_login",
+        "student_activate",
+        "student_logout",
+        "google_form_registration_webhook",
+        "static",
+    }:
+        return None
+    if not request.path.startswith(STUDENT_PROTECTED_PREFIXES):
+        return None
+
+    student_id = session.get("student_id")
+    if not student_id:
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Student login required"}), 401
+        return redirect(url_for("student_login"))
+
+    student = storage.get_student(student_id)
+    if not student or str(student.status or "").lower() != "active":
+        session.clear()
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Student account is unavailable"}), 401
+        return redirect(url_for("student_login"))
+    return None
+
+
+@app.route("/student/login", methods=["GET", "POST"])
+def student_login():
+    """Authenticate an enrolled student with a founder-issued activation password."""
+    if request.method == "GET":
+        return render_template("student_login.html", error=None)
+
+    student_id = str(request.form.get("student_id") or "").strip().upper()
+    password = str(request.form.get("password") or "")
+    authenticated_student_id = None
+    now = datetime.now()
+
+    if student_id and password:
+        with engine.begin() as db:
+            row = db.execute(
+                text(
+                    "SELECT c.password_hash,c.failed_login_count,c.locked_until,s.status "
+                    "FROM student_access_credentials c "
+                    "JOIN students s ON s.student_id=c.student_id "
+                    "WHERE c.student_id=:student_id FOR UPDATE"
+                ),
+                {"student_id": student_id},
+            ).mappings().first()
+
+            if row and str(row["status"] or "").lower() == "active":
+                locked_until = row["locked_until"]
+                if locked_until and locked_until > now:
+                    authenticated_student_id = None
+                elif check_password_hash(row["password_hash"], password):
+                    db.execute(
+                        text(
+                            "UPDATE student_access_credentials "
+                            "SET failed_login_count=0,locked_until=NULL,last_login_at=:now,updated_at=:now "
+                            "WHERE student_id=:student_id"
+                        ),
+                        {"student_id": student_id, "now": now},
+                    )
+                    authenticated_student_id = student_id
+                else:
+                    failures = int(row["failed_login_count"] or 0) + 1
+                    lock = now + timedelta(minutes=15) if failures >= 5 else None
+                    db.execute(
+                        text(
+                            "UPDATE student_access_credentials "
+                            "SET failed_login_count=:failures,locked_until=:locked,updated_at=:now "
+                            "WHERE student_id=:student_id"
+                        ),
+                        {
+                            "student_id": student_id,
+                            "failures": failures,
+                            "locked": lock,
+                            "now": now,
+                        },
+                    )
+
+    if not authenticated_student_id:
+        return render_template(
+            "student_login.html",
+            error="Login failed. Check your Student ID and password, or contact Improvia for a new access link.",
+        ), 401
+
+    session.clear()
+    session["student_id"] = authenticated_student_id
+    session.permanent = True
+    return redirect(url_for("test_listing"))
+
+
+@app.route("/student/logout", methods=["POST"])
+def student_logout():
+    session.clear()
+    return redirect(url_for("student_login"))
+
+
+def _access_token_hash(token):
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+@app.route("/student/activate", methods=["GET", "POST"])
+def student_activate():
+    """Set an initial password using a single-use, expiring teacher-issued link."""
+    token = str(request.values.get("token") or "").strip()
+    if not token or len(token) > 256:
+        return render_template("student_activate.html", token="", error="This activation link is invalid or expired."), 400
+
+    if request.method == "GET":
+        now = datetime.now()
+        with engine.connect() as db:
+            row = db.execute(
+                text(
+                    "SELECT student_id FROM student_access_tokens "
+                    "WHERE token_hash=:token_hash AND used_at IS NULL AND expires_at>:now"
+                ),
+                {"token_hash": _access_token_hash(token), "now": now},
+            ).mappings().first()
+        if not row:
+            return render_template("student_activate.html", token="", error="This activation link is invalid or expired."), 400
+        return render_template("student_activate.html", token=token, error=None)
+
+    password = str(request.form.get("password") or "")
+    confirmation = str(request.form.get("confirm_password") or "")
+    if len(password) < 12:
+        return render_template("student_activate.html", token=token, error="Use a password with at least 12 characters."), 400
+    if password != confirmation:
+        return render_template("student_activate.html", token=token, error="The passwords do not match."), 400
+
+    now = datetime.now()
+    token_hash = _access_token_hash(token)
+    password_hash = generate_password_hash(password)
+    activated_student_id = None
+    with engine.begin() as db:
+        row = db.execute(
+            text(
+                "SELECT student_id,expires_at,used_at FROM student_access_tokens "
+                "WHERE token_hash=:token_hash FOR UPDATE"
+            ),
+            {"token_hash": token_hash},
+        ).mappings().first()
+        if row and row["used_at"] is None and row["expires_at"] > now:
+            student = db.execute(
+                text("SELECT status FROM students WHERE student_id=:student_id"),
+                {"student_id": row["student_id"]},
+            ).mappings().first()
+            if student and str(student["status"] or "").lower() == "active":
+                db.execute(
+                    text(
+                        "INSERT INTO student_access_credentials "
+                        "(student_id,password_hash,failed_login_count,locked_until,created_at,updated_at) "
+                        "VALUES(:student_id,:password_hash,0,NULL,:now,:now) "
+                        "ON DUPLICATE KEY UPDATE password_hash=:password_hash,"
+                        "failed_login_count=0,locked_until=NULL,updated_at=:now"
+                    ),
+                    {
+                        "student_id": row["student_id"],
+                        "password_hash": password_hash,
+                        "now": now,
+                    },
+                )
+                db.execute(
+                    text("UPDATE student_access_tokens SET used_at=:now WHERE token_hash=:token_hash AND used_at IS NULL"),
+                    {"token_hash": token_hash, "now": now},
+                )
+                activated_student_id = row["student_id"]
+
+    if not activated_student_id:
+        return render_template("student_activate.html", token="", error="This activation link is invalid, expired, or already used."), 400
+
+    session.clear()
+    session["student_id"] = activated_student_id
+    session.permanent = True
+    return redirect(url_for("test_listing"))
+
+
+@app.route("/teacher/students/<student_id>/access-link", methods=["POST"])
+def create_student_access_link(student_id):
+    """Issue a single-use activation link for an enrolled student.
+
+    This endpoint is intended for the authenticated teacher/operator. The raw
+    token is returned once so the founder can deliver it through the approved
+    communication channel; only its SHA-256 hash is stored in MySQL.
+    """
+    student = storage.get_student(student_id)
+    if not student or str(student.status or "").lower() != "active":
+        return jsonify({"error": "Active student not found"}), 404
+
+    token = secrets.token_urlsafe(32)
+    now = datetime.now()
+    expires_at = now + timedelta(hours=24)
+    with engine.begin() as db:
+        # Only one outstanding activation/reset link may exist for a student.
+        db.execute(
+            text(
+                "UPDATE student_access_tokens SET used_at=:now "
+                "WHERE student_id=:student_id AND used_at IS NULL"
+            ),
+            {"student_id": student_id, "now": now},
+        )
+        db.execute(
+            text(
+                "INSERT INTO student_access_tokens "
+                "(token_hash,student_id,expires_at,used_at,created_at) "
+                "VALUES(:token_hash,:student_id,:expires_at,NULL,:now)"
+            ),
+            {
+                "token_hash": _access_token_hash(token),
+                "student_id": student_id,
+                "expires_at": expires_at,
+                "now": now,
+            },
+        )
+
+    return jsonify(
+        {
+            "student_id": student_id,
+            "activation_url": url_for("student_activate", token=token, _external=True),
+            "expires_at": expires_at.isoformat(),
+            "message": "Send this one-time link privately to the student. It expires in 24 hours.",
+        }
+    ), 201
 
 
 # ---------------------------------------------------------------------------
@@ -158,6 +433,19 @@ def ensure_attempt_access(attempt_id):
         return None, (
             jsonify({"error": "You do not have access to this attempt"}),
             403,
+        )
+
+    # Submitted attempts are immutable. Apply this guard in the shared access
+    # helper so both local routes and the deployment adapter reject late writes.
+    if attempt.status == AttemptStatus.SUBMITTED.value and request.method in {
+        "POST", "PUT", "PATCH", "DELETE"
+    }:
+        return None, (
+            jsonify({
+                "error": "This assessment has already been submitted and cannot be changed.",
+                "status": "submitted",
+            }),
+            409,
         )
 
     if attempt_is_expired(attempt):
@@ -519,24 +807,38 @@ def upload_answer_image(attempt_id):
         f"{attempt_id}_{question_id}_page_{page_number}_"
         f"{uuid.uuid4().hex[:8]}.{ext}"
     )
-    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-    file.save(filepath)
-
-    storage.create_image(
-        AnswerImage(
-            image_id=f"IMG{uuid.uuid4().hex[:12].upper()}",
-            attempt_id=attempt_id,
-            question_id=question_id,
-            page_number=page_number,
-            original_filename=secure_filename(file.filename),
-            file_path=filepath,
-            uploaded_at=datetime.now(),
+    image_id = f"IMG{uuid.uuid4().hex[:12].upper()}"
+    filepath = None
+    try:
+        filepath = store_image(
+            file,
+            filename,
+            upload_folder=app.config["UPLOAD_FOLDER"],
         )
-    )
+        storage.create_image(
+            AnswerImage(
+                image_id=image_id,
+                attempt_id=attempt_id,
+                question_id=question_id,
+                page_number=page_number,
+                original_filename=secure_filename(file.filename),
+                file_path=filepath,
+                uploaded_at=datetime.now(),
+            )
+        )
+    except Exception:
+        # Avoid orphaned files when storage or database persistence fails.
+        if filepath:
+            try:
+                delete_stored_image(filepath)
+            except Exception:
+                app.logger.exception("Failed to clean up an incomplete answer-image upload")
+        app.logger.exception("Failed to persist handwritten image for attempt %s", attempt_id)
+        return jsonify({"error": "Unable to store answer image; please retry"}), 503
 
     return jsonify(
         {
-            "image_id": storage.get_attempt_images(attempt_id, question_id)[-1].image_id,
+            "image_id": image_id,
             "page_number": page_number,
             "filename": filename,
         }
@@ -555,11 +857,42 @@ def get_question_images(attempt_id, question_id):
                 "image_id": image.image_id,
                 "page_number": image.page_number,
                 "filename": image.original_filename,
-                "url": f"/uploads/{Path(image.file_path).name}",
+                "url": url_for(
+                    "student_answer_image",
+                    attempt_id=attempt_id,
+                    image_id=image.image_id,
+                ),
             }
             for image in storage.get_attempt_images(attempt_id, question_id)
         ]
     )
+
+
+@app.route("/api/attempt/<attempt_id>/image/<image_id>", methods=["GET"])
+def student_answer_image(attempt_id, image_id):
+    """Serve a handwritten answer only to the student who owns the attempt."""
+    attempt, error = ensure_attempt_access(attempt_id)
+    if error:
+        return error
+    image = next(
+        (
+            item for item in storage.images.values()
+            if item.image_id == image_id and item.attempt_id == attempt_id
+        ),
+        None,
+    )
+    if not image:
+        return jsonify({"error": "Image not found"}), 404
+
+    try:
+        data, content_type = read_stored_image(image.file_path)
+    except FileNotFoundError:
+        return jsonify({"error": "Stored image is missing"}), 404
+    except Exception:
+        app.logger.exception("Failed to retrieve handwritten image for attempt %s", attempt_id)
+        return jsonify({"error": "Image is temporarily unavailable"}), 503
+
+    return send_file(BytesIO(data), mimetype=content_type, max_age=0)
 
 
 @app.route("/api/attempt/<attempt_id>/delete-image/<image_id>", methods=["DELETE"])
@@ -580,8 +913,11 @@ def delete_image(attempt_id, image_id):
     if not image:
         return jsonify({"error": "Image not found"}), 404
 
-    if os.path.exists(image.file_path):
-        os.remove(image.file_path)
+    try:
+        delete_stored_image(image.file_path)
+    except Exception:
+        app.logger.exception("Failed to delete handwritten image %s", image_id)
+        return jsonify({"error": "Image is temporarily unavailable for deletion"}), 503
 
     storage.delete_image(image_id)
     return jsonify({"status": "deleted"})
@@ -652,14 +988,26 @@ def submit_attempt(attempt_id):
             }
         ), 400
 
-    attempt.submitted_at = datetime.now()
-    attempt.status = AttemptStatus.SUBMITTED.value
-    storage.update_attempt(attempt)
+    submitted_at = datetime.now()
+    finalization = storage.finalize_attempt(
+        attempt_id,
+        attempt.student_id,
+        [question.question_id for question in questions],
+        submitted_at,
+    )
+    if finalization == "not_found":
+        return jsonify({"error": "Attempt not found"}), 404
+    if finalization == "forbidden":
+        return jsonify({"error": "You do not have access to this attempt"}), 403
+    if finalization == "already_submitted":
+        return jsonify({"error": "This assessment has already been submitted", "status": "submitted"}), 409
+    if finalization != "submitted":
+        return jsonify({"error": "Attempt cannot be submitted in its current state", "status": finalization}), 409
 
     return jsonify(
         {
             "status": "submitted",
-            "submitted_at": attempt.submitted_at.isoformat(),
+            "submitted_at": submitted_at.isoformat(),
             "redirect_url": url_for(
                 "submission_confirmation",
                 attempt_id=attempt_id,
@@ -684,13 +1032,8 @@ def submission_confirmation(attempt_id):
 
 
 # ---------------------------------------------------------------------------
-# Uploaded-file serving and local development entry point
+# Local development entry point
 # ---------------------------------------------------------------------------
-
-
-@app.route("/uploads/<path:filename>")
-def uploaded_file(filename):
-    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
 
 
 if __name__ == "__main__":

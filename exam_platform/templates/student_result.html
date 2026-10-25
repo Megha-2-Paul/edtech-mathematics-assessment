@@ -7,17 +7,17 @@
         <h1>{{ test.title }}</h1>
         <p>Attempt {{ attempt.attempt_id }} · Your result, patterns, and next steps.</p>
     </div>
-    {% if diagnosis.evaluation_complete %}
+    {% if diagnosis.report_ready %}
     <a class="btn btn-primary" href="{{ url_for('evaluation.student_report', attempt_id=attempt.attempt_id) }}">View Full Report →</a>
     {% endif %}
 </div>
 
-{% if not diagnosis.evaluation_complete %}
+{% if not diagnosis.report_ready %}
 <div class="card result-waiting">
     <div class="result-status-icon">⏳</div>
     <span class="badge badge-blue">Evaluation in progress</span>
     <h2>Your submission is safe</h2>
-    <p class="muted">Your answers have been submitted. Marks and detailed diagnosis will appear after teacher evaluation.</p>
+    <p class="muted">Your answers have been submitted. The report will be available after all responses are evaluated and the assessment data passes validation.</p>
     <a class="btn btn-secondary" href="{{ url_for('test_listing') }}">Back to Tests</a>
 </div>
 {% else %}
@@ -30,10 +30,10 @@
     </div>
     <div class="result-score-context">
         <div class="result-context-item"><span>Attempt rate</span><strong>{{ attempt.attempt_rate }}%</strong></div>
-        <div class="result-context-item"><span>Accuracy</span><strong>{{ attempt.accuracy or 0 }}%</strong></div>
+        <div class="result-context-item"><span>Attempted-work accuracy</span><strong>{% if diagnosis.accuracy is not none %}{{ diagnosis.accuracy }}%{% else %}N/A{% endif %}</strong></div>
         <div class="result-context-item"><span>Marks lost</span><strong>{{ diagnosis.marks_lost }}</strong></div>
         {% if diagnosis.score_change is not none %}
-        <div class="result-context-item"><span>Vs previous</span><strong>{% if diagnosis.score_change >= 0 %}+{% endif %}{{ diagnosis.score_change }} marks</strong></div>
+        <div class="result-context-item"><span>Score trend</span><strong>{% if diagnosis.score_change >= 0 %}+{% endif %}{{ diagnosis.score_change }} percentage points</strong></div>
         {% endif %}
     </div>
 </div>
@@ -44,7 +44,7 @@
         <span class="badge badge-coral">Your diagnosis</span>
         <h2>Where should you focus?</h2>
         {% if diagnosis.weaknesses %}
-        <p>Your current priority areas are <strong>{% for item in diagnosis.weaknesses[:2] %}{{ item.name }}{% if not loop.last %} and {% endif %}{% endfor %}</strong>. The error patterns below explain where marks were lost.</p>
+        <p>Your current priority areas are <strong>{% for item in diagnosis.weaknesses[:2] %}{{ item.name }}{% if not loop.last %} and {% endif %}{% endfor %}</strong>. The error patterns below show what the evaluator observed in your answers.</p>
         {% elif diagnosis.error_counts %}
         <p>Your chapter performance is broadly balanced. The main opportunities are shown in your error patterns below.</p>
         {% else %}
@@ -117,8 +117,9 @@
 <div class="card progress-result-card">
     <div class="section-heading">
         <div><span class="badge badge-blue">Progress</span><h2>Compared with your previous test</h2></div>
-        <span class="progress-change {% if diagnosis.score_change is not none and diagnosis.score_change >= 0 %}progress-positive{% endif %}">{% if diagnosis.score_change is not none and diagnosis.score_change >= 0 %}+{% endif %}{{ diagnosis.score_change or 0 }} marks</span>
+        <span class="progress-change {% if diagnosis.marks_change is not none and diagnosis.marks_change >= 0 %}progress-positive{% endif %}">{% if diagnosis.marks_change is not none and diagnosis.marks_change >= 0 %}+{% endif %}{{ diagnosis.marks_change if diagnosis.marks_change is not none else 'N/A' }} marks</span>
     </div>
+    <p class="muted">{{ diagnosis.comparison_note }}</p>
     <div class="progress-compare">
         <div><span>Previous score</span><strong>{{ diagnosis.previous_score }}</strong></div>
         <div class="progress-arrow">→</div>

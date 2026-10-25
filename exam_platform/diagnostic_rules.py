@@ -63,7 +63,9 @@ def interpret_diagnosis(error_counts, attempt_rate, accuracy, weaknesses):
                 ),
             }
         )
-    if errors.get("C09", 0) >= 1 or attempt_rate < 80:
+    if errors.get("C09", 0) >= 1 or (
+        attempt_rate is not None and attempt_rate < 80
+    ):
         signals.append(
             {
                 "type": "completion",
@@ -75,7 +77,7 @@ def interpret_diagnosis(error_counts, attempt_rate, accuracy, weaknesses):
                 ),
             }
         )
-    if not signals and accuracy >= 75:
+    if not signals and accuracy is not None and accuracy >= 75:
         signals.append(
             {
                 "type": "maintenance",
