@@ -1,5 +1,6 @@
 import hmac
 import os
+import secrets
 import sys
 import uuid
 from io import BytesIO
@@ -33,7 +34,16 @@ from question_bank.extraction.review_app import register_extraction_review
 # ---------------------------------------------------------------------------
 
 app = Flask(__name__)
-app.secret_key = "dev-secret-key-change-in-production"
+_configured_secret = os.getenv("SECRET_KEY")
+if os.getenv("RENDER") and not _configured_secret:
+    raise RuntimeError("SECRET_KEY must be configured on the hosted service.")
+app.secret_key = _configured_secret or secrets.token_hex(32)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=bool(os.getenv("RENDER")),
+)
+app.permanent_session_lifetime = timedelta(hours=12)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 app.config["MAX_IMAGE_SIZE"] = 10 * 1024 * 1024
 app.config["UPLOAD_FOLDER"] = str(Path(__file__).parent.parent / "uploads")
