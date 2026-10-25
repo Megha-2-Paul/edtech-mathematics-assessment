@@ -543,8 +543,8 @@ def upload_answer_image(attempt_id):
         app.logger.exception("Answer image storage failed")
         try:
             media.delete_image(filepath)
-        except (UnboundLocalError, OSError, RuntimeError):
-            app.logger.warning("Could not clean up failed answer-image upload")
+        except Exception:
+            app.logger.warning("Could not clean up failed answer-image upload", exc_info=True)
         return jsonify({"error": "Image could not be stored; please retry"}), 503
 
     return jsonify(
