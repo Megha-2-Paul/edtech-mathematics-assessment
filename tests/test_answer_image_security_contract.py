@@ -22,3 +22,14 @@ def test_answer_image_proxy_checks_attempt_access_and_uses_private_cache_headers
     assert "media.read_stored_image(image.file_path)" in route
     assert 'response.headers["Cache-Control"] = "private, no-store"' in route
     assert 'response.headers["X-Content-Type-Options"] = "nosniff"' in route
+
+def test_submitted_attempts_reject_mutating_http_methods():
+    source = APP_SOURCE.read_text(encoding="utf-8")
+    helper_start = source.index("def ensure_attempt_access(")
+    helper_end = source.index("\n\nload_mock_data()", helper_start)
+    helper = source[helper_start:helper_end]
+
+    assert "attempt.status == AttemptStatus.SUBMITTED.value" in helper
+    assert '"POST", "PUT", "PATCH", "DELETE"' in helper
+    assert "cannot be changed." in helper
+    assert "409" in helper
