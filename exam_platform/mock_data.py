@@ -27,7 +27,10 @@ def _enable_testing_retake_mode() -> None:
 
 
 def load_mock_data() -> None:
-    """Load demo data only when explicitly enabled for development."""
+    """Load demo data only when explicitly enabled outside production."""
+    if os.getenv("RENDER"):
+        return
+
     _enable_testing_retake_mode()
 
     if os.getenv("LOAD_DEMO_DATA", "0") != "1":
