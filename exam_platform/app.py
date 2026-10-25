@@ -2,15 +2,17 @@ import hmac
 import os
 import sys
 import uuid
+from io import BytesIO
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from flask import Flask, jsonify, redirect, render_template, request, send_from_directory, session, url_for
+from flask import Flask, jsonify, redirect, render_template, request, send_file, session, url_for
 from PIL import Image
 from werkzeug.utils import secure_filename
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from exam_platform import media
 from exam_platform.admin import register_admin
 from exam_platform.db_source import storage
 from exam_platform.mock_data import load_mock_data
@@ -519,26 +521,42 @@ def upload_answer_image(attempt_id):
         f"{attempt_id}_{question_id}_page_{page_number}_"
         f"{uuid.uuid4().hex[:8]}.{ext}"
     )
-    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
-    file.save(filepath)
-
-    storage.create_image(
-        AnswerImage(
-            image_id=f"IMG{uuid.uuid4().hex[:12].upper()}",
-            attempt_id=attempt_id,
-            question_id=question_id,
-            page_number=page_number,
-            original_filename=secure_filename(file.filename),
-            file_path=filepath,
-            uploaded_at=datetime.now(),
+    image_id = f"IMG{uuid.uuid4().hex[:12].upper()}"
+    try:
+        filepath = media.store_image(
+            file,
+            filename,
+            upload_folder=app.config["UPLOAD_FOLDER"],
         )
-    )
+        storage.create_image(
+            AnswerImage(
+                image_id=image_id,
+                attempt_id=attempt_id,
+                question_id=question_id,
+                page_number=page_number,
+                original_filename=secure_filename(file.filename),
+                file_path=filepath,
+                uploaded_at=datetime.now(),
+            )
+        )
+    except Exception:
+        app.logger.exception("Answer image storage failed")
+        try:
+            media.delete_image(filepath)
+        except (UnboundLocalError, OSError, RuntimeError):
+            app.logger.warning("Could not clean up failed answer-image upload")
+        return jsonify({"error": "Image could not be stored; please retry"}), 503
 
     return jsonify(
         {
-            "image_id": storage.get_attempt_images(attempt_id, question_id)[-1].image_id,
+            "image_id": image_id,
             "page_number": page_number,
             "filename": filename,
+            "url": url_for(
+                "get_answer_image",
+                attempt_id=attempt_id,
+                image_id=image_id,
+            ),
         }
     )
 
@@ -555,7 +573,11 @@ def get_question_images(attempt_id, question_id):
                 "image_id": image.image_id,
                 "page_number": image.page_number,
                 "filename": image.original_filename,
-                "url": f"/uploads/{Path(image.file_path).name}",
+                "url": url_for(
+                    "get_answer_image",
+                    attempt_id=attempt_id,
+                    image_id=image.image_id,
+                ),
             }
             for image in storage.get_attempt_images(attempt_id, question_id)
         ]
@@ -580,8 +602,11 @@ def delete_image(attempt_id, image_id):
     if not image:
         return jsonify({"error": "Image not found"}), 404
 
-    if os.path.exists(image.file_path):
-        os.remove(image.file_path)
+    try:
+        media.delete_image(image.file_path)
+    except Exception:
+        app.logger.exception("Answer image deletion failed")
+        return jsonify({"error": "Image could not be deleted"}), 503
 
     storage.delete_image(image_id)
     return jsonify({"status": "deleted"})
@@ -684,13 +709,45 @@ def submission_confirmation(attempt_id):
 
 
 # ---------------------------------------------------------------------------
-# Uploaded-file serving and local development entry point
+# Private answer-image delivery and local development entry point
 # ---------------------------------------------------------------------------
 
 
-@app.route("/uploads/<path:filename>")
-def uploaded_file(filename):
-    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+@app.route(
+    "/api/attempt/<attempt_id>/images/<image_id>/content",
+    methods=["GET"],
+)
+def get_answer_image(attempt_id, image_id):
+    attempt, error = ensure_attempt_access(attempt_id)
+    if error:
+        return error
+
+    image = next(
+        (
+            item
+            for item in storage.images.values()
+            if item.image_id == image_id and item.attempt_id == attempt_id
+        ),
+        None,
+    )
+    if not image:
+        return jsonify({"error": "Image not found"}), 404
+
+    try:
+        data, content_type = media.read_stored_image(image.file_path)
+    except Exception:
+        app.logger.exception("Answer image retrieval failed")
+        return jsonify({"error": "Image is temporarily unavailable"}), 503
+
+    response = send_file(
+        BytesIO(data),
+        mimetype=content_type,
+        as_attachment=False,
+        max_age=0,
+    )
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
 
 
 if __name__ == "__main__":
