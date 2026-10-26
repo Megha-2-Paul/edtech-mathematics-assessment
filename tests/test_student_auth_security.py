@@ -56,3 +56,44 @@ def test_csrf_guard_does_not_capture_machine_to_machine_or_teacher_routes():
     assert "request.path.startswith(CSRF_PROTECTED_PREFIXES)" in guard
     assert '"/api/registrations/google-form"' not in guard
     assert '"/teacher/students/<student_id>/access-link"' not in guard
+
+def test_csrf_guard_rejects_missing_and_invalid_tokens():
+    from exam_platform.app import app
+
+    app.config.update(TESTING=True, SECRET_KEY="csrf-test-only-secret")
+    client = app.test_client()
+
+    missing = client.post("/api/attempt/csrf-test/response", json={})
+    assert missing.status_code == 400
+    assert missing.get_json() == {"error": "Invalid or missing CSRF token"}
+
+    with client.session_transaction() as session:
+        session["_csrf_token"] = "expected-token"
+    invalid = client.post(
+        "/api/attempt/csrf-test/response",
+        json={},
+        headers={"X-CSRF-Token": "wrong-token"},
+    )
+    assert invalid.status_code == 400
+    assert invalid.get_json() == {"error": "Invalid or missing CSRF token"}
+
+
+def test_csrf_guard_accepts_valid_token_before_route_access_checks():
+    from exam_platform.app import app
+
+    app.config.update(TESTING=True, SECRET_KEY="csrf-test-only-secret")
+    client = app.test_client()
+    with client.session_transaction() as session:
+        session["_csrf_token"] = "expected-token"
+
+    response = client.post(
+        "/api/attempt/csrf-test/response",
+        json={},
+        headers={"X-CSRF-Token": "expected-token"},
+    )
+
+    # CSRF validation passes; the request then reaches the existing
+    # student-access guard, which rejects this anonymous assessment request.
+    assert response.status_code == 401
+    assert response.get_json() == {"error": "Student login required"}
+
