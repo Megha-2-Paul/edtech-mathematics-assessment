@@ -878,7 +878,7 @@ def delete_image(attempt_id, image_id):
         return jsonify({"error": "Image not found"}), 404
 
     try:
-        media.delete_image(image.file_path)
+        media.delete_image(image.file_path, upload_folder=app.config["UPLOAD_FOLDER"])
     except Exception:
         app.logger.exception("Answer image deletion failed")
         return jsonify({"error": "Image could not be deleted"}), 503
@@ -1009,7 +1009,7 @@ def get_answer_image(attempt_id, image_id):
         return jsonify({"error": "Image not found"}), 404
 
     try:
-        data, content_type = media.read_stored_image(image.file_path)
+        data, content_type = media.read_stored_image(image.file_path, upload_folder=app.config["UPLOAD_FOLDER"])
     except Exception:
         app.logger.exception("Answer image retrieval failed")
         return jsonify({"error": "Image is temporarily unavailable"}), 503
