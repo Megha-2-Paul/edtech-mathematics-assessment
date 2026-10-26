@@ -19,9 +19,11 @@ def test_answer_image_proxy_checks_attempt_access_and_uses_private_cache_headers
 
     assert "ensure_attempt_access(attempt_id)" in route
     assert "item.image_id == image_id and item.attempt_id == attempt_id" in route
-    assert "media.read_stored_image(image.file_path)" in route
+    assert "media.read_stored_image(" in route
+    assert 'upload_folder=app.config["UPLOAD_FOLDER"]' in route
     assert 'response.headers["Cache-Control"] = "private, no-store"' in route
     assert 'response.headers["X-Content-Type-Options"] = "nosniff"' in route
+
 
 def test_submitted_attempts_reject_mutating_http_methods():
     source = APP_SOURCE.read_text(encoding="utf-8")
@@ -34,6 +36,7 @@ def test_submitted_attempts_reject_mutating_http_methods():
     assert "cannot be changed." in helper
     assert "409" in helper
 
+
 def test_wsgi_does_not_replace_private_image_routes_with_legacy_handlers():
     wsgi_source = (
         Path(__file__).resolve().parents[1] / "wsgi.py"
@@ -43,3 +46,12 @@ def test_wsgi_does_not_replace_private_image_routes_with_legacy_handlers():
     assert 'app.view_functions["upload_answer_image"]' not in wsgi_source
     assert 'app.view_functions["get_question_images"]' not in wsgi_source
     assert "/uploads/" not in wsgi_source
+
+
+def test_private_image_reads_are_constrained_to_configured_storage_root():
+    media_source = (
+        Path(__file__).resolve().parents[1] / "exam_platform" / "media.py"
+    ).read_text(encoding="utf-8")
+    assert "path.relative_to(root)" in media_source
+    assert "outside the private upload directory" in media_source
+    assert 'for delivery_type in ("authenticated", "upload")' not in media_source
