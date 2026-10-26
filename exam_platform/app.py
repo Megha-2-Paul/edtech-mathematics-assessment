@@ -51,6 +51,7 @@ app.config.update(
 app.permanent_session_lifetime = timedelta(hours=12)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 app.config["MAX_IMAGE_SIZE"] = 10 * 1024 * 1024
+app.config["MAX_IMAGE_DIMENSION"] = 8000
 app.config["UPLOAD_FOLDER"] = str(Path(__file__).parent.parent / "uploads")
 app.config["EXAM_MONITORING_MODES"] = {"off", "optional", "required"}
 Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
@@ -793,6 +794,15 @@ def upload_answer_image(attempt_id):
 
     try:
         image_check = Image.open(file)
+        width, height = image_check.size
+        if (
+            width < 1
+            or height < 1
+            or width > app.config["MAX_IMAGE_DIMENSION"]
+            or height > app.config["MAX_IMAGE_DIMENSION"]
+            or width * height > 40_000_000
+        ):
+            return jsonify({"error": "Image dimensions exceed the allowed limit"}), 413
         image_check.verify()
         file.seek(0)
     except Exception:
@@ -806,6 +816,7 @@ def upload_answer_image(attempt_id):
         f"{uuid.uuid4().hex[:8]}.{ext}"
     )
     image_id = f"IMG{uuid.uuid4().hex[:12].upper()}"
+    filepath = None
     try:
         filepath = media.store_image(
             file,
@@ -826,7 +837,11 @@ def upload_answer_image(attempt_id):
     except Exception:
         app.logger.exception("Answer image storage failed")
         try:
-            media.delete_image(filepath)
+            if filepath:
+                media.delete_image(
+                    filepath,
+                    upload_folder=app.config["UPLOAD_FOLDER"],
+                )
         except Exception:
             app.logger.warning("Could not clean up failed answer-image upload", exc_info=True)
         return jsonify({"error": "Image could not be stored; please retry"}), 503
