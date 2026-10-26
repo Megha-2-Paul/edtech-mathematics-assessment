@@ -17,11 +17,7 @@ if CLOUDINARY_ENABLED:
 
 
 def store_image(file_obj, filename, upload_folder=None):
-    """Store an uploaded image and return the reference persisted in answer_images.file_path.
-
-    Cloud deployments use authenticated Cloudinary delivery. Local development uses
-    the configured upload folder, which should be persistent if used beyond testing.
-    """
+    """Store answer images in authenticated cloud storage or a private local folder."""
     if CLOUDINARY_ENABLED:
         stem = Path(filename).stem
         public_id = f"improvia/answers/{stem}"
@@ -61,34 +57,33 @@ def _resolve_local_path(file_path, upload_folder=None):
 
 
 def read_stored_image(file_path, upload_folder=None):
-    """Read image bytes for an access-checked proxy route.
+    """Read answer image bytes only from the configured root or authenticated cloud delivery.
 
-    New Cloudinary answer images use authenticated delivery. Legacy public
-    Cloudinary assets remain a migration concern; this function never returns
-    their provider URL to the browser.
+    Legacy Cloudinary assets that are accessible only through public delivery are
+    deliberately not used as a fallback. They must be migrated to authenticated
+    delivery before they can be served through this private proxy.
     """
     value = str(file_path or "")
     if value.startswith("cloudinary://"):
         public_id = value[len("cloudinary://") :]
-        last_error = None
-        for delivery_type in ("authenticated", "upload"):
-            try:
-                url, _ = cloudinary_url(
-                    public_id,
-                    resource_type="image",
-                    type=delivery_type,
-                    secure=True,
-                    sign_url=(delivery_type == "authenticated"),
-                )
-                with urlopen(url, timeout=15) as response:
-                    data = response.read()
-                    content_type = response.headers.get_content_type()
-                if not data:
-                    raise RuntimeError("Stored image is empty.")
-                return data, content_type
-            except (HTTPError, URLError, TimeoutError, OSError) as exc:
-                last_error = exc
-        raise RuntimeError("Unable to retrieve the stored Cloudinary image.") from last_error
+        try:
+            url, _ = cloudinary_url(
+                public_id,
+                resource_type="image",
+                type="authenticated",
+                secure=True,
+                sign_url=True,
+            )
+            with urlopen(url, timeout=15) as response:
+                data = response.read()
+                content_type = response.headers.get_content_type()
+            if not data:
+                raise RuntimeError("Stored image is empty.")
+            return data, content_type
+        except (HTTPError, URLError, TimeoutError, OSError) as exc:
+            raise RuntimeError(
+                "Unable to retrieve the image through authenticated Cloudinary delivery."
+            ) from exc
 
     path = _resolve_local_path(value, upload_folder=upload_folder)
     data = path.read_bytes()
@@ -97,7 +92,7 @@ def read_stored_image(file_path, upload_folder=None):
 
 
 def delete_image(file_path, upload_folder=None):
-    """Delete a stored image, supporting authenticated and legacy Cloudinary assets."""
+    """Delete stored answer images from cloud or within the configured local root."""
     if str(file_path).startswith("cloudinary://"):
         public_id = str(file_path)[len("cloudinary://") :]
         result = cloudinary.uploader.destroy(
