@@ -43,6 +43,8 @@ IMPORTANT RULES
 13. Difficulty must be one of Easy, Moderate, Difficult when it is explicitly supported. Otherwise use null.
 14. competency should be used only when supported by the source/question design; otherwise use null.
 15. Return JSON only. No markdown fences. No commentary before or after the JSON.
+16. JSON escaping is mandatory. Mathematical notation may contain backslashes; inside JSON strings every literal backslash must be escaped. For example, a LaTeX command such as `\\theta` must be represented as `\\\\theta` in the raw JSON file.
+17. Before returning the final answer, validate that the complete output is syntactically valid JSON. Do not return pseudo-JSON, a Python dictionary, or Markdown containing JSON.
 
 CANONICAL SCOPE
 subject: Mathematics
