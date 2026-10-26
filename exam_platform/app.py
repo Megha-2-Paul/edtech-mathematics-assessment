@@ -89,7 +89,11 @@ def _csrf_token():
 
 
 def _valid_csrf():
-    supplied = str(request.form.get("csrf_token") or "")
+    supplied = str(
+        request.headers.get("X-CSRF-Token")
+        or request.form.get("csrf_token")
+        or ""
+    )
     expected = str(session.get("_csrf_token") or "")
     return bool(supplied and expected and hmac.compare_digest(supplied, expected))
 
