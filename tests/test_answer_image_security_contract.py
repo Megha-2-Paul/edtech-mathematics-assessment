@@ -55,3 +55,15 @@ def test_private_image_reads_are_constrained_to_configured_storage_root():
     assert "path.relative_to(root)" in media_source
     assert "outside the private upload directory" in media_source
     assert 'for delivery_type in ("authenticated", "upload")' not in media_source
+
+
+
+def test_assessment_templates_attach_csrf_tokens_to_mutating_fetch_requests():
+    root = Path(__file__).resolve().parents[1] / "exam_platform" / "templates"
+    base = (root / "base.html").read_text(encoding="utf-8")
+    app_source = APP_SOURCE.read_text(encoding="utf-8")
+
+    assert 'meta name="csrf-token"' in base
+    assert 'headers.set("X-CSRF-Token", token)' in base
+    assert 'return nativeFetch(input, requestOptions);' in base
+    assert "request.headers.get(\"X-CSRF-Token\")" in app_source
