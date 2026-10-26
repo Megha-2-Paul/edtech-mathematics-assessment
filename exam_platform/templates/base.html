@@ -17,7 +17,10 @@
         const nativeFetch = window.fetch.bind(window);
         window.fetch = function (input, options = {}) {
             const requestOptions = { ...options };
-            const method = String(requestOptions.method || "GET").toUpperCase();
+            const method = String(
+                requestOptions.method ||
+                (input instanceof Request ? input.method : "GET")
+            ).toUpperCase();
             const url = new URL(
                 typeof input === "string" ? input : input.url,
                 window.location.href
