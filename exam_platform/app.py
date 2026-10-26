@@ -104,6 +104,25 @@ def _valid_csrf():
     return bool(supplied and expected and hmac.compare_digest(supplied, expected))
 
 
+# Machine-to-machine endpoints authenticate independently of browser sessions.
+CSRF_EXEMPT_ENDPOINTS = {
+    "google_form_registration_webhook",
+    "create_student_access_link",
+}
+
+
+@app.before_request
+def enforce_csrf():
+    """Validate CSRF tokens for every state-changing browser request."""
+    if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
+        return None
+    if request.endpoint in CSRF_EXEMPT_ENDPOINTS:
+        return None
+    if not _valid_csrf():
+        return jsonify({"error": "Invalid or missing CSRF token"}), 400
+    return None
+
+
 def _token_hash(token):
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
