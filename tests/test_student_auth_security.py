@@ -38,3 +38,18 @@ def test_activation_tokens_are_hashed_and_passwords_are_hashed():
 def test_migration_defaults_to_audit_only():
     assert "Default mode is read-only" in MIGRATION_SOURCE
     assert "--apply" in MIGRATION_SOURCE
+
+def test_csrf_guard_covers_all_state_changing_http_methods():
+    assert "def enforce_csrf():" in APP_SOURCE
+    assert 'request.method not in {"POST", "PUT", "PATCH", "DELETE"}' in APP_SOURCE
+    assert 'if not _valid_csrf():' in APP_SOURCE
+    assert 'return jsonify({"error": "Invalid or missing CSRF token"}), 400' in APP_SOURCE
+
+
+def test_csrf_exemptions_are_limited_to_independently_authenticated_machine_endpoints():
+    assert '"google_form_registration_webhook"' in APP_SOURCE
+    assert '"create_student_access_link"' in APP_SOURCE
+    guard_start = APP_SOURCE.index("def enforce_csrf():")
+    guard_end = APP_SOURCE.index("\n\ndef _token_hash", guard_start)
+    guard = APP_SOURCE[guard_start:guard_end]
+    assert "request.endpoint in CSRF_EXEMPT_ENDPOINTS" in guard
