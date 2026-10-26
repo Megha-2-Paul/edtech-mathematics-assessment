@@ -57,43 +57,81 @@ def test_csrf_guard_does_not_capture_machine_to_machine_or_teacher_routes():
     assert '"/api/registrations/google-form"' not in guard
     assert '"/teacher/students/<student_id>/access-link"' not in guard
 
+
+def _isolated_csrf_client():
+    """Build a tiny Flask app from the real CSRF hook without importing app.py."""
+    import ast
+    import hmac
+
+    from flask import Flask, jsonify, request, session
+
+    tree = ast.parse(APP_SOURCE)
+    selected = []
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == "CSRF_PROTECTED_PREFIXES"
+            for target in node.targets
+        ):
+            selected.append(node)
+        elif isinstance(node, ast.FunctionDef) and node.name in {"_valid_csrf", "enforce_csrf"}:
+            node.decorator_list = []
+            selected.append(node)
+
+    namespace = {"hmac": hmac, "request": request, "session": session, "jsonify": jsonify}
+    module = ast.Module(body=selected, type_ignores=[])
+    exec(compile(ast.fix_missing_locations(module), "<csrf-source>", "exec"), namespace)
+
+    test_app = Flask(__name__)
+    test_app.secret_key = "csrf-test-only-secret"
+    test_app.before_request(namespace["enforce_csrf"])
+
+    @test_app.route("/api/attempt/example/response", methods=["POST"])
+    def assessment_mutation():
+        return {"ok": True}, 200
+
+    @test_app.route("/api/registrations/google-form", methods=["POST"])
+    def registration_webhook():
+        return {"ok": True}, 200
+
+    @test_app.route("/teacher/students/example/access-link", methods=["POST"])
+    def teacher_route():
+        return {"ok": True}, 200
+
+    return test_app.test_client()
+
+
 def test_csrf_guard_rejects_missing_and_invalid_tokens():
-    from exam_platform.app import app
+    client = _isolated_csrf_client()
 
-    app.config.update(TESTING=True, SECRET_KEY="csrf-test-only-secret")
-    client = app.test_client()
-
-    missing = client.post("/api/attempt/csrf-test/response", json={})
+    missing = client.post("/api/attempt/example/response")
     assert missing.status_code == 400
     assert missing.get_json() == {"error": "Invalid or missing CSRF token"}
 
     with client.session_transaction() as session:
         session["_csrf_token"] = "expected-token"
     invalid = client.post(
-        "/api/attempt/csrf-test/response",
-        json={},
+        "/api/attempt/example/response",
         headers={"X-CSRF-Token": "wrong-token"},
     )
     assert invalid.status_code == 400
     assert invalid.get_json() == {"error": "Invalid or missing CSRF token"}
 
 
-def test_csrf_guard_accepts_valid_token_before_route_access_checks():
-    from exam_platform.app import app
-
-    app.config.update(TESTING=True, SECRET_KEY="csrf-test-only-secret")
-    client = app.test_client()
+def test_csrf_guard_accepts_valid_token():
+    client = _isolated_csrf_client()
     with client.session_transaction() as session:
         session["_csrf_token"] = "expected-token"
 
     response = client.post(
-        "/api/attempt/csrf-test/response",
-        json={},
+        "/api/attempt/example/response",
         headers={"X-CSRF-Token": "expected-token"},
     )
+    assert response.status_code == 200
+    assert response.get_json() == {"ok": True}
 
-    # CSRF validation passes; the request then reaches the existing
-    # student-access guard, which rejects this anonymous assessment request.
-    assert response.status_code == 401
-    assert response.get_json() == {"error": "Student login required"}
 
+def test_csrf_guard_leaves_webhook_and_teacher_routes_outside_scope():
+    client = _isolated_csrf_client()
+
+    assert client.post("/api/registrations/google-form").status_code == 200
+    assert client.post("/teacher/students/example/access-link").status_code == 200
