@@ -104,19 +104,20 @@ def _valid_csrf():
     return bool(supplied and expected and hmac.compare_digest(supplied, expected))
 
 
-# Machine-to-machine endpoints authenticate independently of browser sessions.
-CSRF_EXEMPT_ENDPOINTS = {
-    "google_form_registration_webhook",
-    "create_student_access_link",
-}
+# Limit the shared guard to student authentication and assessment mutations.
+CSRF_PROTECTED_PREFIXES = (
+    "/student/",
+    "/api/test/",
+    "/api/attempt/",
+)
 
 
 @app.before_request
 def enforce_csrf():
-    """Validate CSRF tokens for every state-changing browser request."""
+    """Validate CSRF tokens for state-changing student and assessment requests."""
     if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
         return None
-    if request.endpoint in CSRF_EXEMPT_ENDPOINTS:
+    if not request.path.startswith(CSRF_PROTECTED_PREFIXES):
         return None
     if not _valid_csrf():
         return jsonify({"error": "Invalid or missing CSRF token"}), 400
