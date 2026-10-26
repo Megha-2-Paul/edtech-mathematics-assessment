@@ -88,6 +88,11 @@ def _csrf_token():
     return token
 
 
+@app.context_processor
+def inject_csrf_token():
+    return {"csrf_token": _csrf_token()}
+
+
 def _valid_csrf():
     supplied = str(
         request.headers.get("X-CSRF-Token")
