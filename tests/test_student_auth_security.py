@@ -39,17 +39,20 @@ def test_migration_defaults_to_audit_only():
     assert "Default mode is read-only" in MIGRATION_SOURCE
     assert "--apply" in MIGRATION_SOURCE
 
-def test_csrf_guard_covers_all_state_changing_http_methods():
+def test_csrf_guard_covers_state_changing_student_assessment_requests():
     assert "def enforce_csrf():" in APP_SOURCE
     assert 'request.method not in {"POST", "PUT", "PATCH", "DELETE"}' in APP_SOURCE
+    assert '"/student/"' in APP_SOURCE
+    assert '"/api/test/"' in APP_SOURCE
+    assert '"/api/attempt/"' in APP_SOURCE
     assert 'if not _valid_csrf():' in APP_SOURCE
     assert 'return jsonify({"error": "Invalid or missing CSRF token"}), 400' in APP_SOURCE
 
 
-def test_csrf_exemptions_are_limited_to_independently_authenticated_machine_endpoints():
-    assert '"google_form_registration_webhook"' in APP_SOURCE
-    assert '"create_student_access_link"' in APP_SOURCE
+def test_csrf_guard_does_not_capture_machine_to_machine_or_teacher_routes():
     guard_start = APP_SOURCE.index("def enforce_csrf():")
     guard_end = APP_SOURCE.index("\n\ndef _token_hash", guard_start)
     guard = APP_SOURCE[guard_start:guard_end]
-    assert "request.endpoint in CSRF_EXEMPT_ENDPOINTS" in guard
+    assert "request.path.startswith(CSRF_PROTECTED_PREFIXES)" in guard
+    assert '"/api/registrations/google-form"' not in guard
+    assert '"/teacher/students/<student_id>/access-link"' not in guard
