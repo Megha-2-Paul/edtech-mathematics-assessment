@@ -11,6 +11,7 @@
 <p style="color:#666;margin:6px 0 18px">Question ID: <strong>{{ question.question_id if question else 'Generated automatically' }}</strong></p>
 {% with messages=get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="flash">{{message}}</div>{% endfor %}{% endwith %}
 <form method="post" enctype="multipart/form-data" id="questionForm">
+<input type="hidden" name="teacher_csrf_token" value="{{ teacher_csrf_token }}">
 <div class="form-grid">
 <div class="field"><label>Subject *</label><select name="subject" id="subject" required>{% for s in subjects %}<option value="{{s.name}}" {% if question and question.subject==s.name or not question and s.name=='Mathematics' %}selected{% endif %}>{{s.name}}</option>{% endfor %}</select></div>
 <div class="field"><label>Board *</label><select name="board" id="board" required>{% for b in boards %}<option value="{{b}}" {% if question and question.board==b or not question and b=='CBSE' %}selected{% endif %}>{{b}}</option>{% endfor %}</select></div>
