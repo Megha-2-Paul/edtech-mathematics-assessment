@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, inspect, text
+from database_url import build_database_url
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 load_dotenv(PROJECT_ROOT / ".env")
@@ -11,7 +12,14 @@ DB_PORT = os.getenv("DB_PORT", "3306")
 DB_NAME = os.getenv("DB_NAME", "edtech_assessment")
 DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-DATABASE_URL = os.getenv("DATABASE_URL") or f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
+DATABASE_URL = build_database_url(
+    host=DB_HOST,
+    port=DB_PORT,
+    database=DB_NAME,
+    username=DB_USER,
+    password=DB_PASSWORD,
+    override=os.getenv("DATABASE_URL"),
+)
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
 
 SCHEMA = [
