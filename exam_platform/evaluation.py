@@ -1,6 +1,7 @@
-"""Teacher evaluation workflow, diagnosis, and student result calculations."""
+﻿"""Teacher evaluation workflow, diagnosis, and student result calculations."""
 
 import os
+from decimal import Decimal, InvalidOperation
 from datetime import datetime
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, send_from_directory, url_for
@@ -73,8 +74,28 @@ def _evaluate_attempt(attempt_id):
     return attempt
 
 
+def _validate_marks(marks, maximum):
+    """Reject invalid marks instead of silently changing the teacher's input."""
+    try:
+        awarded = Decimal(str(marks).strip())
+        max_marks = Decimal(str(maximum))
+    except (InvalidOperation, ValueError, TypeError, AttributeError):
+        raise ValueError("Enter a valid numeric mark.") from None
+
+    if not awarded.is_finite() or not max_marks.is_finite():
+        raise ValueError("Marks must be finite numbers.")
+
+    if max_marks < 0 or awarded < 0 or awarded > max_marks:
+        raise ValueError(f"Marks must be between 0 and {max_marks}.")
+
+    if awarded * 2 != (awarded * 2).to_integral_value():
+        raise ValueError("Marks must use increments of 0.5.")
+
+    return float(awarded)
+
+
 def _save_response_evaluation(response, question, marks, error_codes, comment):
-    marks = max(0.0, min(float(marks), float(question.marks)))
+    marks = _validate_marks(marks, question.marks)
     is_correct = (
         (response.selected_answer == question.correct_answer)
         if question.question_type == "mcq" and response.selected_answer
@@ -185,33 +206,63 @@ def evaluate(attempt_id):
     responses = {r.question_id: r for r in storage.get_attempt_responses(attempt_id)}
 
     if request.method == "POST":
-        for q in questions:
-            r = responses.get(q.question_id)
-            if not r:
-                continue
+        pending_evaluations = []
 
-            if q.question_type == "mcq":
-                marks = float(q.marks) if r.selected_answer == q.correct_answer else 0.0
-                codes = []
-            else:
-                marks = request.form.get(f"marks_{q.question_id}", "0") or "0"
-                codes = [
-                    c
-                    for c, _ in ERROR_CODES
-                    if c in request.form.getlist(f"errors_{q.question_id}")
-                ]
+        try:
+            # Validate every response before making any evaluation writes.
+            for q in questions:
+                r = responses.get(q.question_id)
+                if not r:
+                    continue
 
-            _save_response_evaluation(
-                r,
-                q,
-                marks,
-                codes,
-                request.form.get(f"comment_{q.question_id}", "").strip(),
+                if q.question_type == "mcq":
+                    marks = (
+                        float(q.marks)
+                        if r.selected_answer == q.correct_answer
+                        else 0.0
+                    )
+                    codes = []
+                else:
+                    raw_marks = request.form.get(
+                        f"marks_{q.question_id}", ""
+                    )
+                    marks = _validate_marks(raw_marks, q.marks)
+                    codes = [
+                        code
+                        for code, _ in ERROR_CODES
+                        if code in request.form.getlist(
+                            f"errors_{q.question_id}"
+                        )
+                    ]
+
+                # Validate calculated MCQ marks too, before any saves.
+                marks = _validate_marks(marks, q.marks)
+
+                comment = request.form.get(
+                    f"comment_{q.question_id}", ""
+                ).strip()
+
+                pending_evaluations.append(
+                    (r, q, marks, codes, comment)
+                )
+
+        except ValueError as exc:
+            flash(
+                f"Evaluation not saved. Please correct the marks: {exc}",
+                "error",
             )
+            return redirect(
+                url_for("evaluation.evaluate", attempt_id=attempt_id)
+            )
+
+        # Save only after every submitted mark has passed validation.
+        for r, q, marks, codes, comment in pending_evaluations:
+            _save_response_evaluation(r, q, marks, codes, comment)
 
         attempt = _evaluate_attempt(attempt_id)
         storage.update_attempt(attempt)
         _update_question_history(attempt_id)
+
         flash("Evaluation saved and result calculated.", "success")
         return redirect(url_for("evaluation.evaluate", attempt_id=attempt_id))
 
