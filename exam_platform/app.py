@@ -1,3 +1,4 @@
+import hashlib
 import hmac
 import os
 import secrets
@@ -7,9 +8,13 @@ from io import BytesIO
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from flask import Flask, jsonify, redirect, render_template, request, send_file, session, url_for
+from flask import Flask, Response as FlaskResponse, jsonify, redirect, render_template, request, send_file, session, url_for
 from PIL import Image
+from sqlalchemy import text
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
+
+from database import engine
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -47,6 +52,7 @@ app.config.update(
 app.permanent_session_lifetime = timedelta(hours=12)
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024
 app.config["MAX_IMAGE_SIZE"] = 10 * 1024 * 1024
+app.config["MAX_IMAGE_DIMENSION"] = 8000
 app.config["UPLOAD_FOLDER"] = str(Path(__file__).parent.parent / "uploads")
 app.config["EXAM_MONITORING_MODES"] = {"off", "optional", "required"}
 Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
@@ -68,23 +74,299 @@ def allowed_file(filename):
 
 
 def get_or_create_student_id():
-    student_id = session.get("student_id")
-    if not student_id:
-        student_id = f"STU{uuid.uuid4().hex[:8].upper()}"
-        session["student_id"] = student_id
-    return student_id
+    """Return the logged-in student ID; never create an anonymous identity."""
+    return session.get("student_id")
 
 
 def ensure_student_record(student_id):
-    if not storage.get_student(student_id):
-        storage.create_student(
-            Student(
-                student_id=student_id,
-                name="Guest Student",
-                email="",
-                registration_source="prototype",
-            )
+    """Look up an existing student without creating a guest account."""
+    return storage.get_student(student_id)
+
+
+def _csrf_token():
+    token = session.get("_csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["_csrf_token"] = token
+    return token
+
+
+@app.context_processor
+def inject_csrf_token():
+    return {"csrf_token": _csrf_token()}
+
+
+def _valid_csrf():
+    supplied = str(
+        request.headers.get("X-CSRF-Token")
+        or request.form.get("csrf_token")
+        or ""
+    )
+    expected = str(session.get("_csrf_token") or "")
+    return bool(supplied and expected and hmac.compare_digest(supplied, expected))
+
+
+# Limit the shared guard to student authentication and assessment mutations.
+CSRF_PROTECTED_PREFIXES = (
+    "/student/",
+    "/api/test/",
+    "/api/attempt/",
+)
+
+
+@app.before_request
+def enforce_csrf():
+    """Validate CSRF tokens for state-changing student and assessment requests."""
+    if request.method not in {"POST", "PUT", "PATCH", "DELETE"}:
+        return None
+    if not request.path.startswith(CSRF_PROTECTED_PREFIXES):
+        return None
+    if not _valid_csrf():
+        return jsonify({"error": "Invalid or missing CSRF token"}), 400
+    return None
+
+
+def _token_hash(token):
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+STUDENT_PROTECTED_PREFIXES = (
+    "/tests",
+    "/test/",
+    "/api/test/",
+    "/api/attempt/",
+    "/submission/",
+    "/report/",
+    "/result/",
+    "/student/report/",
+    "/student/result/",
+)
+
+
+@app.before_request
+def enforce_student_access():
+    """Require an active student session before serving student assessment data."""
+    if request.endpoint in {
+        "index",
+        "student_login",
+        "student_activate",
+        "student_logout",
+        "google_form_registration_webhook",
+        "static",
+    }:
+        return None
+    if not request.path.startswith(STUDENT_PROTECTED_PREFIXES):
+        return None
+
+    student_id = session.get("student_id")
+    if not student_id:
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Student login required"}), 401
+        return redirect(url_for("student_login"))
+
+    student = storage.get_student(student_id)
+    if not student or str(student.status or "").lower() != "active":
+        session.clear()
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "Student account is unavailable"}), 401
+        return redirect(url_for("student_login"))
+    return None
+
+
+@app.route("/student/login", methods=["GET", "POST"])
+def student_login():
+    """Authenticate an active student using a founder-issued password."""
+    if request.method == "GET":
+        return render_template("student_login.html", error=None, csrf_token=_csrf_token())
+
+    if not _valid_csrf():
+        return jsonify({"error": "Invalid or missing CSRF token"}), 400
+
+    student_id = str(request.form.get("student_id") or "").strip().upper()
+    password = str(request.form.get("password") or "")
+    authenticated_student_id = None
+    now = datetime.now()
+
+    if student_id and password:
+        with engine.begin() as db:
+            row = db.execute(
+                text(
+                    "SELECT c.password_hash,c.failed_login_count,c.locked_until,s.status "
+                    "FROM student_access_credentials c "
+                    "JOIN students s ON s.student_id=c.student_id "
+                    "WHERE c.student_id=:student_id FOR UPDATE"
+                ),
+                {"student_id": student_id},
+            ).mappings().first()
+
+            if row and str(row["status"] or "").lower() == "active":
+                locked_until = row["locked_until"]
+                if not locked_until or locked_until <= now:
+                    if check_password_hash(row["password_hash"], password):
+                        db.execute(
+                            text(
+                                "UPDATE student_access_credentials "
+                                "SET failed_login_count=0,locked_until=NULL,last_login_at=:now,updated_at=:now "
+                                "WHERE student_id=:student_id"
+                            ),
+                            {"student_id": student_id, "now": now},
+                        )
+                        authenticated_student_id = student_id
+                    else:
+                        failures = int(row["failed_login_count"] or 0) + 1
+                        locked = now + timedelta(minutes=15) if failures >= 5 else None
+                        db.execute(
+                            text(
+                                "UPDATE student_access_credentials "
+                                "SET failed_login_count=:failures,locked_until=:locked,updated_at=:now "
+                                "WHERE student_id=:student_id"
+                            ),
+                            {"student_id": student_id, "failures": failures, "locked": locked, "now": now},
+                        )
+
+    if not authenticated_student_id:
+        return render_template(
+            "student_login.html",
+            error="Login failed. Check your Student ID and password, or contact Improvia for a new access link.",
+            csrf_token=_csrf_token(),
+        ), 401
+
+    session.clear()
+    session["student_id"] = authenticated_student_id
+    session.permanent = True
+    return redirect(url_for("test_listing"))
+
+
+@app.route("/student/logout", methods=["POST"])
+def student_logout():
+    if not _valid_csrf():
+        return jsonify({"error": "Invalid or missing CSRF token"}), 400
+    session.clear()
+    return redirect(url_for("student_login"))
+
+
+@app.route("/student/activate", methods=["GET", "POST"])
+def student_activate():
+    """Set an initial password using a single-use, expiring activation link."""
+    token = str(request.values.get("token") or "").strip()
+    if not token or len(token) > 256:
+        return render_template("student_activate.html", token="", error="This activation link is invalid or expired."), 400
+
+    if request.method == "GET":
+        with engine.connect() as db:
+            row = db.execute(
+                text(
+                    "SELECT student_id FROM student_access_tokens "
+                    "WHERE token_hash=:token_hash AND used_at IS NULL AND expires_at>:now"
+                ),
+                {"token_hash": _token_hash(token), "now": datetime.now()},
+            ).mappings().first()
+        if not row:
+            return render_template("student_activate.html", token="", error="This activation link is invalid or expired."), 400
+        return render_template("student_activate.html", token=token, error=None, csrf_token=_csrf_token())
+
+    if not _valid_csrf():
+        return jsonify({"error": "Invalid or missing CSRF token"}), 400
+
+    password = str(request.form.get("password") or "")
+    confirmation = str(request.form.get("confirm_password") or "")
+    if len(password) < 12:
+        return render_template("student_activate.html", token=token, error="Use a password with at least 12 characters.", csrf_token=_csrf_token()), 400
+    if password != confirmation:
+        return render_template("student_activate.html", token=token, error="The passwords do not match.", csrf_token=_csrf_token()), 400
+
+    now = datetime.now()
+    token_hash = _token_hash(token)
+    password_hash = generate_password_hash(password)
+    activated_student_id = None
+    with engine.begin() as db:
+        row = db.execute(
+            text(
+                "SELECT student_id,expires_at,used_at FROM student_access_tokens "
+                "WHERE token_hash=:token_hash FOR UPDATE"
+            ),
+            {"token_hash": token_hash},
+        ).mappings().first()
+        if row and row["used_at"] is None and row["expires_at"] > now:
+            student = db.execute(
+                text("SELECT status FROM students WHERE student_id=:student_id"),
+                {"student_id": row["student_id"]},
+            ).mappings().first()
+            if student and str(student["status"] or "").lower() == "active":
+                db.execute(
+                    text(
+                        "INSERT INTO student_access_credentials "
+                        "(student_id,password_hash,failed_login_count,locked_until,created_at,updated_at) "
+                        "VALUES(:student_id,:password_hash,0,NULL,:now,:now) "
+                        "ON DUPLICATE KEY UPDATE password_hash=:password_hash,"
+                        "failed_login_count=0,locked_until=NULL,updated_at=:now"
+                    ),
+                    {"student_id": row["student_id"], "password_hash": password_hash, "now": now},
+                )
+                db.execute(
+                    text("UPDATE student_access_tokens SET used_at=:now WHERE token_hash=:token_hash AND used_at IS NULL"),
+                    {"token_hash": token_hash, "now": now},
+                )
+                activated_student_id = row["student_id"]
+
+    if not activated_student_id:
+        return render_template("student_activate.html", token="", error="This activation link is invalid, expired, or already used."), 400
+
+    session.clear()
+    session["student_id"] = activated_student_id
+    session.permanent = True
+    return redirect(url_for("test_listing"))
+
+
+@app.route("/teacher/students/<student_id>/access-link", methods=["POST"])
+def create_student_access_link(student_id):
+    """Issue a one-time activation link; require teacher Basic Auth in every entry point."""
+    expected_username = os.getenv("TEACHER_ACCESS_USERNAME", "teacher").strip()
+    expected_password = os.getenv("TEACHER_ACCESS_PASSWORD", "").strip()
+    auth = request.authorization
+    if not expected_password:
+        return FlaskResponse("Teacher access is not configured.", status=503)
+    if (
+        not auth
+        or not hmac.compare_digest(auth.username or "", expected_username)
+        or not hmac.compare_digest(auth.password or "", expected_password)
+    ):
+        return FlaskResponse(
+            "Authentication required.",
+            status=401,
+            headers={"WWW-Authenticate": 'Basic realm="Improvia Teacher"'},
         )
+    if not request.is_json:
+        return jsonify({"error": "JSON request required"}), 415
+    student = storage.get_student(student_id)
+    if not student or str(student.status or "").lower() != "active":
+        return jsonify({"error": "Active student not found"}), 404
+
+    token = secrets.token_urlsafe(32)
+    now = datetime.now()
+    expires_at = now + timedelta(hours=24)
+    with engine.begin() as db:
+        db.execute(
+            text(
+                "UPDATE student_access_tokens SET used_at=:now "
+                "WHERE student_id=:student_id AND used_at IS NULL"
+            ),
+            {"student_id": student_id, "now": now},
+        )
+        db.execute(
+            text(
+                "INSERT INTO student_access_tokens "
+                "(token_hash,student_id,expires_at,used_at,created_at) "
+                "VALUES(:token_hash,:student_id,:expires_at,NULL,:now)"
+            ),
+            {"token_hash": _token_hash(token), "student_id": student_id, "expires_at": expires_at, "now": now},
+        )
+    return jsonify({
+        "student_id": student_id,
+        "activation_url": url_for("student_activate", token=token, _external=True),
+        "expires_at": expires_at.isoformat(),
+        "message": "Deliver this one-time link privately. It expires in 24 hours.",
+    }), 201
 
 
 # ---------------------------------------------------------------------------
@@ -534,6 +816,15 @@ def upload_answer_image(attempt_id):
 
     try:
         image_check = Image.open(file)
+        width, height = image_check.size
+        if (
+            width < 1
+            or height < 1
+            or width > app.config["MAX_IMAGE_DIMENSION"]
+            or height > app.config["MAX_IMAGE_DIMENSION"]
+            or width * height > 40_000_000
+        ):
+            return jsonify({"error": "Image dimensions exceed the allowed limit"}), 413
         image_check.verify()
         file.seek(0)
     except Exception:
@@ -547,6 +838,7 @@ def upload_answer_image(attempt_id):
         f"{uuid.uuid4().hex[:8]}.{ext}"
     )
     image_id = f"IMG{uuid.uuid4().hex[:12].upper()}"
+    filepath = None
     try:
         filepath = media.store_image(
             file,
@@ -567,7 +859,11 @@ def upload_answer_image(attempt_id):
     except Exception:
         app.logger.exception("Answer image storage failed")
         try:
-            media.delete_image(filepath)
+            if filepath:
+                media.delete_image(
+                    filepath,
+                    upload_folder=app.config["UPLOAD_FOLDER"],
+                )
         except Exception:
             app.logger.warning("Could not clean up failed answer-image upload", exc_info=True)
         return jsonify({"error": "Image could not be stored; please retry"}), 503
@@ -628,7 +924,7 @@ def delete_image(attempt_id, image_id):
         return jsonify({"error": "Image not found"}), 404
 
     try:
-        media.delete_image(image.file_path)
+        media.delete_image(image.file_path, upload_folder=app.config["UPLOAD_FOLDER"])
     except Exception:
         app.logger.exception("Answer image deletion failed")
         return jsonify({"error": "Image could not be deleted"}), 503
@@ -759,7 +1055,7 @@ def get_answer_image(attempt_id, image_id):
         return jsonify({"error": "Image not found"}), 404
 
     try:
-        data, content_type = media.read_stored_image(image.file_path)
+        data, content_type = media.read_stored_image(image.file_path, upload_folder=app.config["UPLOAD_FOLDER"])
     except Exception:
         app.logger.exception("Answer image retrieval failed")
         return jsonify({"error": "Image is temporarily unavailable"}), 503

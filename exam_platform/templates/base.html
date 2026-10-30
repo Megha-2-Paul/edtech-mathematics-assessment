@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{% block title %}Improvia{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='improvia-base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='improvia.css') }}">
@@ -10,6 +11,36 @@
     {% block head %}{% endblock %}
     {% block custom_styles %}{% endblock %}
     <link rel="stylesheet" href="{{ url_for('static', filename='improvia-overrides.css') }}">
+    <script>
+    (function () {
+        const token = document.querySelector('meta[name="csrf-token"]')?.content;
+        const nativeFetch = window.fetch.bind(window);
+        window.fetch = function (input, options = {}) {
+            const requestOptions = { ...options };
+            const method = String(
+                requestOptions.method ||
+                (input instanceof Request ? input.method : "GET")
+            ).toUpperCase();
+            const url = new URL(
+                typeof input === "string" ? input : input.url,
+                window.location.href
+            );
+            if (
+                token &&
+                url.origin === window.location.origin &&
+                ["POST", "PUT", "PATCH", "DELETE"].includes(method)
+            ) {
+                const headers = new Headers(
+                    requestOptions.headers ||
+                    (input instanceof Request ? input.headers : undefined)
+                );
+                headers.set("X-CSRF-Token", token);
+                requestOptions.headers = headers;
+            }
+            return nativeFetch(input, requestOptions);
+        };
+    })();
+    </script>
 </head>
 <body>
     <header class="site-header">
