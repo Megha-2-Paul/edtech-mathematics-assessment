@@ -2,7 +2,6 @@
 
 import os
 from decimal import Decimal, InvalidOperation
-from datetime import datetime
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, send_from_directory, url_for
 from sqlalchemy import text
@@ -143,37 +142,92 @@ def _save_response_evaluation(response, question, marks, error_codes, comment):
 
 def _update_question_history(attempt_id):
     attempt = storage.get_attempt(attempt_id)
+    if not attempt:
+        return
+
     responses = storage.get_attempt_responses(attempt_id)
+    if not responses:
+        return
 
     with engine.begin() as db:
         for response in responses:
+            history = db.execute(
+                text(
+                    "SELECT "
+                    "COUNT(*) AS attempt_count, "
+                    "COALESCE(SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END), 0) "
+                    "AS correct_count, "
+                    "MAX(COALESCE(a.submitted_at, a.started_at)) AS last_attempted_at, "
+                    "MAX(CASE WHEN r.is_correct = 1 "
+                    "THEN COALESCE(a.submitted_at, a.started_at) END) AS last_correct_at "
+                    "FROM responses r "
+                    "JOIN attempts a ON a.attempt_id = r.attempt_id "
+                    "WHERE a.student_id = :student "
+                    "AND r.question_id = :question "
+                    "AND r.marks_awarded IS NOT NULL"
+                ),
+                {
+                    "student": attempt.student_id,
+                    "question": response.question_id,
+                },
+            ).mappings().one()
+
+            latest = db.execute(
+                text(
+                    "SELECT r.response_id, r.marks_awarded "
+                    "FROM responses r "
+                    "JOIN attempts a ON a.attempt_id = r.attempt_id "
+                    "WHERE a.student_id = :student "
+                    "AND r.question_id = :question "
+                    "AND r.marks_awarded IS NOT NULL "
+                    "ORDER BY COALESCE(a.submitted_at, a.started_at) DESC, "
+                    "a.attempt_id DESC LIMIT 1"
+                ),
+                {
+                    "student": attempt.student_id,
+                    "question": response.question_id,
+                },
+            ).mappings().first()
+
+            if not latest:
+                continue
+
             errors = db.execute(
                 text(
                     "SELECT error_code FROM evaluation_errors "
                     "WHERE response_id=:id ORDER BY evaluation_error_id"
                 ),
-                {"id": response.response_id},
+                {"id": latest["response_id"]},
             ).scalars().all()
             summary = ", ".join(errors) if errors else None
 
             db.execute(
                 text(
-                    """INSERT INTO question_history(
-student_id,question_id,attempt_count,correct_count,last_attempted_at,last_correct_at,last_marks_awarded,last_error_summary)
-VALUES(:student,:question,1,:correct,:attempted,:correct_at,:marks,:summary)
-ON DUPLICATE KEY UPDATE attempt_count=attempt_count+1,correct_count=correct_count+VALUES(correct_count),last_attempted_at=VALUES(last_attempted_at),last_correct_at=IF(VALUES(correct_count)=1,VALUES(last_correct_at),last_correct_at),last_marks_awarded=VALUES(last_marks_awarded),last_error_summary=VALUES(last_error_summary)"""
+                    "INSERT INTO question_history("
+                    "student_id,question_id,attempt_count,correct_count,"
+                    "last_attempted_at,last_correct_at,last_marks_awarded,"
+                    "last_error_summary) "
+                    "VALUES(:student,:question,:attempt_count,:correct_count,"
+                    ":last_attempted_at,:last_correct_at,:last_marks_awarded,"
+                    ":last_error_summary) "
+                    "ON DUPLICATE KEY UPDATE "
+                    "attempt_count=:attempt_count,correct_count=:correct_count,"
+                    "last_attempted_at=:last_attempted_at,"
+                    "last_correct_at=:last_correct_at,"
+                    "last_marks_awarded=:last_marks_awarded,"
+                    "last_error_summary=:last_error_summary"
                 ),
                 {
                     "student": attempt.student_id,
                     "question": response.question_id,
-                    "correct": 1 if response.is_correct else 0,
-                    "attempted": attempt.submitted_at or datetime.now(),
-                    "correct_at": attempt.submitted_at if response.is_correct else None,
-                    "marks": response.marks_awarded,
-                    "summary": summary,
+                    "attempt_count": int(history["attempt_count"]),
+                    "correct_count": int(history["correct_count"]),
+                    "last_attempted_at": history["last_attempted_at"],
+                    "last_correct_at": history["last_correct_at"],
+                    "last_marks_awarded": latest["marks_awarded"],
+                    "last_error_summary": summary,
                 },
             )
-
 
 @evaluation_bp.route("/teacher/submissions")
 def submissions():
