@@ -16,6 +16,28 @@ if CLOUDINARY_ENABLED:
     cloudinary.config(secure=True)
 
 
+def _resolve_local_image_path(file_path, upload_folder=None):
+    """Resolve a local image path and ensure it stays inside the upload folder."""
+    upload_root = Path(
+        upload_folder or os.getenv("UPLOAD_FOLDER", "uploads")
+    ).resolve()
+    candidate = Path(str(file_path or ""))
+    candidate_absolute = candidate.absolute()
+
+    try:
+        candidate_absolute.relative_to(upload_root)
+        resolved = candidate.resolve()
+        resolved.relative_to(upload_root)
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise ValueError(
+            "Image path is outside the configured upload folder."
+        ) from exc
+
+    if resolved == upload_root:
+        raise ValueError("Image path is not a valid upload file.")
+
+    return candidate_absolute
+
 def store_image(file_obj, filename, upload_folder=None):
     """Store an uploaded image and return the reference persisted in answer_images.file_path.
 
@@ -46,7 +68,7 @@ def media_url(file_path):
     return None
 
 
-def read_stored_image(file_path):
+def read_stored_image(file_path, upload_folder=None):
     """Read image bytes for an authenticated proxy route.
 
     New Cloudinary answer images use authenticated delivery. The upload-type
@@ -76,13 +98,13 @@ def read_stored_image(file_path):
                 last_error = exc
         raise RuntimeError("Unable to retrieve the stored Cloudinary image.") from last_error
 
-    path = Path(value)
+    path = _resolve_local_image_path(value, upload_folder)
     data = path.read_bytes()
     content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     return data, content_type
 
 
-def delete_image(file_path):
+def delete_image(file_path, upload_folder=None):
     """Delete a stored image, supporting authenticated and legacy Cloudinary assets."""
     if str(file_path).startswith("cloudinary://"):
         public_id = str(file_path)[len("cloudinary://") :]
@@ -93,6 +115,6 @@ def delete_image(file_path):
             cloudinary.uploader.destroy(public_id, resource_type="image", type="upload")
         return
 
-    path = Path(file_path)
+    path = _resolve_local_image_path(file_path, upload_folder)
     if path.exists():
         path.unlink()

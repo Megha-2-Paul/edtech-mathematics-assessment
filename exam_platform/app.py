@@ -27,6 +27,7 @@ from exam_platform.models import (
     Student,
 )
 from exam_platform.teacher_csrf import register_teacher_csrf
+from exam_platform.student_csrf import register_student_csrf
 from question_bank.extraction.review_app import register_extraction_review
 
 
@@ -54,6 +55,7 @@ Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
 register_admin(app)
 register_extraction_review(app)
 register_teacher_csrf(app)
+register_student_csrf(app)
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}
 
@@ -567,7 +569,7 @@ def upload_answer_image(attempt_id):
     except Exception:
         app.logger.exception("Answer image storage failed")
         try:
-            media.delete_image(filepath)
+            media.delete_image(filepath, upload_folder=app.config["UPLOAD_FOLDER"])
         except Exception:
             app.logger.warning("Could not clean up failed answer-image upload", exc_info=True)
         return jsonify({"error": "Image could not be stored; please retry"}), 503
@@ -628,7 +630,7 @@ def delete_image(attempt_id, image_id):
         return jsonify({"error": "Image not found"}), 404
 
     try:
-        media.delete_image(image.file_path)
+        media.delete_image(image.file_path, upload_folder=app.config["UPLOAD_FOLDER"])
     except Exception:
         app.logger.exception("Answer image deletion failed")
         return jsonify({"error": "Image could not be deleted"}), 503
@@ -759,7 +761,7 @@ def get_answer_image(attempt_id, image_id):
         return jsonify({"error": "Image not found"}), 404
 
     try:
-        data, content_type = media.read_stored_image(image.file_path)
+        data, content_type = media.read_stored_image(image.file_path, upload_folder=app.config["UPLOAD_FOLDER"])
     except Exception:
         app.logger.exception("Answer image retrieval failed")
         return jsonify({"error": "Image is temporarily unavailable"}), 503

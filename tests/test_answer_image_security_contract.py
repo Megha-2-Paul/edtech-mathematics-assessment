@@ -19,7 +19,8 @@ def test_answer_image_proxy_checks_attempt_access_and_uses_private_cache_headers
 
     assert "ensure_attempt_access(attempt_id)" in route
     assert "item.image_id == image_id and item.attempt_id == attempt_id" in route
-    assert "media.read_stored_image(image.file_path)" in route
+    assert "media.read_stored_image(image.file_path," in route
+    assert 'upload_folder=app.config["UPLOAD_FOLDER"]' in route
     assert 'response.headers["Cache-Control"] = "private, no-store"' in route
     assert 'response.headers["X-Content-Type-Options"] = "nosniff"' in route
 

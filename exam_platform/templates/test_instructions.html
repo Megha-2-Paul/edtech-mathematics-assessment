@@ -62,7 +62,7 @@ function startTest(testId) {
     const button = event.target.closest('button');
     button.disabled = true;
     button.textContent = 'Starting...';
-    fetch(`/api/test/${testId}/start`, { method: 'POST' })
+    fetch(`/api/test/${testId}/start`, { method: 'POST', headers: { 'X-Student-CSRF-Token': document.querySelector('meta[name="student-csrf-token"]').content } })
         .then(async response => {
             const data = await response.json();
             if (!response.ok) {
