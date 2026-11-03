@@ -34,6 +34,7 @@ def test_teacher_questions_page_renders_subjects_and_preserves_filters(monkeypat
         ),
     )
     app.secret_key = "teacher-questions-test-secret"
+    app.add_url_rule("/", endpoint="test_listing", view_func=lambda: "")
     admin_module.register_admin(app)
     register_teacher_csrf(app)
 
