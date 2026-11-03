@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from flask import Flask
 
 from exam_platform import admin as admin_module
@@ -26,7 +28,7 @@ def test_teacher_questions_page_renders_subjects_and_preserves_filters(monkeypat
     app = Flask(
         __name__,
         template_folder=str(
-            admin_module.Path(__file__).resolve().parents[1]
+            Path(__file__).resolve().parents[1]
             / "exam_platform"
             / "templates"
         ),
