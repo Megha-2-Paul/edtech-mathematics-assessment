@@ -296,7 +296,7 @@ def questions():
         difficulty=difficulty,
         competency=competency,
         status=status,
-        subjects=SUBJECTS,
+        subjects=[item["name"] for item in storage.get_subjects()],
         boards=BOARDS,
         difficulties=DIFFICULTIES,
     )
