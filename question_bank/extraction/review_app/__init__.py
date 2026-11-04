@@ -424,8 +424,8 @@ def _json_upload_view():
             payload = json.loads(payload_bytes.decode("utf-8-sig"))
         except json.JSONDecodeError as exc:
             hint = (
-                "This usually means an AI-generated mathematical expression contains an unescaped backslash. "
-                "JSON requires backslashes inside strings to be escaped."
+                "Check the JSON syntax. Mathematical notation is one common source of errors. "
+                "Literal backslashes inside JSON strings must be escaped."
             )
             return render_template(
                 "extraction_json_upload.html",
