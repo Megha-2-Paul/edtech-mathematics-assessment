@@ -30,7 +30,13 @@ def store_image(file_obj, filename, upload_folder=None):
         )
         return f"cloudinary://{result['public_id']}"
 
-    upload_folder = Path(upload_folder or os.getenv("UPLOAD_FOLDER", Path(__file__).resolve().parent.parent / "uploads")).resolve()
+    upload_folder = Path(
+        upload_folder
+        or os.getenv(
+            "UPLOAD_FOLDER",
+            Path(__file__).resolve().parent.parent / "uploads",
+        )
+    ).resolve()
     upload_folder.mkdir(parents=True, exist_ok=True)
     destination = upload_folder / Path(filename).name
     file_obj.save(destination)
@@ -42,18 +48,31 @@ def media_url(file_path):
     return None
 
 
-def _resolve_local_path(file_path, upload_folder=None):
-    """Reject local media references outside the configured private upload root."""
-    root = Path(
+def _resolve_local_image_path(file_path, upload_folder=None):
+    """Resolve a local image path and ensure it stays inside the upload folder."""
+    upload_root = Path(
         upload_folder
-        or os.getenv("UPLOAD_FOLDER", Path(__file__).resolve().parent.parent / "uploads")
+        or os.getenv(
+            "UPLOAD_FOLDER",
+            Path(__file__).resolve().parent.parent / "uploads",
+        )
     ).resolve()
-    path = Path(file_path).resolve()
+    candidate = Path(str(file_path or ""))
+    candidate_absolute = candidate.absolute()
+
     try:
-        path.relative_to(root)
-    except ValueError as exc:
-        raise PermissionError("Stored image path is outside the private upload directory.") from exc
-    return path
+        candidate_absolute.relative_to(upload_root)
+        resolved = candidate.resolve()
+        resolved.relative_to(upload_root)
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise ValueError(
+            "Image path is outside the configured upload folder."
+        ) from exc
+
+    if resolved == upload_root:
+        raise ValueError("Image path is not a valid upload file.")
+
+    return candidate_absolute
 
 
 def read_stored_image(file_path, upload_folder=None):
@@ -85,7 +104,7 @@ def read_stored_image(file_path, upload_folder=None):
                 "Unable to retrieve the image through authenticated Cloudinary delivery."
             ) from exc
 
-    path = _resolve_local_path(value, upload_folder=upload_folder)
+    path = _resolve_local_image_path(value, upload_folder)
     data = path.read_bytes()
     content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     return data, content_type
@@ -99,9 +118,11 @@ def delete_image(file_path, upload_folder=None):
             public_id, resource_type="image", type="authenticated"
         )
         if result.get("result") == "not found":
-            cloudinary.uploader.destroy(public_id, resource_type="image", type="upload")
+            cloudinary.uploader.destroy(
+                public_id, resource_type="image", type="upload"
+            )
         return
 
-    path = _resolve_local_path(file_path, upload_folder=upload_folder)
+    path = _resolve_local_image_path(file_path, upload_folder)
     if path.exists():
         path.unlink()

@@ -11,6 +11,7 @@
 <div class="card">
 {% with messages=get_flashed_messages(with_categories=true) %}{% for category,message in messages %}<div class="notice notice-warning" style="margin-bottom:10px;">{{ message }}</div>{% endfor %}{% endwith %}
 <form method="post">
+<input type="hidden" name="teacher_csrf_token" value="{{ teacher_csrf_token }}">
 <div class="form-grid">
 <div class="field"><label>Test title<input name="title" value="{{ form.get('title','') if form else '' }}" required></label></div>
 <div class="field"><label>Subject<select name="subject" required><option>Mathematics</option><option>Applied Mathematics</option><option>Information Technology</option><option>Computer Applications</option><option>Computer Science</option><option>Informatics Practices</option></select></label></div>

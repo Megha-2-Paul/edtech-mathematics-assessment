@@ -110,8 +110,8 @@ def diagnose_attempt(attempt, test, questions, responses):
     evaluated = sum(
         1
         for question in questions
-        if not response_map.get(question.question_id)
-        or response_map[question.question_id].marks_awarded is not None
+        if response_map.get(question.question_id) is not None
+        and response_map[question.question_id].marks_awarded is not None
     )
     marks_lost = max(0.0, total_marks - awarded)
 

@@ -19,7 +19,7 @@ def test_answer_image_proxy_checks_attempt_access_and_uses_private_cache_headers
 
     assert "ensure_attempt_access(attempt_id)" in route
     assert "item.image_id == image_id and item.attempt_id == attempt_id" in route
-    assert "media.read_stored_image(" in route
+    assert "media.read_stored_image(image.file_path," in route
     assert 'upload_folder=app.config["UPLOAD_FOLDER"]' in route
     assert 'response.headers["Cache-Control"] = "private, no-store"' in route
     assert 'response.headers["X-Content-Type-Options"] = "nosniff"' in route
@@ -52,8 +52,10 @@ def test_private_image_reads_are_constrained_to_configured_storage_root():
     media_source = (
         Path(__file__).resolve().parents[1] / "exam_platform" / "media.py"
     ).read_text(encoding="utf-8")
-    assert "path.relative_to(root)" in media_source
-    assert "outside the private upload directory" in media_source
+    assert "candidate_absolute.relative_to(upload_root)" in media_source
+    assert "resolved.relative_to(upload_root)" in media_source
+    assert "resolved == upload_root" in media_source
+    assert "outside the configured upload folder" in media_source
     assert 'for delivery_type in ("authenticated", "upload")' not in media_source
 
 

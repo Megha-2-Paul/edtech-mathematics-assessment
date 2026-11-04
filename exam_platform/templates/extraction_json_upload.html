@@ -17,6 +17,7 @@
     <a class="btn" href="{{ url_for('extraction_review.dashboard') }}">Open review queue →</a>
   {% else %}
     <form method="post" enctype="multipart/form-data">
+<input type="hidden" name="teacher_csrf_token" value="{{ teacher_csrf_token }}">
       <div style="padding:20px;border:2px dashed #ccc;border-radius:12px;margin:18px 0">
         <label><strong>JSON batch files</strong></label><br><input type="file" name="json_file" accept=".json,application/json" multiple required style="margin-top:10px">
         <p class="small">Select multiple JSON files if you want. Maximum 5 MB per file. Every file is validated and placed in the review inbox; nothing is published automatically.</p>

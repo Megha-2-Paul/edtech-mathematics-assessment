@@ -20,6 +20,7 @@
 <div class="evaluation-instruction"><strong>Evaluation checklist:</strong> review the question and handwritten work → award marks → select applicable error codes → add concise feedback → save once all responses are reviewed.</div>
 
 <form method="post">
+<input type="hidden" name="teacher_csrf_token" value="{{ teacher_csrf_token }}">
 {% for item in response_data %}
     {% set q=item.question %}{% set r=item.response %}
     <section class="card evaluation-question">

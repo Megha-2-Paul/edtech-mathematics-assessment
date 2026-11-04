@@ -63,6 +63,48 @@ def test_render_mock_data_guard_precedes_demo_data_loading():
         'if os.getenv("LOAD_DEMO_DATA", "0") != "1":'
     )
 
+
+def test_production_schema_guard_requires_monitoring_mode(monkeypatch):
+    import database
+
+    class FakeInspector:
+        def get_table_names(self):
+            return [
+                statement.split("CREATE TABLE IF NOT EXISTS ", 1)[1].split(" ", 1)[0]
+                for statement in database.SCHEMA
+            ]
+
+        def get_columns(self, table):
+            required_columns = {
+                "students": {"student_id", "name", "email", "status"},
+                "tests": {
+                    "test_id", "title", "duration_minutes",
+                    "total_marks", "questions_json",
+                },
+                "questions": {
+                    "question_id", "question_content_json",
+                    "answer_choices_json", "marks",
+                },
+                "attempts": {
+                    "attempt_id", "student_id", "test_id",
+                    "started_at", "status",
+                },
+                "responses": {
+                    "response_id", "attempt_id", "question_id",
+                    "answer_status",
+                },
+                "answer_images": {
+                    "image_id", "attempt_id", "question_id", "file_path",
+                },
+            }
+            return [{"name": name} for name in required_columns.get(table, set())]
+
+    monkeypatch.setattr(database, "inspect", lambda _engine: FakeInspector())
+
+    with pytest.raises(RuntimeError, match="monitoring_mode"):
+        database._validate_production_schema()
+
+
 def test_application_does_not_use_a_hard_coded_production_session_secret():
     from pathlib import Path
 

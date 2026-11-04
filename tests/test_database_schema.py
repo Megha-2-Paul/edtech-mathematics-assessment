@@ -35,6 +35,17 @@ class DatabaseSchemaTests(unittest.TestCase):
         for table in EXPECTED_TABLES:
             self.assertIn(f"CREATE TABLE IF NOT EXISTS {table} ", schema)
 
+    def test_tests_table_declares_monitoring_mode(self):
+        tests_sql = next(
+            statement
+            for statement in SCHEMA
+            if "CREATE TABLE IF NOT EXISTS tests " in statement
+        )
+        self.assertIn(
+            "monitoring_mode VARCHAR(20) NOT NULL DEFAULT 'off'",
+            tests_sql,
+        )
+
     def test_question_history_and_payment_schema_declare_expected_fields(self):
         schema = "\n".join(SCHEMA)
         history_sql = next(s for s in SCHEMA if "CREATE TABLE IF NOT EXISTS question_history " in s)

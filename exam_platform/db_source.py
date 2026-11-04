@@ -13,11 +13,6 @@ from sqlalchemy import text
 from database import engine
 from .models import AnswerImage, Attempt, ContentBlock, Question, Response, Student, Test
 from .storage import storage as legacy_storage
-from .monitoring_db import ensure_exam_monitoring_schema
-
-
-# Existing databases need the monitoring column before the first SELECT * from tests.
-ensure_exam_monitoring_schema()
 
 
 def _dt(value):
