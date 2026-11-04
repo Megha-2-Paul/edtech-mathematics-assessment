@@ -422,6 +422,24 @@ def _json_upload_view():
             return render_template("extraction_json_upload.html", error=f"JSON file is too large (maximum 5 MB): {filename}")
         try:
             payload = json.loads(payload_bytes.decode("utf-8-sig"))
+        except json.JSONDecodeError as exc:
+            hint = (
+                "Check the JSON syntax. Mathematical notation is one common source of errors. "
+                "Literal backslashes inside JSON strings must be escaped."
+            )
+            return render_template(
+                "extraction_json_upload.html",
+                error=(
+                    f"Invalid JSON in {filename}: line {exc.lineno}, column {exc.colno} "
+                    f"(character {exc.pos}). {hint}"
+                ),
+            )
+        except UnicodeDecodeError as exc:
+            return render_template(
+                "extraction_json_upload.html",
+                error=f"{filename} is not valid UTF-8 JSON: {exc}",
+            )
+        try:
             result = AIJSONBulkImporter(existing_questions=_legacy.storage.questions.values()).prepare(payload)
         except Exception as exc:
             return render_template("extraction_json_upload.html", error=f"Import validation failed for {filename}: {exc}")
