@@ -2,7 +2,8 @@
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
+from database_url import build_database_url
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 load_dotenv(PROJECT_ROOT / ".env")
@@ -11,7 +12,14 @@ DB_PORT = os.getenv("DB_PORT", "3306")
 DB_NAME = os.getenv("DB_NAME", "edtech_assessment")
 DB_USER = os.getenv("DB_USER", "root")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-DATABASE_URL = os.getenv("DATABASE_URL") or f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
+DATABASE_URL = build_database_url(
+    host=DB_HOST,
+    port=DB_PORT,
+    database=DB_NAME,
+    username=DB_USER,
+    password=DB_PASSWORD,
+    override=os.getenv("DATABASE_URL"),
+)
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
 
 SCHEMA = [
@@ -22,13 +30,20 @@ SCHEMA = [
 """CREATE TABLE IF NOT EXISTS plans (plan_id VARCHAR(32) PRIMARY KEY,name VARCHAR(100) NOT NULL,description TEXT,amount_paise INT NOT NULL DEFAULT 0,billing_interval VARCHAR(30) NOT NULL DEFAULT 'one_time',active BOOLEAN NOT NULL DEFAULT TRUE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS subscriptions (subscription_id VARCHAR(40) PRIMARY KEY,student_id VARCHAR(32) NOT NULL,plan_id VARCHAR(32) NOT NULL,start_date DATE NOT NULL,end_date DATE,status VARCHAR(30) NOT NULL,FOREIGN KEY(student_id) REFERENCES students(student_id),FOREIGN KEY(plan_id) REFERENCES plans(plan_id),INDEX idx_subscription_student(student_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS payments (payment_id VARCHAR(40) PRIMARY KEY,student_id VARCHAR(32) NOT NULL,subscription_id VARCHAR(40),billing_period VARCHAR(20),amount_paise INT NOT NULL,currency VARCHAR(10) NOT NULL DEFAULT 'INR',payment_date DATETIME,payment_method VARCHAR(40),transaction_reference VARCHAR(150),status VARCHAR(30) NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX idx_payment_student_period(student_id,billing_period),FOREIGN KEY(student_id) REFERENCES students(student_id),FOREIGN KEY(subscription_id) REFERENCES subscriptions(subscription_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
-"""CREATE TABLE IF NOT EXISTS tests (test_id VARCHAR(40) PRIMARY KEY,title VARCHAR(255) NOT NULL,subject VARCHAR(100) NOT NULL,class_level INT NOT NULL,board VARCHAR(30),test_date DATE,duration_minutes INT NOT NULL,total_marks DECIMAL(10,2) NOT NULL,test_type VARCHAR(50) NOT NULL DEFAULT 'weekly',status VARCHAR(30) NOT NULL,questions_json LONGTEXT NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS tests (test_id VARCHAR(40) PRIMARY KEY,title VARCHAR(255) NOT NULL,subject VARCHAR(100) NOT NULL,class_level INT NOT NULL,board VARCHAR(30),test_date DATE,duration_minutes INT NOT NULL,total_marks DECIMAL(10,2) NOT NULL,test_type VARCHAR(50) NOT NULL DEFAULT 'weekly',status VARCHAR(30) NOT NULL,monitoring_mode VARCHAR(20) NOT NULL DEFAULT 'off',questions_json LONGTEXT NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS questions (question_id VARCHAR(40) PRIMARY KEY,subject VARCHAR(100) NOT NULL DEFAULT 'Mathematics',board VARCHAR(30),class_level INT,chapter VARCHAR(150),topic VARCHAR(150),subtopic VARCHAR(150),question_type VARCHAR(40) NOT NULL,answer_mode VARCHAR(80) NOT NULL,difficulty VARCHAR(50),competency VARCHAR(100),question_content_json LONGTEXT NOT NULL,answer_choices_json LONGTEXT NOT NULL,correct_answer VARCHAR(255),marks DECIMAL(10,2) NOT NULL,handwritten_upload_mode VARCHAR(20) NOT NULL DEFAULT 'none',source VARCHAR(255),source_year INT,status VARCHAR(20) NOT NULL DEFAULT 'active',source_type VARCHAR(20) NOT NULL DEFAULT 'manual',verification_status VARCHAR(30) NOT NULL DEFAULT 'VERIFIED',canonical_question_id VARCHAR(40),created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""","""CREATE TABLE IF NOT EXISTS question_solutions (question_solution_id BIGINT AUTO_INCREMENT PRIMARY KEY,question_id VARCHAR(40) NOT NULL,solution_content LONGTEXT,marking_scheme LONGTEXT,version INT NOT NULL DEFAULT 1,verified BOOLEAN NOT NULL DEFAULT FALSE,source_type VARCHAR(30) NOT NULL DEFAULT 'extracted',created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,UNIQUE KEY uq_question_solution_version(question_id,version),FOREIGN KEY(question_id) REFERENCES questions(question_id) ON DELETE CASCADE,INDEX idx_question_solution_question(question_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS extraction_review_batches (batch_id VARCHAR(80) PRIMARY KEY,filename VARCHAR(255) NOT NULL,payload_json LONGTEXT NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS extraction_review_items (item_id VARCHAR(100) PRIMARY KEY,batch_id VARCHAR(80) NOT NULL,question_index INT NOT NULL,question_json LONGTEXT NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'PENDING',note TEXT,question_id VARCHAR(40),extraction_snapshot_json LONGTEXT,human_verified_values_json LONGTEXT,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY(batch_id) REFERENCES extraction_review_batches(batch_id) ON DELETE CASCADE,FOREIGN KEY(question_id) REFERENCES questions(question_id) ON DELETE SET NULL,INDEX idx_extraction_review_batch(batch_id),INDEX idx_extraction_review_status(status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 
 """CREATE TABLE IF NOT EXISTS question_assets (asset_id VARCHAR(50) PRIMARY KEY,question_id VARCHAR(40) NOT NULL,asset_type VARCHAR(30) NOT NULL,original_filename VARCHAR(255),file_path TEXT NOT NULL,created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(question_id) REFERENCES questions(question_id) ON DELETE CASCADE,INDEX idx_question_assets(question_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS subjects (subject_id VARCHAR(40) PRIMARY KEY,name VARCHAR(100) NOT NULL UNIQUE,active BOOLEAN NOT NULL DEFAULT TRUE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS subject_catalog (subject_id VARCHAR(80) PRIMARY KEY,subject_name VARCHAR(150) NOT NULL,subject_code VARCHAR(30),active BOOLEAN NOT NULL DEFAULT TRUE,UNIQUE KEY uq_subject_catalog_name_code(subject_name,subject_code)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS curriculum_catalog (curriculum_id VARCHAR(120) PRIMARY KEY,board VARCHAR(20) NOT NULL,class_level INT NOT NULL,subject_id VARCHAR(80) NOT NULL,subject_code VARCHAR(30),academic_year VARCHAR(20) NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'VERIFIED',FOREIGN KEY(subject_id) REFERENCES subject_catalog(subject_id),UNIQUE KEY uq_curriculum(board,class_level,subject_id,academic_year)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS curriculum_units (unit_id VARCHAR(150) PRIMARY KEY,curriculum_id VARCHAR(120) NOT NULL,unit_order INT NOT NULL,unit_name VARCHAR(255) NOT NULL,FOREIGN KEY(curriculum_id) REFERENCES curriculum_catalog(curriculum_id) ON DELETE CASCADE,UNIQUE KEY uq_curriculum_unit(curriculum_id,unit_order)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS canonical_concepts (concept_id VARCHAR(100) PRIMARY KEY,concept_name VARCHAR(200) NOT NULL,subject_id VARCHAR(80),active BOOLEAN NOT NULL DEFAULT TRUE,FOREIGN KEY(subject_id) REFERENCES subject_catalog(subject_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS curriculum_chapters (curriculum_chapter_id VARCHAR(180) PRIMARY KEY,unit_id VARCHAR(150) NOT NULL,chapter_order INT NOT NULL,official_chapter_name VARCHAR(255) NOT NULL,canonical_concept_id VARCHAR(100) NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'VERIFIED',FOREIGN KEY(unit_id) REFERENCES curriculum_units(unit_id) ON DELETE CASCADE,FOREIGN KEY(canonical_concept_id) REFERENCES canonical_concepts(concept_id),UNIQUE KEY uq_curriculum_chapter(unit_id,chapter_order),INDEX idx_curriculum_chapter_lookup(official_chapter_name)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS question_curriculum_map (question_id VARCHAR(40) NOT NULL,curriculum_chapter_id VARCHAR(180) NOT NULL,compatibility_status VARCHAR(30) NOT NULL DEFAULT 'REVIEW_REQUIRED',notes TEXT,reviewed_by VARCHAR(100),reviewed_at DATETIME NULL,PRIMARY KEY(question_id,curriculum_chapter_id),FOREIGN KEY(question_id) REFERENCES questions(question_id) ON DELETE CASCADE,FOREIGN KEY(curriculum_chapter_id) REFERENCES curriculum_chapters(curriculum_chapter_id) ON DELETE CASCADE,INDEX idx_qcm_status(compatibility_status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS student_subject_enrollments (enrollment_id BIGINT AUTO_INCREMENT PRIMARY KEY,student_id VARCHAR(32) NOT NULL,board VARCHAR(20) NOT NULL,class_level INT NOT NULL,subject_id VARCHAR(80) NOT NULL,subject_code VARCHAR(30),academic_year VARCHAR(20) NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE',created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,FOREIGN KEY(student_id) REFERENCES students(student_id) ON DELETE CASCADE,FOREIGN KEY(subject_id) REFERENCES subject_catalog(subject_id),UNIQUE KEY uq_student_enrollment(student_id,board,class_level,subject_id,academic_year),INDEX idx_active_enrollment(student_id,status,board,class_level,subject_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS chapters (chapter_id VARCHAR(60) PRIMARY KEY,board VARCHAR(30) NOT NULL,class_level INT NOT NULL,subject_id VARCHAR(40) NOT NULL,chapter_name VARCHAR(150) NOT NULL,sort_order INT NOT NULL DEFAULT 0,active BOOLEAN NOT NULL DEFAULT TRUE,UNIQUE KEY uq_chapter(board,class_level,subject_id,chapter_name),FOREIGN KEY(subject_id) REFERENCES subjects(subject_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS competencies (competency_id VARCHAR(60) PRIMARY KEY,subject_id VARCHAR(40) NOT NULL,name VARCHAR(150) NOT NULL,description VARCHAR(500),sort_order INT NOT NULL DEFAULT 0,active BOOLEAN NOT NULL DEFAULT TRUE,UNIQUE KEY uq_competency(subject_id,name),FOREIGN KEY(subject_id) REFERENCES subjects(subject_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 """CREATE TABLE IF NOT EXISTS test_questions (test_id VARCHAR(40) NOT NULL,question_id VARCHAR(40) NOT NULL,sequence_number INT NOT NULL,marks DECIMAL(10,2) NOT NULL,PRIMARY KEY(test_id,question_id),UNIQUE KEY uq_test_sequence(test_id,sequence_number),FOREIGN KEY(test_id) REFERENCES tests(test_id) ON DELETE CASCADE,FOREIGN KEY(question_id) REFERENCES questions(question_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
@@ -46,7 +61,60 @@ ICSE_MATH_CHAPTERS = {10: ["Commercial Mathematics", "Algebra", "Geometry", "Men
 BOARD_MATH_CHAPTERS = {"CBSE": CBSE_MATH_CHAPTERS, "ICSE": ICSE_MATH_CHAPTERS}
 
 
+def _validate_production_schema():
+    """Fail closed on Render instead of running DDL or seed writes at startup."""
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    required_tables = {
+        statement.split("CREATE TABLE IF NOT EXISTS ", 1)[1].split(" ", 1)[0]
+        for statement in SCHEMA
+        if "CREATE TABLE IF NOT EXISTS " in statement
+    }
+    missing_tables = sorted(required_tables - existing_tables)
+
+    required_columns = {
+        "students": {"student_id", "name", "email", "status"},
+        "tests": {"test_id", "title", "duration_minutes", "total_marks", "questions_json", "monitoring_mode"},
+        "questions": {"question_id", "question_content_json", "answer_choices_json", "marks"},
+        "attempts": {"attempt_id", "student_id", "test_id", "started_at", "status"},
+        "responses": {"response_id", "attempt_id", "question_id", "answer_status"},
+        "answer_images": {"image_id", "attempt_id", "question_id", "file_path"},
+    }
+    missing_columns = {}
+    for table, required in required_columns.items():
+        if table not in existing_tables:
+            continue
+        actual = {column["name"] for column in inspector.get_columns(table)}
+        absent = sorted(required - actual)
+        if absent:
+            missing_columns[table] = absent
+
+    if missing_tables or missing_columns:
+        details = []
+        if missing_tables:
+            details.append("missing tables: " + ", ".join(missing_tables))
+        if missing_columns:
+            details.append(
+                "missing columns: "
+                + "; ".join(
+                    f"{table} ({', '.join(columns)})"
+                    for table, columns in missing_columns.items()
+                )
+            )
+        raise RuntimeError(
+            "Production database schema is not ready. No automatic DDL or data repair "
+            "was attempted; "
+            + " | ".join(details)
+            + ". Review the migration runbook, apply approved migrations, and restart."
+        )
+
+
 def initialize_database():
+    """Bootstrap local/test databases; validate production without modifying it."""
+    if os.getenv("RENDER", "").strip().lower() == "true":
+        _validate_production_schema()
+        return
+
     with engine.begin() as connection:
         for statement in SCHEMA:
             connection.execute(text(statement))

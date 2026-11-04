@@ -13,11 +13,6 @@ from sqlalchemy import text
 from database import engine
 from .models import AnswerImage, Attempt, ContentBlock, Question, Response, Student, Test
 from .storage import storage as legacy_storage
-from .monitoring_db import ensure_exam_monitoring_schema
-
-
-# Existing databases need the monitoring column before the first SELECT * from tests.
-ensure_exam_monitoring_schema()
 
 
 def _dt(value):
@@ -196,6 +191,25 @@ class DatabaseFirstStorage:
                 for r in db.execute(text("SELECT * FROM answer_images")).mappings()
             }
 
+    def _question_matches_curriculum(self, question_id, board, class_level, subject):
+        try:
+            with engine.connect() as db:
+                return bool(db.execute(text("""
+                    SELECT 1
+                    FROM question_curriculum_map qcm
+                    JOIN curriculum_chapters cc ON cc.curriculum_chapter_id=qcm.curriculum_chapter_id
+                    JOIN curriculum_units cu ON cu.unit_id=cc.unit_id
+                    JOIN curriculum_catalog cur ON cur.curriculum_id=cu.curriculum_id
+                    JOIN subject_catalog sc ON sc.subject_id=cur.subject_id
+                    WHERE qcm.question_id=:question
+                      AND qcm.compatibility_status IN ('EXACT','CONCEPT_MATCH')
+                      AND cur.board=:board AND cur.class_level=:class
+                      AND sc.subject_name=:subject AND cur.academic_year='2026-27'
+                    LIMIT 1
+                """), {"question":question_id,"board":board,"class":class_level,"subject":subject}).first())
+        except Exception:
+            return False
+
     def create_test(self, test: Test):
         """Persist a test, including its exam monitoring mode and question links."""
         # Prevent Mathematics / Applied Mathematics and academic-context mixing.
@@ -209,15 +223,15 @@ class DatabaseFirstStorage:
                     f"but test {test.test_id} is {test.subject!r}."
                 )
             if test.board and question.board and question.board != test.board:
-                raise ValueError(
-                    f"Question {qid} has board {question.board!r}, "
-                    f"but test {test.test_id} is {test.board!r}."
-                )
+                if not self._question_matches_curriculum(qid, test.board, test.class_level, test.subject):
+                    raise ValueError(
+                        f"Question {qid} is not mapped as reusable for {test.board} class {test.class_level} {test.subject}."
+                    )
             if test.class_level and question.class_level and question.class_level != test.class_level:
-                raise ValueError(
-                    f"Question {qid} has class {question.class_level}, "
-                    f"but test {test.test_id} is class {test.class_level}."
-                )
+                if not self._question_matches_curriculum(qid, test.board, test.class_level, test.subject):
+                    raise ValueError(
+                        f"Question {qid} is not mapped as reusable for class {test.class_level} {test.subject}."
+                    )
 
         monitoring_mode = test.monitoring_mode
         try:

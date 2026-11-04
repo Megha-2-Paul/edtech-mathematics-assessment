@@ -1,0 +1,1723 @@
+{
+  "taxonomy_version": "2026.27.7",
+  "academic_year": "2026-27",
+  "subjects": [
+    {
+      "subject_id": "mathematics",
+      "name": "Mathematics",
+      "subject_code": "041"
+    },
+    {
+      "subject_id": "applied_mathematics",
+      "name": "Applied Mathematics",
+      "subject_code": "241"
+    },
+    {
+      "subject_id": "cbse_information_technology",
+      "name": "Information Technology",
+      "subject_code": "402"
+    },
+    {
+      "subject_id": "cbse_computer_applications",
+      "name": "Computer Applications",
+      "subject_code": "165"
+    },
+    {
+      "subject_id": "cbse_computer_science",
+      "name": "Computer Science",
+      "subject_code": "083"
+    },
+    {
+      "subject_id": "cbse_informatics_practices",
+      "name": "Informatics Practices",
+      "subject_code": "065"
+    },
+    {
+      "subject_id": "icse_computer_applications",
+      "name": "Computer Applications",
+      "subject_code": "86"
+    },
+    {
+      "subject_id": "isc_computer_science",
+      "name": "Computer Science",
+      "subject_code": "868"
+    }
+  ],
+  "curricula": [
+    {
+      "curriculum_id": "mathematics_CBSE_9_2026_27",
+      "board": "CBSE",
+      "class_level": 9,
+      "subject_id": "mathematics",
+      "subject_code": "041",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Number System",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Number System"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Introduction to Polynomials"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Sequences and Progressions"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Exploring Algebraic Identities"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Linear Equations in Two Variables"
+            }
+          ]
+        },
+        {
+          "unit_name": "Coordinate Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Coordinate Geometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Introduction to Euclid’s Geometry: Axioms and Postulates"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Lines and Angles"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Triangles – Congruence Theorems"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "4-gons (Quadrilaterals)"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Circles"
+            }
+          ]
+        },
+        {
+          "unit_name": "Mensuration",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Area and Perimeter"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Surface Area and Volume"
+            }
+          ]
+        },
+        {
+          "unit_name": "Statistics and Probability",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Statistics"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Introduction to Probability"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "mathematics_CBSE_10_2026_27",
+      "board": "CBSE",
+      "class_level": 10,
+      "subject_id": "mathematics",
+      "subject_code": "041",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Number Systems",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Real Numbers"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Polynomials"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Pair of Linear Equations in Two Variables"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Quadratic Equations"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Arithmetic Progressions"
+            }
+          ]
+        },
+        {
+          "unit_name": "Coordinate Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Coordinate Geometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Triangles"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Circles"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Constructions"
+            }
+          ]
+        },
+        {
+          "unit_name": "Trigonometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Introduction to Trigonometry"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Some Applications of Trigonometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Mensuration",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Areas Related to Circles"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Surface Areas and Volumes"
+            }
+          ]
+        },
+        {
+          "unit_name": "Statistics and Probability",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Statistics"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Probability"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "mathematics_CBSE_11_2026_27",
+      "board": "CBSE",
+      "class_level": 11,
+      "subject_id": "mathematics",
+      "subject_code": "041",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Sets and Functions",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Sets"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Relations & Functions"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Trigonometric Functions"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Complex Numbers and Quadratic Equations"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Linear Inequalities"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Permutations and Combinations"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Binomial Theorem"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Sequence and Series"
+            }
+          ]
+        },
+        {
+          "unit_name": "Coordinate Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Straight Lines"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Conic Sections"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Introduction to Three-dimensional Geometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Calculus",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Limits and Derivatives"
+            }
+          ]
+        },
+        {
+          "unit_name": "Statistics and Probability",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Statistics"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Probability"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "mathematics_CBSE_12_2026_27",
+      "board": "CBSE",
+      "class_level": 12,
+      "subject_id": "mathematics",
+      "subject_code": "041",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Relations and Functions",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Relations and Functions"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Inverse Trigonometric Functions"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Matrices"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Determinants"
+            }
+          ]
+        },
+        {
+          "unit_name": "Calculus",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Continuity and Differentiability"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Applications of Derivatives"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Integrals"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Application of the Integrals"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Differential Equations"
+            }
+          ]
+        },
+        {
+          "unit_name": "Vectors and Three-dimensional Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Vectors"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Three-dimensional Geometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Linear Programming Problem",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Linear Programming"
+            }
+          ]
+        },
+        {
+          "unit_name": "Probability",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Probability"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "mathematics_ICSE_9_2026_27",
+      "board": "ICSE",
+      "class_level": 9,
+      "subject_id": "mathematics",
+      "subject_code": "51",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Pure Arithmetic",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Rational and Irrational Numbers"
+            }
+          ]
+        },
+        {
+          "unit_name": "Commercial Mathematics",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Compound Interest"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Expansions"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Factorisation"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Simultaneous Linear Equations in two variables"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Indices/Exponents"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Logarithms"
+            }
+          ]
+        },
+        {
+          "unit_name": "Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Triangles"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Rectilinear Figures"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Circle"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Constructions of Polygons"
+            }
+          ]
+        },
+        {
+          "unit_name": "Statistics",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Statistics"
+            }
+          ]
+        },
+        {
+          "unit_name": "Mensuration",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Mensuration"
+            }
+          ]
+        },
+        {
+          "unit_name": "Trigonometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Trigonometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Coordinate Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Coordinate Geometry"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "mathematics_ICSE_10_2026_27",
+      "board": "ICSE",
+      "class_level": 10,
+      "subject_id": "mathematics",
+      "subject_code": "51",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Commercial Mathematics",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Goods and Services Tax (GST)"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Banking"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Shares and Dividends"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Linear Inequations"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Quadratic Equations in one variable"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Ratio and Proportion"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Factorisation of polynomials"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Matrices"
+            },
+            {
+              "chapter_order": 6,
+              "official_chapter_name": "Arithmetic and Geometric Progression"
+            },
+            {
+              "chapter_order": 7,
+              "official_chapter_name": "Co-ordinate Geometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Similarity"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Loci"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Circles"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Constructions"
+            }
+          ]
+        },
+        {
+          "unit_name": "Mensuration",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Mensuration"
+            }
+          ]
+        },
+        {
+          "unit_name": "Trigonometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Trigonometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Statistics",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Statistics"
+            }
+          ]
+        },
+        {
+          "unit_name": "Probability",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Probability"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "mathematics_ISC_11_2026_27",
+      "board": "ISC",
+      "class_level": 11,
+      "subject_id": "mathematics",
+      "subject_code": "860",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Sets and Functions",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Sets"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Relations & Functions"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Trigonometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Complex Numbers"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Permutations and Combinations"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Binomial Theorem"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Sequence and Series"
+            }
+          ]
+        },
+        {
+          "unit_name": "Coordinate Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Straight Lines"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Conic Section"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Introduction to Three Dimensional Geometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Calculus",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Limits and Derivatives"
+            }
+          ]
+        },
+        {
+          "unit_name": "Statistics & Probability",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Statistics"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Probability"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "mathematics_ISC_12_2026_27",
+      "board": "ISC",
+      "class_level": 12,
+      "subject_id": "mathematics",
+      "subject_code": "860",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Relations and Functions",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Relations and Functions"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Inverse Trigonometric Functions"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Matrices"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Determinants"
+            }
+          ]
+        },
+        {
+          "unit_name": "Calculus",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Continuity and Differentiability"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Applications of Derivatives"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Integrals"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Applications of Integrals"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Differential Equations"
+            }
+          ]
+        },
+        {
+          "unit_name": "Vector Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Vector Algebra"
+            }
+          ]
+        },
+        {
+          "unit_name": "Three-Dimensional Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Three-Dimensional Geometry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Linear Programming",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Linear Programming"
+            }
+          ]
+        },
+        {
+          "unit_name": "Probability",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Probability"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "applied_mathematics_CBSE_11_2026_27",
+      "board": "CBSE",
+      "class_level": 11,
+      "subject_id": "applied_mathematics",
+      "subject_code": "241",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Numbers, Quantification and Numerical Applications",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Numbers in Indian Knowledge System and Binary Numbers"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Indices, Logarithm and Antilogarithm"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Numerical Applications"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Sets"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Relations"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Mathematical Logic"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Sequences and Series"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Functions and their Graphs"
+            }
+          ]
+        },
+        {
+          "unit_name": "Calculus",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Limits and Continuity"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Differentiation"
+            }
+          ]
+        },
+        {
+          "unit_name": "Combinatorics and Probability",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Combinatorics"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Probability"
+            }
+          ]
+        },
+        {
+          "unit_name": "Descriptive Statistics",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Descriptive Statistics"
+            }
+          ]
+        },
+        {
+          "unit_name": "Basics of Financial Mathematics",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Basics of Financial Mathematics"
+            }
+          ]
+        },
+        {
+          "unit_name": "Coordinate Geometry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Coordinate Geometry"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "applied_mathematics_CBSE_12_2026_27",
+      "board": "CBSE",
+      "class_level": 12,
+      "subject_id": "applied_mathematics",
+      "subject_code": "241",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Numbers, Quantification and Numerical Applications",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Modulo Arithmetic and Congruence"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Alligation and Mixture"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Numerical Problems"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Numerical Inequalities"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algebra",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Matrices"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Determinants"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Inverse of a Matrix"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Systems of Simultaneous Equations"
+            }
+          ]
+        },
+        {
+          "unit_name": "Calculus",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Differentiation and its Applications"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Integration and its Applications"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Differential Equations and Modelling"
+            }
+          ]
+        },
+        {
+          "unit_name": "Probability Distributions",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Probability Distributions"
+            }
+          ]
+        },
+        {
+          "unit_name": "Inferential Statistics",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Inferential Statistics"
+            }
+          ]
+        },
+        {
+          "unit_name": "Time-based Data",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Time-based Data"
+            }
+          ]
+        },
+        {
+          "unit_name": "Financial Mathematics",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Financial Mathematics"
+            }
+          ]
+        },
+        {
+          "unit_name": "Linear Programming",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Linear Programming"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "cbse_information_technology_CBSE_9_2026_27",
+      "board": "CBSE",
+      "class_level": 9,
+      "subject_id": "cbse_information_technology",
+      "subject_code": "402",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Introduction to IT–ITeS Industry",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Introduction to IT–ITeS Industry"
+            }
+          ]
+        },
+        {
+          "unit_name": "Data Entry and Keyboarding Skills",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Data Entry and Keyboarding Skills"
+            }
+          ]
+        },
+        {
+          "unit_name": "Digital Documentation",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Digital Documentation"
+            }
+          ]
+        },
+        {
+          "unit_name": "Electronic Spreadsheet",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Electronic Spreadsheet"
+            }
+          ]
+        },
+        {
+          "unit_name": "Digital Presentation",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Digital Presentation"
+            }
+          ]
+        },
+        {
+          "unit_name": "Employability Skills",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Communication Skills-I"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Self-Management Skills-I"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "ICT Skills-I"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Entrepreneurial Skills-I"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Green Skills-I"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "cbse_information_technology_CBSE_10_2026_27",
+      "board": "CBSE",
+      "class_level": 10,
+      "subject_id": "cbse_information_technology",
+      "subject_code": "402",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Digital Documentation",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Introduction"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Working with Images"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Advanced Features of Writer"
+            }
+          ]
+        },
+        {
+          "unit_name": "Electronic Spreadsheet",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Analyse data using scenarios and goal seek"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Using Macros in Spreadsheet"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Linking Spreadsheet Data"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Share and Review a Spreadsheet"
+            }
+          ]
+        },
+        {
+          "unit_name": "Database Management System",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Introduction to Database Management System"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Starting with LibreOffice Base"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Working with Multiple Tables"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Queries in Base"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Forms and Reports"
+            }
+          ]
+        },
+        {
+          "unit_name": "Maintain Healthy, Safe and Secure Working Environment",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Health, Safety and Security at Workplace"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Workplace Quality Measures"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Prevent Accidents and Emergencies"
+            }
+          ]
+        },
+        {
+          "unit_name": "Employability Skills",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Communication Skills-II"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Self-Management Skills-II"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "ICT Skills-II"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Entrepreneurial Skills-II"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Green Skills-II"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "cbse_computer_applications_CBSE_10_2026_27",
+      "board": "CBSE",
+      "class_level": 10,
+      "subject_id": "cbse_computer_applications",
+      "subject_code": "165",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Networking",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Networking"
+            }
+          ]
+        },
+        {
+          "unit_name": "HTML",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "HTML"
+            }
+          ]
+        },
+        {
+          "unit_name": "Cyber ethics",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Cyber ethics"
+            }
+          ]
+        },
+        {
+          "unit_name": "Practicals",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Practicals"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "cbse_computer_science_CBSE_11_2026_27",
+      "board": "CBSE",
+      "class_level": 11,
+      "subject_id": "cbse_computer_science",
+      "subject_code": "083",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Computer Systems and Organisation",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Computer Systems and Organisation"
+            }
+          ]
+        },
+        {
+          "unit_name": "Computational Thinking and Programming -1",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Computational Thinking and Programming -1"
+            }
+          ]
+        },
+        {
+          "unit_name": "Society, Law, and Ethics",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Society, Law, and Ethics"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "cbse_computer_science_CBSE_12_2026_27",
+      "board": "CBSE",
+      "class_level": 12,
+      "subject_id": "cbse_computer_science",
+      "subject_code": "083",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Computational Thinking and Programming - 2",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Computational Thinking and Programming - 2"
+            }
+          ]
+        },
+        {
+          "unit_name": "Computer Networks",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Computer Networks"
+            }
+          ]
+        },
+        {
+          "unit_name": "Database Management",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Database Management"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "cbse_informatics_practices_CBSE_11_2026_27",
+      "board": "CBSE",
+      "class_level": 11,
+      "subject_id": "cbse_informatics_practices",
+      "subject_code": "065",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Introduction to computer system",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Introduction to computer system"
+            }
+          ]
+        },
+        {
+          "unit_name": "Introduction to Python",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Introduction to Python"
+            }
+          ]
+        },
+        {
+          "unit_name": "Database concepts and the Structured Query Language",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Database concepts and the Structured Query Language"
+            }
+          ]
+        },
+        {
+          "unit_name": "Introduction to Emerging Trends",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Introduction to Emerging Trends"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "cbse_informatics_practices_CBSE_12_2026_27",
+      "board": "CBSE",
+      "class_level": 12,
+      "subject_id": "cbse_informatics_practices",
+      "subject_code": "065",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Data Handling using Pandas and Data Visualization",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Data Handling using Pandas and Data Visualization"
+            }
+          ]
+        },
+        {
+          "unit_name": "Database Query using SQL",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Database Query using SQL"
+            }
+          ]
+        },
+        {
+          "unit_name": "Introduction to Computer Networks",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Introduction to Computer Networks"
+            }
+          ]
+        },
+        {
+          "unit_name": "Societal Impacts",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Societal Impacts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "icse_computer_applications_ICSE_9_2026_27",
+      "board": "ICSE",
+      "class_level": 9,
+      "subject_id": "icse_computer_applications",
+      "subject_code": "86",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Computer Applications",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Introduction to Object Oriented Programming concepts"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Elementary Concept of Objects and Classes"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Values and data types"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Operators in Java"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Input in Java"
+            },
+            {
+              "chapter_order": 6,
+              "official_chapter_name": "Mathematical Library Methods"
+            },
+            {
+              "chapter_order": 7,
+              "official_chapter_name": "Conditional constructs in Java"
+            },
+            {
+              "chapter_order": 8,
+              "official_chapter_name": "Iterative constructs in Java"
+            },
+            {
+              "chapter_order": 9,
+              "official_chapter_name": "Nested for loops"
+            },
+            {
+              "chapter_order": 10,
+              "official_chapter_name": "Computing and Ethics"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "icse_computer_applications_ICSE_10_2026_27",
+      "board": "ICSE",
+      "class_level": 10,
+      "subject_id": "icse_computer_applications",
+      "subject_code": "86",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Computer Applications",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Revision of Class IX Syllabus"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Class as the Basis of all Computation"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "User-defined Methods"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Constructors"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Library classes"
+            },
+            {
+              "chapter_order": 6,
+              "official_chapter_name": "Encapsulation"
+            },
+            {
+              "chapter_order": 7,
+              "official_chapter_name": "Arrays"
+            },
+            {
+              "chapter_order": 8,
+              "official_chapter_name": "String Handling"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "isc_computer_science_ISC_11_2026_27",
+      "board": "ISC",
+      "class_level": 11,
+      "subject_id": "isc_computer_science",
+      "subject_code": "868",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Basic Computer Hardware and Software",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Numbers"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Encodings"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Propositional logic, Hardware implementation, Arithmetic operations"
+            }
+          ]
+        },
+        {
+          "unit_name": "Java Programming",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Introduction to Object Oriented Programming using Java"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Objects"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Primitive values, Wrapper classes, Types and casting"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Variables, Expressions"
+            },
+            {
+              "chapter_order": 5,
+              "official_chapter_name": "Statements, Scope"
+            },
+            {
+              "chapter_order": 6,
+              "official_chapter_name": "Methods"
+            },
+            {
+              "chapter_order": 7,
+              "official_chapter_name": "Arrays, Strings"
+            },
+            {
+              "chapter_order": 8,
+              "official_chapter_name": "Recursion"
+            },
+            {
+              "chapter_order": 9,
+              "official_chapter_name": "Inheritance, Interfaces and Polymorphism"
+            }
+          ]
+        },
+        {
+          "unit_name": "Algorithms and Data Structures",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Data Structures"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Computational complexity"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "curriculum_id": "isc_computer_science_ISC_12_2026_27",
+      "board": "ISC",
+      "class_level": 12,
+      "subject_id": "isc_computer_science",
+      "subject_code": "868",
+      "academic_year": "2026-27",
+      "units": [
+        {
+          "unit_name": "Section A – Hardware",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Boolean Algebra"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Computer Hardware"
+            }
+          ]
+        },
+        {
+          "unit_name": "Section B - Java",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Methods – Object as a parameter and return data type"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Arrays (Single and double dimensional), String handling"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Recursion"
+            },
+            {
+              "chapter_order": 4,
+              "official_chapter_name": "Inheritance and Interface"
+            }
+          ]
+        },
+        {
+          "unit_name": "Section C - Python & Conceptual aspects",
+          "chapters": [
+            {
+              "chapter_order": 1,
+              "official_chapter_name": "Programming in Python"
+            },
+            {
+              "chapter_order": 2,
+              "official_chapter_name": "Data Structures"
+            },
+            {
+              "chapter_order": 3,
+              "official_chapter_name": "Complexity and Big O notation"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "compatibility_statuses": [
+    "EXACT",
+    "CONCEPT_MATCH",
+    "BOARD_SPECIFIC",
+    "REVIEW_REQUIRED"
+  ]
+}

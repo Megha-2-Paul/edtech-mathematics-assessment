@@ -2335,5 +2335,12 @@
       ],
       "cbse_subject_code": "241"
     }
+  ],
+  "status": "legacy_analytics_taxonomy",
+  "superseded_by": "curriculum_taxonomy_2026_27.json",
+  "notes": [
+    "Legacy analytics taxonomy retained for backward compatibility only.",
+    "Do not use this file as the authoritative official syllabus chapter registry.",
+    "Use curriculum_taxonomy_2026_27.json for exact 2026-27 official chapter names."
   ]
 }

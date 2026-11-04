@@ -1,7 +1,7 @@
-"""Teacher evaluation workflow, diagnosis, and student result calculations."""
+﻿"""Teacher evaluation workflow, diagnosis, and student result calculations."""
 
 import os
-from datetime import datetime
+from decimal import Decimal, InvalidOperation
 
 from flask import Blueprint, abort, flash, redirect, render_template, request, session, send_from_directory, url_for
 from sqlalchemy import text
@@ -73,8 +73,28 @@ def _evaluate_attempt(attempt_id):
     return attempt
 
 
+def _validate_marks(marks, maximum):
+    """Reject invalid marks instead of silently changing the teacher's input."""
+    try:
+        awarded = Decimal(str(marks).strip())
+        max_marks = Decimal(str(maximum))
+    except (InvalidOperation, ValueError, TypeError, AttributeError):
+        raise ValueError("Enter a valid numeric mark.") from None
+
+    if not awarded.is_finite() or not max_marks.is_finite():
+        raise ValueError("Marks must be finite numbers.")
+
+    if max_marks < 0 or awarded < 0 or awarded > max_marks:
+        raise ValueError(f"Marks must be between 0 and {max_marks}.")
+
+    if awarded * 2 != (awarded * 2).to_integral_value():
+        raise ValueError("Marks must use increments of 0.5.")
+
+    return float(awarded)
+
+
 def _save_response_evaluation(response, question, marks, error_codes, comment):
-    marks = max(0.0, min(float(marks), float(question.marks)))
+    marks = _validate_marks(marks, question.marks)
     is_correct = (
         (response.selected_answer == question.correct_answer)
         if question.question_type == "mcq" and response.selected_answer
@@ -122,37 +142,92 @@ def _save_response_evaluation(response, question, marks, error_codes, comment):
 
 def _update_question_history(attempt_id):
     attempt = storage.get_attempt(attempt_id)
+    if not attempt:
+        return
+
     responses = storage.get_attempt_responses(attempt_id)
+    if not responses:
+        return
 
     with engine.begin() as db:
         for response in responses:
+            history = db.execute(
+                text(
+                    "SELECT "
+                    "COUNT(*) AS attempt_count, "
+                    "COALESCE(SUM(CASE WHEN r.is_correct = 1 THEN 1 ELSE 0 END), 0) "
+                    "AS correct_count, "
+                    "MAX(COALESCE(a.submitted_at, a.started_at)) AS last_attempted_at, "
+                    "MAX(CASE WHEN r.is_correct = 1 "
+                    "THEN COALESCE(a.submitted_at, a.started_at) END) AS last_correct_at "
+                    "FROM responses r "
+                    "JOIN attempts a ON a.attempt_id = r.attempt_id "
+                    "WHERE a.student_id = :student "
+                    "AND r.question_id = :question "
+                    "AND r.marks_awarded IS NOT NULL"
+                ),
+                {
+                    "student": attempt.student_id,
+                    "question": response.question_id,
+                },
+            ).mappings().one()
+
+            latest = db.execute(
+                text(
+                    "SELECT r.response_id, r.marks_awarded "
+                    "FROM responses r "
+                    "JOIN attempts a ON a.attempt_id = r.attempt_id "
+                    "WHERE a.student_id = :student "
+                    "AND r.question_id = :question "
+                    "AND r.marks_awarded IS NOT NULL "
+                    "ORDER BY COALESCE(a.submitted_at, a.started_at) DESC, "
+                    "a.attempt_id DESC LIMIT 1"
+                ),
+                {
+                    "student": attempt.student_id,
+                    "question": response.question_id,
+                },
+            ).mappings().first()
+
+            if not latest:
+                continue
+
             errors = db.execute(
                 text(
                     "SELECT error_code FROM evaluation_errors "
                     "WHERE response_id=:id ORDER BY evaluation_error_id"
                 ),
-                {"id": response.response_id},
+                {"id": latest["response_id"]},
             ).scalars().all()
             summary = ", ".join(errors) if errors else None
 
             db.execute(
                 text(
-                    """INSERT INTO question_history(
-student_id,question_id,attempt_count,correct_count,last_attempted_at,last_correct_at,last_marks_awarded,last_error_summary)
-VALUES(:student,:question,1,:correct,:attempted,:correct_at,:marks,:summary)
-ON DUPLICATE KEY UPDATE attempt_count=attempt_count+1,correct_count=correct_count+VALUES(correct_count),last_attempted_at=VALUES(last_attempted_at),last_correct_at=IF(VALUES(correct_count)=1,VALUES(last_correct_at),last_correct_at),last_marks_awarded=VALUES(last_marks_awarded),last_error_summary=VALUES(last_error_summary)"""
+                    "INSERT INTO question_history("
+                    "student_id,question_id,attempt_count,correct_count,"
+                    "last_attempted_at,last_correct_at,last_marks_awarded,"
+                    "last_error_summary) "
+                    "VALUES(:student,:question,:attempt_count,:correct_count,"
+                    ":last_attempted_at,:last_correct_at,:last_marks_awarded,"
+                    ":last_error_summary) "
+                    "ON DUPLICATE KEY UPDATE "
+                    "attempt_count=:attempt_count,correct_count=:correct_count,"
+                    "last_attempted_at=:last_attempted_at,"
+                    "last_correct_at=:last_correct_at,"
+                    "last_marks_awarded=:last_marks_awarded,"
+                    "last_error_summary=:last_error_summary"
                 ),
                 {
                     "student": attempt.student_id,
                     "question": response.question_id,
-                    "correct": 1 if response.is_correct else 0,
-                    "attempted": attempt.submitted_at or datetime.now(),
-                    "correct_at": attempt.submitted_at if response.is_correct else None,
-                    "marks": response.marks_awarded,
-                    "summary": summary,
+                    "attempt_count": int(history["attempt_count"]),
+                    "correct_count": int(history["correct_count"]),
+                    "last_attempted_at": history["last_attempted_at"],
+                    "last_correct_at": history["last_correct_at"],
+                    "last_marks_awarded": latest["marks_awarded"],
+                    "last_error_summary": summary,
                 },
             )
-
 
 @evaluation_bp.route("/teacher/submissions")
 def submissions():
@@ -185,33 +260,63 @@ def evaluate(attempt_id):
     responses = {r.question_id: r for r in storage.get_attempt_responses(attempt_id)}
 
     if request.method == "POST":
-        for q in questions:
-            r = responses.get(q.question_id)
-            if not r:
-                continue
+        pending_evaluations = []
 
-            if q.question_type == "mcq":
-                marks = float(q.marks) if r.selected_answer == q.correct_answer else 0.0
-                codes = []
-            else:
-                marks = request.form.get(f"marks_{q.question_id}", "0") or "0"
-                codes = [
-                    c
-                    for c, _ in ERROR_CODES
-                    if c in request.form.getlist(f"errors_{q.question_id}")
-                ]
+        try:
+            # Validate every response before making any evaluation writes.
+            for q in questions:
+                r = responses.get(q.question_id)
+                if not r:
+                    continue
 
-            _save_response_evaluation(
-                r,
-                q,
-                marks,
-                codes,
-                request.form.get(f"comment_{q.question_id}", "").strip(),
+                if q.question_type == "mcq":
+                    marks = (
+                        float(q.marks)
+                        if r.selected_answer == q.correct_answer
+                        else 0.0
+                    )
+                    codes = []
+                else:
+                    raw_marks = request.form.get(
+                        f"marks_{q.question_id}", ""
+                    )
+                    marks = _validate_marks(raw_marks, q.marks)
+                    codes = [
+                        code
+                        for code, _ in ERROR_CODES
+                        if code in request.form.getlist(
+                            f"errors_{q.question_id}"
+                        )
+                    ]
+
+                # Validate calculated MCQ marks too, before any saves.
+                marks = _validate_marks(marks, q.marks)
+
+                comment = request.form.get(
+                    f"comment_{q.question_id}", ""
+                ).strip()
+
+                pending_evaluations.append(
+                    (r, q, marks, codes, comment)
+                )
+
+        except ValueError as exc:
+            flash(
+                f"Evaluation not saved. Please correct the marks: {exc}",
+                "error",
             )
+            return redirect(
+                url_for("evaluation.evaluate", attempt_id=attempt_id)
+            )
+
+        # Save only after every submitted mark has passed validation.
+        for r, q, marks, codes, comment in pending_evaluations:
+            _save_response_evaluation(r, q, marks, codes, comment)
 
         attempt = _evaluate_attempt(attempt_id)
         storage.update_attempt(attempt)
         _update_question_history(attempt_id)
+
         flash("Evaluation saved and result calculated.", "success")
         return redirect(url_for("evaluation.evaluate", attempt_id=attempt_id))
 

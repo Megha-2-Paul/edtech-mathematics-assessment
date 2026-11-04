@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="student-csrf-token" content="{{ student_csrf_token }}">
     <title>{% block title %}Improvia{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='improvia-base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='improvia.css') }}">
