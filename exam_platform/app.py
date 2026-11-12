@@ -204,26 +204,39 @@ def student_login():
             if row and str(row["status"] or "").lower() == "active":
                 locked_until = row["locked_until"]
                 if not locked_until or locked_until <= now:
+                    failures = int(row["failed_login_count"] or 0)
+
+                    # Start a fresh failure window after the previous lock expires.
+                    if locked_until and locked_until <= now:
+                        failures = 0
+
                     if check_password_hash(row["password_hash"], password):
                         db.execute(
                             text(
                                 "UPDATE student_access_credentials "
-                                "SET failed_login_count=0,locked_until=NULL,last_login_at=:now,updated_at=:now "
+                                "SET failed_login_count=0,locked_until=NULL,"
+                                "last_login_at=:now,updated_at=:now "
                                 "WHERE student_id=:student_id"
                             ),
                             {"student_id": student_id, "now": now},
                         )
                         authenticated_student_id = student_id
                     else:
-                        failures = int(row["failed_login_count"] or 0) + 1
+                        failures += 1
                         locked = now + timedelta(minutes=15) if failures >= 5 else None
                         db.execute(
                             text(
                                 "UPDATE student_access_credentials "
-                                "SET failed_login_count=:failures,locked_until=:locked,updated_at=:now "
+                                "SET failed_login_count=:failures,"
+                                "locked_until=:locked,updated_at=:now "
                                 "WHERE student_id=:student_id"
                             ),
-                            {"student_id": student_id, "failures": failures, "locked": locked, "now": now},
+                            {
+                                "student_id": student_id,
+                                "failures": failures,
+                                "locked": locked,
+                                "now": now,
+                            },
                         )
 
     if not authenticated_student_id:

@@ -8,7 +8,7 @@ from __future__ import annotations
 import argparse
 import os
 
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import DateTime, Integer, create_engine, inspect, text
 
 
 DDL = (
@@ -47,27 +47,168 @@ REQUIRED = {
 }
 
 
+
+COLUMN_SPECS = {
+    "student_access_credentials": {
+        "student_id": ("varchar", 32),
+        "password_hash": ("varchar", 255),
+        "failed_login_count": ("integer", None),
+        "locked_until": ("datetime", None),
+        "last_login_at": ("datetime", None),
+        "created_at": ("datetime", None),
+        "updated_at": ("datetime", None),
+    },
+    "student_access_tokens": {
+        "token_hash": ("char", 64),
+        "student_id": ("varchar", 32),
+        "expires_at": ("datetime", None),
+        "used_at": ("datetime", None),
+        "created_at": ("datetime", None),
+    },
+}
+
+EXPECTED_PRIMARY_KEYS = {
+    "student_access_credentials": ["student_id"],
+    "student_access_tokens": ["token_hash"],
+}
+
+EXPECTED_INDEXES = {
+    "student_access_tokens": {
+        "idx_student_access_token_student": ["student_id"],
+        "idx_student_access_token_expiry": ["expires_at"],
+    },
+}
+
+
+def _matches_column_type(actual_type, expected):
+    kind, length = expected
+    type_name = actual_type.__class__.__name__.upper()
+
+    if kind == "varchar":
+        return type_name == "VARCHAR" and actual_type.length == length
+    if kind == "char":
+        return type_name == "CHAR" and actual_type.length == length
+    if kind == "integer":
+        return isinstance(actual_type, Integer)
+    if kind == "datetime":
+        return isinstance(actual_type, DateTime)
+
+    return False
+
+
 def audit(database_url: str) -> dict:
     engine = create_engine(database_url, pool_pre_ping=True, future=True)
     try:
         inspector = inspect(engine)
         tables = set(inspector.get_table_names())
+
         if "students" not in tables:
             raise RuntimeError("Required parent table 'students' is missing.")
-        student_columns = {column["name"] for column in inspector.get_columns("students")}
-        if "student_id" not in student_columns:
+
+        parent_columns = {
+            column["name"]: column
+            for column in inspector.get_columns("students")
+        }
+        if "student_id" not in parent_columns:
             raise RuntimeError("Required parent column students.student_id is missing.")
 
-        result = {"tables": {}}
-        for table, columns in REQUIRED.items():
+        parent_type = parent_columns["student_id"]["type"]
+        parent_type_valid = _matches_column_type(parent_type, ("varchar", 32))
+
+        result = {
+            "parent": {
+                "student_id_type": str(parent_type),
+                "student_id_valid": parent_type_valid,
+            },
+            "tables": {},
+        }
+
+        for table, required_columns in REQUIRED.items():
             if table not in tables:
-                result["tables"][table] = {"exists": False, "missing_columns": sorted(columns)}
+                result["tables"][table] = {
+                    "exists": False,
+                    "missing_columns": sorted(required_columns),
+                    "invalid_columns": {},
+                    "primary_key_valid": False,
+                    "foreign_key_valid": False,
+                    "missing_indexes": sorted(
+                        EXPECTED_INDEXES.get(table, {})
+                    ),
+                    "issues": ["table_missing"],
+                }
                 continue
-            actual = {column["name"] for column in inspector.get_columns(table)}
+
+            column_details = {
+                column["name"]: column
+                for column in inspector.get_columns(table)
+            }
+            actual_columns = set(column_details)
+            missing_columns = sorted(required_columns - actual_columns)
+
+            invalid_columns = {}
+            for name, expected in COLUMN_SPECS[table].items():
+                if name not in column_details:
+                    continue
+
+                actual_type = column_details[name]["type"]
+                if not _matches_column_type(actual_type, expected):
+                    invalid_columns[name] = {
+                        "expected": f"{expected[0]}({expected[1]})"
+                        if expected[1] is not None else expected[0],
+                        "actual": str(actual_type),
+                    }
+
+            actual_primary_key = (
+                inspector.get_pk_constraint(table).get("constrained_columns") or []
+            )
+            primary_key_valid = (
+                actual_primary_key == EXPECTED_PRIMARY_KEYS[table]
+            )
+
+            foreign_keys = inspector.get_foreign_keys(table)
+            foreign_key_valid = any(
+                fk.get("constrained_columns") == ["student_id"]
+                and fk.get("referred_table") == "students"
+                and fk.get("referred_columns") == ["student_id"]
+                and (fk.get("options") or {}).get("ondelete", "").upper() == "CASCADE"
+                for fk in foreign_keys
+            )
+
+            actual_indexes = inspector.get_indexes(table)
+            missing_indexes = []
+            for index_name, expected_columns in EXPECTED_INDEXES.get(table, {}).items():
+                found = any(
+                    index.get("name") == index_name
+                    and index.get("column_names") == expected_columns
+                    for index in actual_indexes
+                )
+                if not found:
+                    missing_indexes.append(index_name)
+
+            issues = []
+            if missing_columns:
+                issues.append("missing_columns")
+            if invalid_columns:
+                issues.append("invalid_column_types")
+            if not primary_key_valid:
+                issues.append("primary_key_mismatch")
+            if not foreign_key_valid:
+                issues.append("foreign_key_missing_or_incompatible")
+            if missing_indexes:
+                issues.append("missing_indexes")
+            if not parent_type_valid:
+                issues.append("parent_student_id_type_incompatible")
+
             result["tables"][table] = {
                 "exists": True,
-                "missing_columns": sorted(columns - actual),
+                "missing_columns": missing_columns,
+                "invalid_columns": invalid_columns,
+                "primary_key_valid": primary_key_valid,
+                "foreign_key_valid": foreign_key_valid,
+                "missing_indexes": missing_indexes,
+                "issues": issues,
             }
+
         return result
     finally:
         engine.dispose()
@@ -89,11 +230,15 @@ def apply(database_url: str) -> None:
                 connection.execute(text(statement))
         report = audit(database_url)
         incomplete = {
-            table: info for table, info in report["tables"].items()
-            if not info["exists"] or info["missing_columns"]
+            table: info
+            for table, info in report["tables"].items()
+            if info["issues"]
         }
-        if incomplete:
-            raise RuntimeError(f"Post-migration verification failed: {incomplete}")
+        if not report["parent"]["student_id_valid"] or incomplete:
+            raise RuntimeError(
+                "Post-migration verification failed: "
+                f"parent={report['parent']}, tables={incomplete}"
+            )
     finally:
         engine.dispose()
 
