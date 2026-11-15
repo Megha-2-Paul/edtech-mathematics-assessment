@@ -9,8 +9,7 @@ import os
 
 from flask import Response, request
 
-from exam_platform.app import app
-
+from exam_platform.app import app, initialize_app
 
 # ---------------------------------------------------------------------------
 # Deployment-only application settings
@@ -51,5 +50,7 @@ def protect_teacher_routes():
 
     return None
 
+
+initialize_app()
 
 application = app

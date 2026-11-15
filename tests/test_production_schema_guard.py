@@ -72,7 +72,7 @@ def test_production_schema_guard_requires_monitoring_mode(monkeypatch):
             return [
                 statement.split("CREATE TABLE IF NOT EXISTS ", 1)[1].split(" ", 1)[0]
                 for statement in database.SCHEMA
-            ]
+            ] + ["student_access_credentials", "student_access_tokens"]
 
         def get_columns(self, table):
             required_columns = {
@@ -95,6 +95,14 @@ def test_production_schema_guard_requires_monitoring_mode(monkeypatch):
                 },
                 "answer_images": {
                     "image_id", "attempt_id", "question_id", "file_path",
+                },
+                "student_access_credentials": {
+                    "student_id", "password_hash", "failed_login_count",
+                    "locked_until", "last_login_at", "created_at", "updated_at",
+                },
+                "student_access_tokens": {
+                    "token_hash", "student_id", "expires_at", "used_at",
+                    "created_at",
                 },
             }
             return [{"name": name} for name in required_columns.get(table, set())]
@@ -119,3 +127,80 @@ def test_application_does_not_use_a_hard_coded_production_session_secret():
     assert 'SESSION_COOKIE_HTTPONLY=True' in source
     assert 'SESSION_COOKIE_SAMESITE="Lax"' in source
     assert 'SESSION_COOKIE_SECURE=bool(os.getenv("RENDER"))' in source
+
+def _schema_guard_inspector(database, missing_table=None, missing_column=None):
+    required_columns = {
+        "students": {"student_id", "name", "email", "status"},
+        "tests": {
+            "test_id", "title", "duration_minutes", "total_marks",
+            "questions_json", "monitoring_mode",
+        },
+        "questions": {
+            "question_id", "question_content_json",
+            "answer_choices_json", "marks",
+        },
+        "attempts": {
+            "attempt_id", "student_id", "test_id", "started_at", "status",
+        },
+        "responses": {
+            "response_id", "attempt_id", "question_id", "answer_status",
+        },
+        "answer_images": {
+            "image_id", "attempt_id", "question_id", "file_path",
+        },
+        "student_access_credentials": {
+            "student_id", "password_hash", "failed_login_count",
+            "locked_until", "last_login_at", "created_at", "updated_at",
+        },
+        "student_access_tokens": {
+            "token_hash", "student_id", "expires_at", "used_at", "created_at",
+        },
+    }
+
+    class FakeInspector:
+        def get_table_names(self):
+            tables = [
+                statement.split("CREATE TABLE IF NOT EXISTS ", 1)[1].split(" ", 1)[0]
+                for statement in database.SCHEMA
+            ]
+            tables.extend([
+                "student_access_credentials",
+                "student_access_tokens",
+            ])
+            if missing_table:
+                tables.remove(missing_table)
+            return tables
+
+        def get_columns(self, table):
+            columns = set(required_columns.get(table, set()))
+            if missing_column and missing_column[0] == table:
+                columns.discard(missing_column[1])
+            return [{"name": name} for name in columns]
+
+    return FakeInspector()
+
+
+def test_production_schema_guard_requires_student_access_tables(monkeypatch):
+    import database
+
+    inspector = _schema_guard_inspector(
+        database,
+        missing_table="student_access_credentials",
+    )
+    monkeypatch.setattr(database, "inspect", lambda _engine: inspector)
+
+    with pytest.raises(RuntimeError, match="student_access_credentials"):
+        database._validate_production_schema()
+
+
+def test_production_schema_guard_requires_student_access_columns(monkeypatch):
+    import database
+
+    inspector = _schema_guard_inspector(
+        database,
+        missing_column=("student_access_tokens", "token_hash"),
+    )
+    monkeypatch.setattr(database, "inspect", lambda _engine: inspector)
+
+    with pytest.raises(RuntimeError, match="token_hash"):
+        database._validate_production_schema()

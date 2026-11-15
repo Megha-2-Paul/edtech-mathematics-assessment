@@ -1,12 +1,27 @@
 """Application persistence backed by MySQL via SQLAlchemy."""
 import json
 from datetime import datetime
-from typing import List
-from sqlalchemy import text
-from database import engine, initialize_database
-from .models import Test, Question, Student, Attempt, Response, AnswerImage, ContentBlock
-from .question_sync import sync_question_payload, sync_question_solution, deactivate_question, is_sync_configured
 
+from sqlalchemy import text
+from sqlalchemy.exc import ProgrammingError
+
+from database import engine, initialize_database
+
+from .models import (
+    AnswerImage,
+    Attempt,
+    ContentBlock,
+    Question,
+    Response,
+    Student,
+    Test,
+)
+from .question_sync import (
+    deactivate_question,
+    is_sync_configured,
+    sync_question_payload,
+    sync_question_solution,
+)
 
 _SUBJECT_ENROLLMENT_DETAILS = {
     ("CBSE", "Mathematics"): ("mathematics", "041"),
@@ -21,13 +36,33 @@ _SUBJECT_ENROLLMENT_DETAILS = {
     ("ISC", "Computer Science"): ("isc_computer_science", "868"),
 }
 
-initialize_database()
 
 class MySQLStorage:
     def __init__(self):
         self.tests, self.questions, self.students = {}, {}, {}
         self.attempts, self.responses, self.images = {}, {}, {}
-        self._load_cache()
+        self._initialized = False
+
+    def initialize(self):
+        """Initialize the schema and load the legacy storage cache once."""
+        if self._initialized:
+            return
+        try:
+            initialize_database()
+            self._load_cache()
+        except Exception:
+            for cache in (
+                self.tests,
+                self.questions,
+                self.students,
+                self.attempts,
+                self.responses,
+                self.images,
+            ):
+                cache.clear()
+            self._initialized = False
+            raise
+        self._initialized = True
 
     @staticmethod
     def _dt(value):
@@ -35,20 +70,90 @@ class MySQLStorage:
         return value if isinstance(value, datetime) else datetime.fromisoformat(str(value))
 
     def _load_cache(self):
+        # Stage the complete snapshot before publishing it to live caches.
+        tests, questions, students = {}, {}, {}
+        attempts, responses, images = {}, {}, {}
+
         with engine.connect() as db:
             for r in db.execute(text("SELECT * FROM tests")).mappings():
-                self.tests[r['test_id']] = Test(r['test_id'],r['title'],r['subject'],r['class_level'],r['duration_minutes'],r['total_marks'],json.loads(r['questions_json']),r['status'],r['board'],str(r['test_date']) if r['test_date'] else None,r['test_type'])
+                tests[r['test_id']] = Test(
+                    r['test_id'], r['title'], r['subject'],
+                    r['class_level'], r['duration_minutes'],
+                    r['total_marks'], json.loads(r['questions_json']),
+                    r['status'], r['board'],
+                    str(r['test_date']) if r['test_date'] else None,
+                    r['test_type']
+                )
+
             for r in db.execute(text("SELECT * FROM questions")).mappings():
-                blocks=[ContentBlock(**x) for x in json.loads(r['question_content_json'])]
-                self.questions[r['question_id']] = Question(r['question_id'],r['question_type'],r['answer_mode'],blocks,json.loads(r['answer_choices_json']),r['correct_answer'],r['marks'],r['handwritten_upload_mode'],r['subject'],r['board'],r['class_level'],r['chapter'],r['topic'],r['subtopic'],r['difficulty'],r['competency'],r['source'],r['source_year'],r.get('status','active'),r.get('source_type','manual'),r.get('verification_status','VERIFIED'),r.get('canonical_question_id') or r['question_id'])
+                blocks = [
+                    ContentBlock(**x)
+                    for x in json.loads(r['question_content_json'])
+                ]
+                questions[r['question_id']] = Question(
+                    r['question_id'], r['question_type'],
+                    r['answer_mode'], blocks,
+                    json.loads(r['answer_choices_json']),
+                    r['correct_answer'], r['marks'],
+                    r['handwritten_upload_mode'], r['subject'],
+                    r['board'], r['class_level'], r['chapter'],
+                    r['topic'], r['subtopic'], r['difficulty'],
+                    r['competency'], r['source'], r['source_year'],
+                    r.get('status', 'active'),
+                    r.get('source_type', 'manual'),
+                    r.get('verification_status', 'VERIFIED'),
+                    r.get('canonical_question_id') or r['question_id']
+                )
+
             for r in db.execute(text("SELECT * FROM students")).mappings():
-                self.students[r['student_id']] = Student(r['student_id'],r['name'],r['email'],r['phone'],r['city'],r['role'],r['class_level'],r['board'],r['school'],str(r['registration_date']) if r['registration_date'] else None,r['registration_source'],r['status'],r.get('subject'))
+                students[r['student_id']] = Student(
+                    r['student_id'], r['name'], r['email'],
+                    r['phone'], r['city'], r['role'],
+                    r['class_level'], r['board'], r['school'],
+                    str(r['registration_date'])
+                    if r['registration_date'] else None,
+                    r['registration_source'], r['status'],
+                    r.get('subject')
+                )
+
             for r in db.execute(text("SELECT * FROM attempts")).mappings():
-                self.attempts[r['attempt_id']] = Attempt(r['attempt_id'],r['student_id'],r['test_id'],self._dt(r['started_at']),self._dt(r['submitted_at']),r['status'],r['score'],r['percentage'],r['attempt_rate'],r['accuracy'],r['time_taken_seconds'])
+                attempts[r['attempt_id']] = Attempt(
+                    r['attempt_id'], r['student_id'], r['test_id'],
+                    self._dt(r['started_at']), self._dt(r['submitted_at']),
+                    r['status'], r['score'], r['percentage'],
+                    r['attempt_rate'], r['accuracy'],
+                    r['time_taken_seconds']
+                )
+
             for r in db.execute(text("SELECT * FROM responses")).mappings():
-                self.responses[r['response_id']] = Response(r['response_id'],r['attempt_id'],r['question_id'],r['selected_answer'],r['answer_status'],r['marks_awarded'],bool(r['is_correct']) if r['is_correct'] is not None else None,self._dt(r['answered_at']))
+                responses[r['response_id']] = Response(
+                    r['response_id'], r['attempt_id'], r['question_id'],
+                    r['selected_answer'], r['answer_status'],
+                    r['marks_awarded'],
+                    bool(r['is_correct'])
+                    if r['is_correct'] is not None else None,
+                    self._dt(r['answered_at'])
+                )
+
             for r in db.execute(text("SELECT * FROM answer_images")).mappings():
-                self.images[r['image_id']] = AnswerImage(r['image_id'],r['attempt_id'],r['question_id'],r['page_number'],r['original_filename'],r['file_path'],self._dt(r['uploaded_at']))
+                images[r['image_id']] = AnswerImage(
+                    r['image_id'], r['attempt_id'], r['question_id'],
+                    r['page_number'], r['original_filename'],
+                    r['file_path'], self._dt(r['uploaded_at'])
+                )
+
+        # Publish only after all six queries and conversions succeed.
+        # Preserve dictionary identities for existing references.
+        for cache, loaded in (
+            (self.tests, tests),
+            (self.questions, questions),
+            (self.students, students),
+            (self.attempts, attempts),
+            (self.responses, responses),
+            (self.images, images),
+        ):
+            cache.clear()
+            cache.update(loaded)
 
     def _question_row(self, q):
         content=json.dumps([{'type':c.type,'value':c.value,'asset_id':c.asset_id,'metadata':c.metadata} for c in q.question_content],ensure_ascii=False)
@@ -105,7 +210,7 @@ class MySQLStorage:
     def get_question_solution(self, question_id):
         with engine.connect() as db:
             return db.execute(text("SELECT * FROM question_solutions WHERE question_id=:question ORDER BY version DESC LIMIT 1"), {'question':question_id}).mappings().first()
-    def get_questions(self,qids: List[str]): return [self.questions[x] for x in qids if x in self.questions]
+    def get_questions(self,qids: list[str]): return [self.questions[x] for x in qids if x in self.questions]
 
     def delete_question(self,qid):
         with engine.begin() as db: db.execute(text("UPDATE questions SET status='inactive' WHERE question_id=:id"), {'id': qid})
@@ -147,8 +252,14 @@ class MySQLStorage:
                 """), {'board':board,'class':class_level,'subject':subject_name}).mappings().all()
                 if rows:
                     return rows
-            except Exception:
-                pass
+            except ProgrammingError as exc:
+                error_code = (
+                    exc.orig.args[0]
+                    if getattr(exc.orig, "args", ())
+                    else None
+                )
+                if error_code != 1146:
+                    raise
             return db.execute(text("SELECT c.* FROM chapters c JOIN subjects s ON s.subject_id=c.subject_id WHERE c.board=:board AND c.class_level=:class AND s.name=:subject AND c.active=1 ORDER BY c.sort_order,c.chapter_name"), {'board':board,'class':class_level,'subject':subject_name}).mappings().all()
 
     def get_competencies(self, subject_name):
@@ -165,8 +276,14 @@ class MySQLStorage:
                 rows = db.execute(text("SELECT MIN(subject_id) AS subject_id,subject_name,MIN(subject_code) AS subject_code,MAX(active) AS active FROM subject_catalog WHERE active=1 GROUP BY subject_name ORDER BY subject_name")).mappings().all()
                 if rows:
                     return [{"subject_id":r["subject_id"],"name":r["subject_name"],"subject_code":r["subject_code"],"active":r["active"]} for r in rows]
-            except Exception:
-                pass
+            except ProgrammingError as exc:
+                error_code = (
+                    exc.orig.args[0]
+                    if getattr(exc.orig, "args", ())
+                    else None
+                )
+                if error_code != 1146:
+                    raise
             return db.execute(text("SELECT * FROM subjects WHERE active=1 ORDER BY name")).mappings().all()
 
     def create_student(self, s: Student):

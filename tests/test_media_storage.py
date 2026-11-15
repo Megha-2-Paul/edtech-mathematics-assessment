@@ -123,3 +123,110 @@ def test_read_and_delete_reject_upload_folder_itself(tmp_path):
 
     with pytest.raises(ValueError, match="not a valid upload file"):
         media.delete_image(upload_folder, upload_folder=upload_folder)
+
+
+def test_cloudinary_image_uses_authenticated_https_delivery(monkeypatch):
+    from exam_platform import media
+
+    captured = {}
+
+    def fake_cloudinary_url(public_id, **kwargs):
+        captured["public_id"] = public_id
+        captured["kwargs"] = kwargs
+        return "https://res.cloudinary.com/example/image/upload/signed-image", {}
+
+    class FakeHeaders:
+        def get_content_type(self):
+            return "image/png"
+
+    class FakeResponse:
+        headers = FakeHeaders()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b"cloudinary-image-bytes"
+
+    def fake_urlopen(url, timeout):
+        captured["url"] = url
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(
+        media, "cloudinary_url", fake_cloudinary_url, raising=False
+    )
+    monkeypatch.setattr(media, "urlopen", fake_urlopen)
+
+    data, content_type = media.read_stored_image(
+        "cloudinary://improvia/answers/answer-001"
+    )
+
+    assert data == b"cloudinary-image-bytes"
+    assert content_type == "image/png"
+    assert captured["public_id"] == "improvia/answers/answer-001"
+    assert captured["url"].startswith("https://")
+    assert captured["timeout"] == 15
+    assert captured["kwargs"] == {
+        "resource_type": "image",
+        "type": "authenticated",
+        "secure": True,
+        "sign_url": True,
+    }
+
+
+def test_cloudinary_image_retrieval_failure_raises_runtime_error(monkeypatch):
+    from urllib.error import URLError
+
+    from exam_platform import media
+
+    def fake_cloudinary_url(public_id, **kwargs):
+        return "https://res.cloudinary.com/example/signed-image", {}
+
+    def fake_urlopen(url, timeout):
+        raise URLError("Simulated network failure")
+
+    monkeypatch.setattr(
+        media, "cloudinary_url", fake_cloudinary_url, raising=False
+    )
+    monkeypatch.setattr(media, "urlopen", fake_urlopen)
+
+    with pytest.raises(RuntimeError, match="Unable to retrieve"):
+        media.read_stored_image("cloudinary://improvia/answers/answer-002")
+
+
+def test_cloudinary_image_rejects_empty_response(monkeypatch):
+    from exam_platform import media
+
+    def fake_cloudinary_url(public_id, **kwargs):
+        return "https://res.cloudinary.com/example/signed-image", {}
+
+    class FakeHeaders:
+        def get_content_type(self):
+            return "image/png"
+
+    class FakeResponse:
+        headers = FakeHeaders()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b""
+
+    def fake_urlopen(url, timeout):
+        return FakeResponse()
+
+    monkeypatch.setattr(
+        media, "cloudinary_url", fake_cloudinary_url, raising=False
+    )
+    monkeypatch.setattr(media, "urlopen", fake_urlopen)
+
+    with pytest.raises(RuntimeError, match="Stored image is empty"):
+        media.read_stored_image("cloudinary://improvia/answers/answer-003")

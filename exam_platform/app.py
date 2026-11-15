@@ -4,11 +4,21 @@ import os
 import secrets
 import sys
 import uuid
-from io import BytesIO
 from datetime import datetime, timedelta
+from io import BytesIO
 from pathlib import Path
 
-from flask import Flask, Response as FlaskResponse, jsonify, redirect, render_template, request, send_file, session, url_for
+from flask import (
+    Flask,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    session,
+    url_for,
+)
+from flask import Response as FlaskResponse
 from PIL import Image
 from sqlalchemy import text
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -21,20 +31,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from exam_platform import media
 from exam_platform.admin import register_admin
 from exam_platform.db_source import storage
-from exam_platform.mock_data import load_mock_data
 from exam_platform.eligibility import is_test_eligible
+from exam_platform.mock_data import load_mock_data
 from exam_platform.models import (
     AnswerImage,
     AnswerStatus,
     Attempt,
     AttemptStatus,
     Response,
-    Student,
 )
-from exam_platform.teacher_csrf import register_teacher_csrf
 from exam_platform.student_csrf import register_student_csrf
+from exam_platform.teacher_csrf import register_teacher_csrf
 from question_bank.extraction.review_app import register_extraction_review
-
 
 # ---------------------------------------------------------------------------
 # Application configuration
@@ -493,7 +501,12 @@ def ensure_attempt_access(attempt_id):
     return attempt, None
 
 
-load_mock_data()
+def initialize_app():
+    """Initialize persistence and optional local demo data."""
+    from exam_platform.storage import storage as legacy_storage
+
+    legacy_storage.initialize()
+    load_mock_data()
 
 
 # ---------------------------------------------------------------------------
@@ -899,7 +912,7 @@ def upload_answer_image(attempt_id):
 
 @app.route("/api/attempt/<attempt_id>/images/<question_id>", methods=["GET"])
 def get_question_images(attempt_id, question_id):
-    attempt, error = ensure_attempt_access(attempt_id)
+    _, error = ensure_attempt_access(attempt_id)
     if error:
         return error
 
@@ -922,7 +935,7 @@ def get_question_images(attempt_id, question_id):
 
 @app.route("/api/attempt/<attempt_id>/delete-image/<image_id>", methods=["DELETE"])
 def delete_image(attempt_id, image_id):
-    attempt, error = ensure_attempt_access(attempt_id)
+    _, error = ensure_attempt_access(attempt_id)
     if error:
         return error
 
@@ -1054,7 +1067,7 @@ def submission_confirmation(attempt_id):
     methods=["GET"],
 )
 def get_answer_image(attempt_id, image_id):
-    attempt, error = ensure_attempt_access(attempt_id)
+    _, error = ensure_attempt_access(attempt_id)
     if error:
         return error
 
@@ -1087,4 +1100,5 @@ def get_answer_image(attempt_id, image_id):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    initialize_app()
+    app.run(debug=False, port=5000)

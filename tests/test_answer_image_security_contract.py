@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 APP_SOURCE = Path(__file__).resolve().parents[1] / "exam_platform" / "app.py"
 
 
@@ -28,7 +27,7 @@ def test_answer_image_proxy_checks_attempt_access_and_uses_private_cache_headers
 def test_submitted_attempts_reject_mutating_http_methods():
     source = APP_SOURCE.read_text(encoding="utf-8")
     helper_start = source.index("def ensure_attempt_access(")
-    helper_end = source.index("\n\nload_mock_data()", helper_start)
+    helper_end = source.index("\n\ndef initialize_app()", helper_start)
     helper = source[helper_start:helper_end]
 
     assert "attempt.status == AttemptStatus.SUBMITTED.value" in helper
