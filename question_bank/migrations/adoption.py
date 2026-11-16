@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from sqlalchemy import inspect, text
 
+from .manifest import MIGRATIONS
+
 
 VERIFIED_APPLIED = "VERIFIED_APPLIED"
 VERIFIED_NOT_APPLIED = "VERIFIED_NOT_APPLIED"
@@ -28,8 +30,7 @@ def _index_names(inspector, table: str) -> set[str]:
 
 
 def _table_state(inspector, required: set[str]) -> tuple[int, int]:
-    present = sum(inspector.has_table(table) for table in required)
-    return present, len(required)
+    return sum(inspector.has_table(table) for table in required), len(required)
 
 
 def _verify(engine, migration_id: str) -> tuple[str, str]:
@@ -49,10 +50,18 @@ def _verify(engine, migration_id: str) -> tuple[str, str]:
             question_columns.issubset(_columns(inspector, "questions"))
             and asset_columns.issubset(_columns(inspector, "question_assets"))
         )
-        if present == total and has_columns:
-            return VERIFIED_APPLIED, "Foundation tables and provenance columns are present."
-        if present == 0 and not has_columns:
-            return VERIFIED_NOT_APPLIED, "Foundation tables and provenance columns are absent."
+        required_indexes = {
+            "idx_questions_source_type", "idx_questions_verification_status",
+            "idx_questions_canonical",
+        }
+        has_indexes = required_indexes.issubset(_index_names(inspector, "questions"))
+        has_indexes = has_indexes and "idx_question_asset_page" in _index_names(
+            inspector, "question_assets"
+        )
+        if present == total and has_columns and has_indexes:
+            return VERIFIED_APPLIED, "Foundation tables, provenance columns, and indexes are present."
+        if present == 0 and not has_columns and not has_indexes:
+            return VERIFIED_NOT_APPLIED, "Foundation tables, columns, and indexes are absent."
         return PARTIALLY_APPLIED, "Only part of the foundation schema is present."
 
     if migration_id == "002_canonical_question_ingestion":
@@ -104,7 +113,10 @@ def _verify(engine, migration_id: str) -> tuple[str, str]:
         return UNKNOWN, "Curriculum tables exist; taxonomy seeds, enrolment backfill, and exact question mappings require data-level verification."
 
     if migration_id == "006_exam_monitoring_mode":
-        columns = {c["name"]: c for c in inspector.get_columns("tests")} if inspector.has_table("tests") else {}
+        columns = {
+            c["name"]: c
+            for c in inspector.get_columns("tests")
+        } if inspector.has_table("tests") else {}
         column = columns.get("monitoring_mode")
         if column is None:
             return VERIFIED_NOT_APPLIED, "tests.monitoring_mode is absent."
@@ -134,44 +146,52 @@ def _verify(engine, migration_id: str) -> tuple[str, str]:
     return UNKNOWN, "No postcondition verifier is defined for this migration."
 
 
-def inspect_legacy_migrations(engine, migration_ids: tuple[str, ...] | None = None) -> list[dict]:
-    """Classify migrations using read-only schema/data checks; never records adoption."""
-    ids = migration_ids or (
-        "001_question_bank_foundation",
-        "002_canonical_question_ingestion",
-        "003_canonical_math_taxonomy",
-        "004_student_registration_subject",
-        "005_curriculum_question_reuse",
-        "006_exam_monitoring_mode",
-        "008_migration_ledger_upgrade",
-    )
+def inspect_legacy_migrations(
+    engine, migration_ids: tuple[str, ...] | None = None
+) -> list[dict]:
+    """Classify migrations using read-only checks; never records adoption."""
+    ids = migration_ids or tuple(m.migration_id for m in MIGRATIONS)
+    inspector = inspect(engine)
+    ledger_columns = _columns(inspector, "schema_migrations")
     ledger = {}
-    if inspect(engine).has_table("schema_migrations"):
-        columns = _columns(inspect(engine), "schema_migrations")
-        if "migration_id" in columns:
-            with engine.connect() as connection:
-                ledger = {
-                    row["migration_id"]: dict(row)
-                    for row in connection.execute(
-                        text("SELECT migration_id, applied_at FROM schema_migrations")
-                    ).mappings()
-                }
+    if "migration_id" in ledger_columns:
+        selected = ["migration_id", "applied_at"]
+        if "checksum" in ledger_columns:
+            selected.append("checksum")
+        if "status" in ledger_columns:
+            selected.append("status")
+        with engine.connect() as connection:
+            ledger = {
+                row["migration_id"]: dict(row)
+                for row in connection.execute(
+                    text("SELECT " + ", ".join(selected) + " FROM schema_migrations")
+                ).mappings()
+            }
 
+    manifest = {migration.migration_id: migration for migration in MIGRATIONS}
     results = []
     for migration_id in ids:
         state, evidence = _verify(engine, migration_id)
         record = ledger.get(migration_id)
+        migration = manifest.get(migration_id)
+
+        if record and migration and record.get("checksum"):
+            if record["checksum"].lower() != migration.checksum():
+                state = CONFLICTING
+                evidence = "Recorded checksum differs from the current migration source."
+        elif record and migration and state == VERIFIED_APPLIED:
+            evidence += " Legacy record has no checksum; source identity is unverified."
+
         if record and state == VERIFIED_NOT_APPLIED:
             state = CONFLICTING
             evidence += " Ledger says applied, but required postconditions are absent."
-        elif record and state == VERIFIED_APPLIED:
-            evidence += " A legacy ledger record exists."
         elif record and state == UNKNOWN:
-            evidence += " A legacy ledger record exists but does not prove completion."
+            evidence += " A ledger record exists but does not prove completion."
         results.append({
             "migration_id": migration_id,
             "state": state,
             "ledger_recorded": record is not None,
+            "ledger_status": record.get("status") if record else None,
             "evidence": evidence,
         })
     return results
