@@ -226,6 +226,7 @@ def test_mysql_apply_creates_schema_and_is_idempotent():
 
     database_url_string = database_url.render_as_string(hide_password=False)
     engine = create_engine(database_url, pool_pre_ping=True, future=True)
+    created_students_table = False
 
     try:
         with engine.begin() as connection:
@@ -240,6 +241,7 @@ def test_mysql_apply_creates_schema_and_is_idempotent():
                 "student_id VARCHAR(32) PRIMARY KEY"
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
             )
+            created_students_table = True
 
         def assert_schema_is_valid():
             report = MIGRATION.audit(database_url_string)
@@ -263,13 +265,17 @@ def test_mysql_apply_creates_schema_and_is_idempotent():
         assert_schema_is_valid()
 
     finally:
-        # This database is created exclusively for this ephemeral CI job.
-        with engine.begin() as connection:
-            connection.exec_driver_sql(
-                "DROP TABLE IF EXISTS student_access_tokens"
-            )
-            connection.exec_driver_sql(
-                "DROP TABLE IF EXISTS student_access_credentials"
-            )
-            connection.exec_driver_sql("DROP TABLE IF EXISTS students")
-        engine.dispose()
+        # Only clean up after this test has confirmed an empty database and
+        # created its own parent table. Never drop tables from an unexpected DB.
+        try:
+            if created_students_table:
+                with engine.begin() as connection:
+                    connection.exec_driver_sql(
+                        "DROP TABLE IF EXISTS student_access_tokens"
+                    )
+                    connection.exec_driver_sql(
+                        "DROP TABLE IF EXISTS student_access_credentials"
+                    )
+                    connection.exec_driver_sql("DROP TABLE IF EXISTS students")
+        finally:
+            engine.dispose()
