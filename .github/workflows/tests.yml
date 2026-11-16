@@ -15,7 +15,6 @@ jobs:
         image: mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: test_root_password
-          MYSQL_ROOT_HOST: "%"
           MYSQL_DATABASE: edtech_test
           MYSQL_USER: improvia_test
           MYSQL_PASSWORD: test_user_password
@@ -35,7 +34,7 @@ jobs:
       DB_USER: improvia_test
       DB_PASSWORD: test_user_password
       DATABASE_URL: ""
-      MYSQL_TEST_ADMIN_URL: "mysql+pymysql://root:test_root_password@127.0.0.1:3306/mysql"
+      MYSQL_TEST_ADMIN_URL: "mysql+pymysql://improvia_migration_admin:test_admin_password@127.0.0.1:3306/mysql"
 
     steps:
       - name: Checkout repository
@@ -52,6 +51,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install "pytest<9" requests beautifulsoup4
+
+      - name: Configure isolated migration-test administrator
+        shell: bash
+        run: |
+          container_id="$(docker ps --filter 'ancestor=mysql:8.0' --format '{{.ID}}' | head -n 1)"
+          test -n "$container_id"
+          docker exec "$container_id" mysql --protocol=socket -uroot -ptest_root_password -e "
+            CREATE USER IF NOT EXISTS 'improvia_migration_admin'@'%' IDENTIFIED BY 'test_admin_password';
+            GRANT ALL PRIVILEGES ON *.* TO 'improvia_migration_admin'@'%' WITH GRANT OPTION;
+            FLUSH PRIVILEGES;
+          "
 
       - name: Run tests
         env:
