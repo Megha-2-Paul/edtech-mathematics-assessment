@@ -1,13 +1,12 @@
-from datetime import datetime
+import importlib.util
+from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 
 from question_bank.migrations.ledger import read_ledger, record_migration
 from question_bank.migrations.manifest import MIGRATIONS, validate_manifest
 
-import importlib.util
-from pathlib import Path
 
 MIGRATION_PATH = (
     Path(__file__).parents[1]
@@ -47,7 +46,6 @@ def test_upgrade_preserves_legacy_rows_and_old_insert_contract():
     assert legacy["status"] == "applied"
     assert legacy["checksum"] is None
 
-    # The unchanged INSERT used by migrations 001 and 002 remains valid.
     with engine.begin() as connection:
         connection.execute(
             text("INSERT INTO schema_migrations(migration_id) VALUES ('002_existing')")
@@ -60,10 +58,8 @@ def test_upgrade_preserves_legacy_rows_and_old_insert_contract():
 
 def test_upgrade_is_idempotent():
     engine = create_engine("sqlite://")
-    first = upgrade_ledger(engine)
-    second = upgrade_ledger(engine)
-    assert len(first) == 6
-    assert second == []
+    assert len(upgrade_ledger(engine)) == 6
+    assert upgrade_ledger(engine) == []
     engine.dispose()
 
 
@@ -91,8 +87,9 @@ def test_upgrade_fails_closed_for_incompatible_ledger():
         connection.execute(text("CREATE TABLE schema_migrations (wrong_id TEXT)"))
     with pytest.raises(RuntimeError, match="Incompatible"):
         upgrade_ledger(engine)
-    columns = {c["name"] for c in __import__("sqlalchemy").inspect(engine).get_columns("schema_migrations")}
-    assert columns == {"wrong_id"}
+    assert {c["name"] for c in inspect(engine).get_columns("schema_migrations")} == {
+        "wrong_id"
+    }
     engine.dispose()
 
 
