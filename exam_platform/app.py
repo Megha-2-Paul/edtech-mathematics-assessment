@@ -41,6 +41,7 @@ from exam_platform.models import (
     Response,
 )
 from exam_platform.student_csrf import register_student_csrf
+from exam_platform.teacher_auth import register_teacher_auth
 from exam_platform.teacher_csrf import register_teacher_csrf
 from question_bank.extraction.review_app import register_extraction_review
 
@@ -68,6 +69,7 @@ Path(app.config["UPLOAD_FOLDER"]).mkdir(parents=True, exist_ok=True)
 
 register_admin(app)
 register_extraction_review(app)
+register_teacher_auth(app)
 register_teacher_csrf(app)
 register_student_csrf(app)
 

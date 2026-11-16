@@ -1,15 +1,17 @@
-﻿import importlib.util
+import importlib.util
+import os
+import uuid
 from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, text
-
+from sqlalchemy.engine import make_url
 
 MIGRATION_PATH = (
     Path(__file__).resolve().parents[1]
     / "question_bank"
     / "migrations"
-    / "006_student_access.py"
+    / "007_student_access.py"
 )
 
 SPEC = importlib.util.spec_from_file_location(
@@ -202,3 +204,79 @@ def test_audit_detects_incorrect_token_primary_key(tmp_path):
     assert token_report["primary_key_valid"] is False
     assert "primary_key_mismatch" in token_report["issues"]
 
+@pytest.mark.skipif(
+    os.getenv("CI", "").lower() != "true"
+    or not os.getenv("MYSQL_TEST_ADMIN_URL"),
+    reason="Requires the dedicated CI MySQL service.",
+)
+def test_mysql_apply_creates_schema_and_is_idempotent():
+    admin_url = make_url(os.environ["MYSQL_TEST_ADMIN_URL"])
+
+    # Restrict this test to the dedicated loopback CI MySQL service.
+    if (
+        admin_url.drivername != "mysql+pymysql"
+        or admin_url.host not in {"127.0.0.1", "localhost", "::1"}
+        or admin_url.database != "mysql"
+    ):
+        pytest.fail(
+            "MYSQL_TEST_ADMIN_URL must target the loopback MySQL service "
+            "using mysql+pymysql and the mysql administrative database."
+        )
+
+    database_name = f"improvia_migration_test_{uuid.uuid4().hex}"
+    admin_engine = create_engine(admin_url, pool_pre_ping=True, future=True)
+    database_created = False
+
+    try:
+        with admin_engine.begin() as connection:
+            connection.exec_driver_sql(
+                f"CREATE DATABASE `{database_name}` "
+                "CHARACTER SET utf8mb4"
+            )
+        database_created = True
+
+        database_url = admin_url.set(database=database_name)
+        test_engine = create_engine(
+            database_url,
+            pool_pre_ping=True,
+            future=True,
+        )
+
+        try:
+            with test_engine.begin() as connection:
+                connection.exec_driver_sql(
+                    "CREATE TABLE students ("
+                    "student_id VARCHAR(32) PRIMARY KEY"
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+                )
+        finally:
+            test_engine.dispose()
+
+        def assert_schema_is_valid():
+            report = MIGRATION.audit(str(database_url))
+
+            assert report["parent"]["student_id_valid"] is True
+            assert (
+                report["tables"]["student_access_credentials"]["issues"]
+                == []
+            )
+            assert (
+                report["tables"]["student_access_tokens"]["issues"]
+                == []
+            )
+
+        # First application must create both access tables.
+        MIGRATION.apply(str(database_url))
+        assert_schema_is_valid()
+
+        # Second application must remain safe and preserve a valid schema.
+        MIGRATION.apply(str(database_url))
+        assert_schema_is_valid()
+
+    finally:
+        if database_created:
+            with admin_engine.begin() as connection:
+                connection.exec_driver_sql(
+                    f"DROP DATABASE IF EXISTS `{database_name}`"
+                )
+        admin_engine.dispose()

@@ -5,14 +5,20 @@ import pytest
 from flask import Flask
 
 from exam_platform import evaluation
+from exam_platform.teacher_auth import register_teacher_auth
 
 
 @pytest.fixture
 def image_route_setup(monkeypatch, tmp_path):
+    monkeypatch.delenv("RENDER", raising=False)
+    monkeypatch.delenv("TEACHER_ACCESS_PASSWORD", raising=False)
+    monkeypatch.delenv("TEACHER_ACCESS_USERNAME", raising=False)
+
     app = Flask(__name__)
     app.secret_key = "teacher-image-route-test-secret"
     app.config["UPLOAD_FOLDER"] = str(tmp_path)
     app.register_blueprint(evaluation.evaluation_bp)
+    register_teacher_auth(app)
 
     attempt = SimpleNamespace(
         attempt_id="ATTEMPT-1",
@@ -130,3 +136,33 @@ def test_teacher_evaluation_generates_private_image_route_url(
     assert response.get_data(as_text=True) == (
         "/teacher/attempt/ATTEMPT-1/images/IMAGE-1/content"
     )
+
+def test_teacher_image_route_rejects_unauthenticated_request(
+    image_route_setup, monkeypatch
+):
+    setup = image_route_setup
+    monkeypatch.setenv("TEACHER_ACCESS_PASSWORD", "test-secret")
+
+    response = setup.client.get(
+        "/teacher/attempt/ATTEMPT-1/images/IMAGE-1/content"
+    )
+
+    assert response.status_code == 401
+    assert response.headers["WWW-Authenticate"] == 'Basic realm="Improvia Teacher"'
+    setup.read_mock.assert_not_called()
+
+
+def test_teacher_image_route_accepts_authenticated_request(
+    image_route_setup, monkeypatch
+):
+    setup = image_route_setup
+    monkeypatch.setenv("TEACHER_ACCESS_PASSWORD", "test-secret")
+
+    response = setup.client.get(
+        "/teacher/attempt/ATTEMPT-1/images/IMAGE-1/content",
+        auth=("teacher", "test-secret"),
+    )
+
+    assert response.status_code == 200
+    assert response.data == b"image-bytes"
+    setup.read_mock.assert_called_once()

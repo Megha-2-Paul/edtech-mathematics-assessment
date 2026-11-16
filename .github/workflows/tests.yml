@@ -32,6 +32,7 @@ jobs:
       DB_USER: root
       DB_PASSWORD: test_root_password
       DATABASE_URL: ""
+      MYSQL_TEST_ADMIN_URL: "mysql+pymysql://root:test_root_password@127.0.0.1:3306/mysql"
 
     steps:
       - name: Checkout repository

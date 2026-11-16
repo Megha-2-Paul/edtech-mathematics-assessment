@@ -1,11 +1,10 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 APP_SOURCE = (ROOT / "exam_platform" / "app.py").read_text(encoding="utf-8")
 LOGIN_TEMPLATE = (ROOT / "exam_platform" / "templates" / "student_login.html").read_text(encoding="utf-8")
 ACTIVATE_TEMPLATE = (ROOT / "exam_platform" / "templates" / "student_activate.html").read_text(encoding="utf-8")
-MIGRATION_SOURCE = (ROOT / "question_bank" / "migrations" / "006_student_access.py").read_text(encoding="utf-8")
+MIGRATION_SOURCE = (ROOT / "question_bank" / "migrations" / "007_student_access.py").read_text(encoding="utf-8")
 
 
 def test_anonymous_requests_do_not_create_guest_students():

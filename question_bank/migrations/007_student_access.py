@@ -10,7 +10,6 @@ import os
 
 from sqlalchemy import DateTime, Integer, create_engine, inspect, text
 
-
 DDL = (
     """CREATE TABLE IF NOT EXISTS student_access_credentials (
         student_id VARCHAR(32) PRIMARY KEY,
@@ -257,7 +256,7 @@ def main() -> None:
 
     if args.apply:
         apply(args.database_url)
-        print("Migration 006 applied and verified.")
+        print("Migration 007 applied and verified.")
     else:
         print("READ-ONLY AUDIT — no database changes were made.")
         print(audit(args.database_url))
