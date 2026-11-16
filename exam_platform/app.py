@@ -8,6 +8,9 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
 
+# Support direct execution as well as package-based WSGI startup.
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from flask import (
     Flask,
     jsonify,
@@ -25,8 +28,6 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 from database import engine
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from exam_platform import media
 from exam_platform.admin import register_admin
