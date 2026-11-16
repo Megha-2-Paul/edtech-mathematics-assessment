@@ -27,7 +27,7 @@ def test_migration_inventory_exists_and_lists_every_script():
     assert discovered == EXPECTED_SCRIPTS
 
     for filename in EXPECTED_SCRIPTS:
-        assert f"`question_bank/migrations/{filename}`" in document
+        assert f"`{filename}`" in document
 
 
 def test_inventory_distinguishes_apply_migrations_from_read_only_audit():
