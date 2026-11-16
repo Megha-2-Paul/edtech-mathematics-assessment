@@ -224,6 +224,7 @@ def test_mysql_apply_creates_schema_and_is_idempotent():
             "database using the dedicated improvia_test account."
         )
 
+    database_url_string = database_url.render_as_string(hide_password=False)
     engine = create_engine(database_url, pool_pre_ping=True, future=True)
 
     try:
@@ -241,7 +242,7 @@ def test_mysql_apply_creates_schema_and_is_idempotent():
             )
 
         def assert_schema_is_valid():
-            report = MIGRATION.audit(str(database_url))
+            report = MIGRATION.audit(database_url_string)
 
             assert report["parent"]["student_id_valid"] is True
             assert (
@@ -254,11 +255,11 @@ def test_mysql_apply_creates_schema_and_is_idempotent():
             )
 
         # First application must create both access tables.
-        MIGRATION.apply(str(database_url))
+        MIGRATION.apply(database_url_string)
         assert_schema_is_valid()
 
         # Second application must remain safe and preserve a valid schema.
-        MIGRATION.apply(str(database_url))
+        MIGRATION.apply(database_url_string)
         assert_schema_is_valid()
 
     finally:
