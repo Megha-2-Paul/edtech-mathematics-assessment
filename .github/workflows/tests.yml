@@ -34,7 +34,7 @@ jobs:
       DB_USER: improvia_test
       DB_PASSWORD: test_user_password
       DATABASE_URL: ""
-      MYSQL_TEST_ADMIN_URL: "mysql+pymysql://improvia_migration_admin:test_admin_password@127.0.0.1:3306/mysql"
+      MYSQL_TEST_ADMIN_URL: "mysql+pymysql://improvia_test:test_user_password@127.0.0.1:3306/mysql"
 
     steps:
       - name: Checkout repository
@@ -52,16 +52,32 @@ jobs:
           pip install -r requirements.txt
           pip install "pytest<9" requests beautifulsoup4
 
-      - name: Configure isolated migration-test administrator
+      - name: Grant isolated migration-test database privileges
         shell: bash
         run: |
           container_id="$(docker ps --filter 'ancestor=mysql:8.0' --format '{{.ID}}' | head -n 1)"
           test -n "$container_id"
           docker exec "$container_id" mysql --protocol=socket -uroot -ptest_root_password -e "
-            CREATE USER IF NOT EXISTS 'improvia_migration_admin'@'%' IDENTIFIED BY 'test_admin_password';
-            GRANT ALL PRIVILEGES ON *.* TO 'improvia_migration_admin'@'%' WITH GRANT OPTION;
+            GRANT CREATE, DROP ON *.* TO 'improvia_test'@'%';
             FLUSH PRIVILEGES;
           "
+          python - <<'PY'
+          import pymysql
+
+          connection = pymysql.connect(
+              host="127.0.0.1",
+              port=3306,
+              user="improvia_test",
+              password="test_user_password",
+              database="mysql",
+          )
+          try:
+              with connection.cursor() as cursor:
+                  cursor.execute("SELECT CURRENT_USER()")
+                  print(f"Verified migration-test MySQL account: {cursor.fetchone()[0]}")
+          finally:
+              connection.close()
+          PY
 
       - name: Run tests
         env:
