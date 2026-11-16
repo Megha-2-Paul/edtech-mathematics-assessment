@@ -1,9 +1,10 @@
 import importlib.util
 import os
+import uuid
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 
 MIGRATION_PATH = (
@@ -205,47 +206,51 @@ def test_audit_detects_incorrect_token_primary_key(tmp_path):
 
 @pytest.mark.skipif(
     os.getenv("CI", "").lower() != "true"
-    or not os.getenv("MYSQL_TEST_DATABASE_URL"),
+    or not os.getenv("MYSQL_TEST_ADMIN_URL"),
     reason="Requires the dedicated CI MySQL service.",
 )
 def test_mysql_apply_creates_schema_and_is_idempotent():
-    database_url = make_url(os.environ["MYSQL_TEST_DATABASE_URL"])
+    admin_url = make_url(os.environ["MYSQL_TEST_ADMIN_URL"])
 
-    # Restrict this test to the dedicated loopback CI database.
+    # Restrict this test to the dedicated loopback CI MySQL service.
     if (
-        database_url.drivername != "mysql+pymysql"
-        or database_url.host not in {"127.0.0.1", "localhost", "::1"}
-        or database_url.database != "edtech_test"
+        admin_url.drivername != "mysql+pymysql"
+        or admin_url.host not in {"127.0.0.1", "localhost", "::1"}
+        or admin_url.database != "mysql"
     ):
         pytest.fail(
-            "MYSQL_TEST_DATABASE_URL must target the loopback MySQL "
-            "service and the dedicated edtech_test database."
+            "MYSQL_TEST_ADMIN_URL must target the loopback MySQL service "
+            "using mysql+pymysql and the mysql administrative database."
         )
 
-    engine = create_engine(database_url, pool_pre_ping=True, future=True)
-    setup_started = False
+    database_name = f"improvia_migration_test_{uuid.uuid4().hex}"
+    admin_engine = create_engine(admin_url, pool_pre_ping=True, future=True)
+    database_created = False
 
     try:
-        with engine.begin() as connection:
-            existing_tables = set(inspect(connection).get_table_names())
-            reserved_tables = {
-                "students",
-                "student_access_credentials",
-                "student_access_tokens",
-            }
-            conflicts = existing_tables & reserved_tables
-            if conflicts:
-                pytest.fail(
-                    "Dedicated CI database contains reserved migration "
-                    f"test tables: {sorted(conflicts)}"
-                )
-
-            setup_started = True
+        with admin_engine.begin() as connection:
             connection.exec_driver_sql(
-                "CREATE TABLE students ("
-                "student_id VARCHAR(32) PRIMARY KEY"
-                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+                f"CREATE DATABASE `{database_name}` "
+                "CHARACTER SET utf8mb4"
             )
+        database_created = True
+
+        database_url = admin_url.set(database=database_name)
+        test_engine = create_engine(
+            database_url,
+            pool_pre_ping=True,
+            future=True,
+        )
+
+        try:
+            with test_engine.begin() as connection:
+                connection.exec_driver_sql(
+                    "CREATE TABLE students ("
+                    "student_id VARCHAR(32) PRIMARY KEY"
+                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+                )
+        finally:
+            test_engine.dispose()
 
         def assert_schema_is_valid():
             report = MIGRATION.audit(str(database_url))
@@ -269,15 +274,9 @@ def test_mysql_apply_creates_schema_and_is_idempotent():
         assert_schema_is_valid()
 
     finally:
-        if setup_started:
-            with engine.begin() as connection:
+        if database_created:
+            with admin_engine.begin() as connection:
                 connection.exec_driver_sql(
-                    "DROP TABLE IF EXISTS student_access_tokens"
+                    f"DROP DATABASE IF EXISTS `{database_name}`"
                 )
-                connection.exec_driver_sql(
-                    "DROP TABLE IF EXISTS student_access_credentials"
-                )
-                connection.exec_driver_sql(
-                    "DROP TABLE IF EXISTS students"
-                )
-        engine.dispose()
+        admin_engine.dispose()
