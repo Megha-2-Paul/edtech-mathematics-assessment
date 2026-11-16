@@ -14,13 +14,13 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: test_root_password
-          MYSQL_ROOT_HOST: "%"
           MYSQL_DATABASE: edtech_test
+          MYSQL_USER: improvia_test
+          MYSQL_PASSWORD: test_user_password
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -ptest_root_password --silent"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
           --health-interval=10s
           --health-timeout=5s
           --health-start-period=30s
@@ -30,10 +30,10 @@ jobs:
       DB_HOST: 127.0.0.1
       DB_PORT: "3306"
       DB_NAME: edtech_test
-      DB_USER: root
-      DB_PASSWORD: test_root_password
+      DB_USER: improvia_test
+      DB_PASSWORD: test_user_password
       DATABASE_URL: ""
-      MYSQL_TEST_ADMIN_URL: "mysql+pymysql://root:test_root_password@127.0.0.1:3306/mysql"
+      MYSQL_TEST_DATABASE_URL: "mysql+pymysql://improvia_test:test_user_password@127.0.0.1:3306/edtech_test"
 
     steps:
       - name: Checkout repository
