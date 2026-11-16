@@ -82,16 +82,38 @@ def upgrade_ledger(engine) -> list[str]:
 
 
 def main() -> None:
+    import argparse
     import os
     from sqlalchemy import create_engine
 
-    database_url = os.getenv("DATABASE_URL")
-    if not database_url:
-        raise SystemExit("Set DATABASE_URL to the intended LOCAL database.")
-    engine = create_engine(database_url, pool_pre_ping=True)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--database-url", default=os.getenv("DATABASE_URL"))
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--dry-run", action="store_true")
+    mode.add_argument("--apply", action="store_true")
+    args = parser.parse_args()
+
+    if not args.database_url:
+        parser.error("Provide --database-url for the intended LOCAL database.")
+    engine = create_engine(args.database_url, pool_pre_ping=True)
     try:
-        added = upgrade_ledger(engine)
-        print("Added ledger columns: " + (", ".join(added) if added else "none"))
+        if args.dry_run:
+            inspector = inspect(engine)
+            if not inspector.has_table("schema_migrations"):
+                print("Would create the legacy two-column schema_migrations ledger.")
+                existing = set()
+            else:
+                _validate_legacy_ledger(inspector)
+                existing = {
+                    column["name"]
+                    for column in inspector.get_columns("schema_migrations")
+                }
+            missing = [name for name in LEDGER_COLUMNS if name not in existing]
+            print("Would add ledger columns: " + (", ".join(missing) if missing else "none"))
+            print("Dry-run completed. No database changes made.")
+        else:
+            added = upgrade_ledger(engine)
+            print("Added ledger columns: " + (", ".join(added) if added else "none"))
     finally:
         engine.dispose()
 
