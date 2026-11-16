@@ -37,6 +37,8 @@ def _verify(engine, migration_id: str) -> tuple[str, str]:
     inspector = inspect(engine)
 
     if migration_id == "001_question_bank_foundation":
+        if not inspector.has_table("questions") or not inspector.has_table("question_assets"):
+            return UNKNOWN, "Base questions/question_assets tables are absent; foundation state cannot be assessed."
         required_tables = {
             "source_papers", "question_occurrences", "question_groups",
             "question_parts", "question_extraction_runs",
@@ -91,6 +93,8 @@ def _verify(engine, migration_id: str) -> tuple[str, str]:
         return PARTIALLY_APPLIED, "Only some legacy taxonomy tables are present."
 
     if migration_id == "004_student_registration_subject":
+        if not inspector.has_table("students"):
+            return UNKNOWN, "Base students table is absent; registration migration state cannot be assessed."
         columns = _columns(inspector, "students")
         indexes = _index_names(inspector, "students")
         if "subject" in columns and "idx_students_eligibility" in indexes:
@@ -100,6 +104,8 @@ def _verify(engine, migration_id: str) -> tuple[str, str]:
         return PARTIALLY_APPLIED, "Only part of the registration schema is present."
 
     if migration_id == "005_curriculum_question_reuse":
+        if not inspector.has_table("students") or not inspector.has_table("questions"):
+            return UNKNOWN, "Base students/questions tables are absent; curriculum migration state cannot be assessed."
         required = {
             "subject_catalog", "curriculum_catalog", "curriculum_units",
             "canonical_concepts", "curriculum_chapters", "question_curriculum_map",
@@ -113,6 +119,8 @@ def _verify(engine, migration_id: str) -> tuple[str, str]:
         return UNKNOWN, "Curriculum tables exist; taxonomy seeds, enrolment backfill, and exact question mappings require data-level verification."
 
     if migration_id == "006_exam_monitoring_mode":
+        if not inspector.has_table("tests"):
+            return UNKNOWN, "Base tests table is absent; monitoring migration state cannot be assessed."
         columns = {
             c["name"]: c
             for c in inspector.get_columns("tests")
