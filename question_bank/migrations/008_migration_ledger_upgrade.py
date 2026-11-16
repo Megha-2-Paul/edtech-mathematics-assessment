@@ -18,6 +18,37 @@ LEDGER_COLUMNS = {
 }
 
 
+def _validate_legacy_ledger(inspector) -> None:
+    columns = {
+        column["name"]: column
+        for column in inspector.get_columns("schema_migrations")
+    }
+    primary_key = inspector.get_pk_constraint("schema_migrations").get(
+        "constrained_columns"
+    ) or []
+    required = {"migration_id", "applied_at"}
+    missing = required - columns.keys()
+    if missing:
+        raise RuntimeError(
+            "Incompatible schema_migrations ledger; missing required "
+            f"columns: {', '.join(sorted(missing))}. No columns added."
+        )
+
+    migration_id_type = str(columns["migration_id"]["type"]).upper().replace(" ", "")
+    applied_at_type = str(columns["applied_at"]["type"]).upper().replace(" ", "")
+    if (
+        "migration_id" not in primary_key
+        or not migration_id_type.startswith("VARCHAR(100)")
+        or "DATETIME" not in applied_at_type
+        or columns["applied_at"].get("nullable", True)
+    ):
+        raise RuntimeError(
+            "Incompatible schema_migrations ledger definition; expected "
+            "migration_id VARCHAR(100) PRIMARY KEY and applied_at DATETIME NOT NULL. "
+            "No columns added."
+        )
+
+
 def upgrade_ledger(engine) -> list[str]:
     """Create or compatibly extend schema_migrations; return added columns."""
     inspector = inspect(engine)
@@ -32,23 +63,16 @@ def upgrade_ledger(engine) -> list[str]:
             """))
         inspector = inspect(engine)
 
+    _validate_legacy_ledger(inspector)
+
     existing = {
-        column["name"]: column
+        column["name"]
         for column in inspector.get_columns("schema_migrations")
     }
-    required = {"migration_id", "applied_at"}
-    missing_required = required - existing.keys()
-    if missing_required:
-        raise RuntimeError(
-            "Incompatible schema_migrations ledger; missing required "
-            f"columns: {', '.join(sorted(missing_required))}. No columns added."
-        )
-
     added = []
     for name, definition in LEDGER_COLUMNS.items():
         if name in existing:
             continue
-        # Column names and definitions are fixed constants, never user input.
         with engine.begin() as connection:
             connection.execute(
                 text(f"ALTER TABLE schema_migrations ADD COLUMN {name} {definition}")
