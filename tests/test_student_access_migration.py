@@ -1,6 +1,5 @@
 import importlib.util
 import os
-import uuid
 from pathlib import Path
 
 import pytest
@@ -210,47 +209,36 @@ def test_audit_detects_incorrect_token_primary_key(tmp_path):
     reason="Requires the dedicated CI MySQL service.",
 )
 def test_mysql_apply_creates_schema_and_is_idempotent():
-    admin_url = make_url(os.environ["MYSQL_TEST_ADMIN_URL"])
+    database_url = make_url(os.environ["MYSQL_TEST_ADMIN_URL"])
 
-    # Restrict this test to the dedicated loopback CI MySQL service.
+    # Use only the dedicated, pre-created CI database. No database-level
+    # administration or access to any other schema is required.
     if (
-        admin_url.drivername != "mysql+pymysql"
-        or admin_url.host not in {"127.0.0.1", "localhost", "::1"}
-        or admin_url.database != "mysql"
+        database_url.drivername != "mysql+pymysql"
+        or database_url.host not in {"127.0.0.1", "localhost", "::1"}
+        or database_url.database != "improvia_migration_test"
+        or database_url.username != "improvia_test"
     ):
         pytest.fail(
-            "MYSQL_TEST_ADMIN_URL must target the loopback MySQL service "
-            "using mysql+pymysql and the mysql administrative database."
+            "MYSQL_TEST_ADMIN_URL must target the loopback improvia_migration_test "
+            "database using the dedicated improvia_test account."
         )
 
-    database_name = f"improvia_migration_test_{uuid.uuid4().hex}"
-    admin_engine = create_engine(admin_url, pool_pre_ping=True, future=True)
-    database_created = False
+    engine = create_engine(database_url, pool_pre_ping=True, future=True)
 
     try:
-        with admin_engine.begin() as connection:
-            connection.exec_driver_sql(
-                f"CREATE DATABASE `{database_name}` "
-                "CHARACTER SET utf8mb4"
-            )
-        database_created = True
-
-        database_url = admin_url.set(database=database_name)
-        test_engine = create_engine(
-            database_url,
-            pool_pre_ping=True,
-            future=True,
-        )
-
-        try:
-            with test_engine.begin() as connection:
-                connection.exec_driver_sql(
-                    "CREATE TABLE students ("
-                    "student_id VARCHAR(32) PRIMARY KEY"
-                    ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        with engine.begin() as connection:
+            existing_tables = connection.exec_driver_sql("SHOW TABLES").all()
+            if existing_tables:
+                pytest.fail(
+                    "The dedicated CI migration database must start empty; "
+                    f"found tables: {existing_tables!r}"
                 )
-        finally:
-            test_engine.dispose()
+            connection.exec_driver_sql(
+                "CREATE TABLE students ("
+                "student_id VARCHAR(32) PRIMARY KEY"
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+            )
 
         def assert_schema_is_valid():
             report = MIGRATION.audit(str(database_url))
@@ -274,9 +262,13 @@ def test_mysql_apply_creates_schema_and_is_idempotent():
         assert_schema_is_valid()
 
     finally:
-        if database_created:
-            with admin_engine.begin() as connection:
-                connection.exec_driver_sql(
-                    f"DROP DATABASE IF EXISTS `{database_name}`"
-                )
-        admin_engine.dispose()
+        # This database is created exclusively for this ephemeral CI job.
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                "DROP TABLE IF EXISTS student_access_tokens"
+            )
+            connection.exec_driver_sql(
+                "DROP TABLE IF EXISTS student_access_credentials"
+            )
+            connection.exec_driver_sql("DROP TABLE IF EXISTS students")
+        engine.dispose()
