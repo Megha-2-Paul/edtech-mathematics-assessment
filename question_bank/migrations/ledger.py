@@ -49,8 +49,16 @@ def record_migration(
         raise ValueError("checksum must be a 64-character hexadecimal SHA-256 digest.")
 
     columns = {c["name"] for c in inspect(engine).get_columns(LEDGER_TABLE)}
-    if not {"migration_id", "applied_at", "status"}.issubset(columns):
-        raise RuntimeError("Migration ledger upgrade is required before recording status.")
+    required_columns = {
+        "migration_id", "applied_at", "status", "checksum", "started_at",
+        "completed_at", "error_summary", "execution_version",
+    }
+    missing_columns = required_columns - columns
+    if missing_columns:
+        raise RuntimeError(
+            "Migration ledger upgrade is required before recording status; "
+            f"missing columns: {', '.join(sorted(missing_columns))}."
+        )
 
     with engine.begin() as connection:
         connection.execute(
