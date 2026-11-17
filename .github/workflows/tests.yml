@@ -10,6 +10,27 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: improvia_ci_root_password
+          MYSQL_DATABASE: improvia_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --host=127.0.0.1 --user=root --password=improvia_ci_root_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DB_NAME: improvia_ci
+      DB_USER: root
+      DB_PASSWORD: improvia_ci_root_password
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

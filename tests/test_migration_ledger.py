@@ -122,3 +122,26 @@ def test_manifest_is_complete_and_checksums_are_sha256():
         "008_migration_ledger_upgrade",
     }
     assert all(len(m.checksum()) == 64 for m in MIGRATIONS)
+
+def test_successful_retry_clears_previous_error_summary():
+    engine = create_engine("sqlite://")
+    upgrade_ledger(engine)
+
+    record_migration(
+        engine, "retry_migration", "failed",
+        error_summary="Previous execution failed.",
+    )
+    failed = next(
+        row for row in read_ledger(engine)
+        if row["migration_id"] == "retry_migration"
+    )
+    assert failed["error_summary"] == "Previous execution failed."
+
+    record_migration(engine, "retry_migration", "applied")
+    retried = next(
+        row for row in read_ledger(engine)
+        if row["migration_id"] == "retry_migration"
+    )
+    assert retried["status"] == "applied"
+    assert retried["error_summary"] is None
+    engine.dispose()
