@@ -38,7 +38,7 @@ def _validate_legacy_ledger(inspector) -> None:
     applied_at_type = str(columns["applied_at"]["type"]).upper().replace(" ", "")
     if (
         "migration_id" not in primary_key
-        or not migration_id_type.startswith("VARCHAR(100)")
+        or migration_id_type != "VARCHAR(100)"
         or "DATETIME" not in applied_at_type
         or columns["applied_at"].get("nullable", True)
     ):
