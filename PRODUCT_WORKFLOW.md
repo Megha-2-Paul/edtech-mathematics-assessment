@@ -2,6 +2,9 @@
 
 ## 1. Product principle
 
+> **Implementation status note (17 November 2026):** This document describes the intended end-to-end product and operating model. It is not a feature-completion checklist. Components such as n8n orchestration, WhatsApp/email delivery, payment gateway, automated enrolment and some dashboard/longitudinal experiences are roadmap items unless their implementation is independently confirmed in the current code. The present development strategy is local-first; complete and verify the core workflow locally before choosing hosting or expanding integrations. See [PLATFORM_VERIFICATION.md](PLATFORM_VERIFICATION.md) for the evidence-based status.
+
+
 This product is **not a mock-test platform**. Its core value is to answer:
 
 > **Why is a student losing marks, and what should they improve next?**
@@ -1032,3 +1035,41 @@ NEXT TEST
 ```
 
 **This loop — not the exam UI, AI, or number of questions — is the product.**
+
+
+---
+
+## 30. Implementation status versus target workflow
+
+Use this distinction when planning work or communicating product readiness:
+
+| Area | Repository evidence / current position | Verification still required |
+|---|---|---|
+| Flask student assessment experience | Assessment routes and UI foundations exist | Full local student journey, responsive behaviour and failure recovery |
+| Student access | Login, activation and access-control foundations exist | Token lifecycle, session security and cross-student isolation |
+| Registration | Google Form webhook endpoint and registration foundations exist | Validate webhook authentication, idempotency, identity matching and approval process |
+| Persistence | MySQL-backed storage layer exists | Verify local DB target, transactional behaviour and restart persistence |
+| Manual evaluation | Teacher evaluation and marks/error-code persistence foundations exist | Full teacher permissions, partial marks, re-evaluation and audit requirements |
+| Diagnosis/reporting | Deterministic diagnosis, report and student-profile modules exist | Reconcile every metric against hand-calculated examples and real workflow data |
+| Messaging and orchestration | Described in the target architecture | Do not treat n8n, WhatsApp or email automation as implemented without current code and integration evidence |
+| Payments | Described in later commercial workflow | Payment gateway and reconciliation remain separate work unless independently implemented |
+| Adaptive/AI features | Future direction only | Not part of the approved MVP; no unsupervised AI grading |
+
+The intended product loop remains the acceptance target:
+
+`Register → Assess → Submit → Evaluate → Diagnose → Report → Recommend → Reassess → Measure improvement`
+
+The loop is not complete until it is exercised end to end with synthetic local data, its outputs are checked for correctness, and the owner has reviewed the results. A component-level test or merged pull request is not a substitute for that acceptance evidence.
+
+## 31. Current delivery sequence
+
+1. Complete local configuration and confirm database isolation.
+2. Exercise registration and student access.
+3. Complete the assessment attempt, answer persistence, uploads and submission checks.
+4. Complete teacher evaluation and validate score/error persistence.
+5. Verify diagnosis and reports using hand-calculated cases.
+6. Verify student history and reassessment comparison.
+7. Run a small supervised pilot only after privacy, security and operational gates are satisfied.
+8. Evaluate hosting, database hosting, cost and scaling only after local functional and performance evidence exists.
+
+Do not provision or migrate production infrastructure as part of the local development stage.
