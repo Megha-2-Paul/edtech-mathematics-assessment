@@ -66,6 +66,11 @@ Use these codes consistently when supported by the marking evidence. An unanswer
 
 ## Current application and architecture
 
+**Development approach:** development and end-to-end verification are currently local-first. Continue building and testing on a developer machine with an isolated local MySQL database. Hosting provider, production database hosting, deployment topology and scale-out decisions are deliberately deferred until the local product workflow is complete and measured. The production topology documented below is historical/currently documented context, not a new deployment instruction.
+
+For the current implementation-versus-verification status, see [PLATFORM_VERIFICATION.md](PLATFORM_VERIFICATION.md). For the consolidated repository audit and evidence limits, see [docs/IMPROVIA_DEVELOPMENT_AUDIT.md](docs/IMPROVIA_DEVELOPMENT_AUDIT.md).
+
+
 The application uses Python, Flask, Jinja2, SQLAlchemy, and MySQL. The repository includes student exam routes, teacher/admin workflows, question-bank and curriculum components, evaluation and diagnosis code, and reporting functionality.
 
 ### Production and development databases
