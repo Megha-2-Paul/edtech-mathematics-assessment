@@ -1,8 +1,11 @@
 """MySQL database configuration and schema bootstrap for the assessment platform."""
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.exc import ProgrammingError
+
 from database_url import build_database_url
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -70,6 +73,10 @@ def _validate_production_schema():
         for statement in SCHEMA
         if "CREATE TABLE IF NOT EXISTS " in statement
     }
+    required_tables.update({
+        "student_access_credentials",
+        "student_access_tokens",
+    })
     missing_tables = sorted(required_tables - existing_tables)
 
     required_columns = {
@@ -79,6 +86,13 @@ def _validate_production_schema():
         "attempts": {"attempt_id", "student_id", "test_id", "started_at", "status"},
         "responses": {"response_id", "attempt_id", "question_id", "answer_status"},
         "answer_images": {"image_id", "attempt_id", "question_id", "file_path"},
+        "student_access_credentials": {
+            "student_id", "password_hash", "failed_login_count",
+            "locked_until", "last_login_at", "created_at", "updated_at",
+        },
+        "student_access_tokens": {
+            "token_hash", "student_id", "expires_at", "used_at", "created_at",
+        },
     }
     missing_columns = {}
     for table, required in required_columns.items():
@@ -109,6 +123,13 @@ def _validate_production_schema():
         )
 
 
+def _is_mysql_error(exc, error_code):
+    """Return whether a SQLAlchemy DBAPI error has the given MySQL code."""
+    original = getattr(exc, "orig", None)
+    args = getattr(original, "args", ())
+    return bool(args) and args[0] == error_code
+
+
 def initialize_database():
     """Bootstrap local/test databases; validate production without modifying it."""
     if os.getenv("RENDER", "").strip().lower() == "true":
@@ -120,8 +141,8 @@ def initialize_database():
             connection.execute(text(statement))
         try:
             connection.execute(text("ALTER TABLE questions ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'active'"))
-        except Exception as exc:
-            if "Duplicate column" not in str(exc) and "1060" not in str(exc):
+        except ProgrammingError as exc:
+            if not _is_mysql_error(exc, 1060):
                 raise
         for statement in (
             "ALTER TABLE questions ADD COLUMN source_type VARCHAR(20) NOT NULL DEFAULT 'manual'",
@@ -130,22 +151,18 @@ def initialize_database():
         ):
             try:
                 connection.execute(text(statement))
-            except Exception as exc:
-                if "Duplicate column" not in str(exc) and "1060" not in str(exc):
+            except ProgrammingError as exc:
+                if not _is_mysql_error(exc, 1060):
                     raise
 
         try:
             connection.execute(text("ALTER TABLE students ADD COLUMN subject VARCHAR(100) NULL AFTER board"))
-        except Exception as exc:
-            if "Duplicate column" not in str(exc) and "1060" not in str(exc):
+        except ProgrammingError as exc:
+            if not _is_mysql_error(exc, 1060):
                 raise
 
-        try:
-            connection.execute(text("ALTER TABLE students MODIFY COLUMN email VARCHAR(255) NULL"))
-            connection.execute(text("UPDATE students SET email=NULL WHERE email=''"))
-        except Exception as exc:
-            if "1068" not in str(exc):
-                raise
+        connection.execute(text("ALTER TABLE students MODIFY COLUMN email VARCHAR(255) NULL"))
+        connection.execute(text("UPDATE students SET email=NULL WHERE email=''"))
         for subject_id, (name,) in SUBJECTS.items():
             connection.execute(text("INSERT INTO subjects(subject_id,name,active) VALUES(:id,:name,1) ON DUPLICATE KEY UPDATE name=VALUES(name),active=1"), {"id": subject_id, "name": name})
         for board, curriculum in BOARD_MATH_CHAPTERS.items():

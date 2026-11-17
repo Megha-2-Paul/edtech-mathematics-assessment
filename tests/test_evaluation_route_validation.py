@@ -2,9 +2,10 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from flask import Flask, session
+from flask import Flask
 
 from exam_platform import evaluation
+from exam_platform.models import AnswerStatus, Response
 from exam_platform.teacher_csrf import register_teacher_csrf
 
 
@@ -78,11 +79,17 @@ def route_setup(monkeypatch):
     )
 
     save_mock = Mock()
+    create_response_mock = Mock()
+    evaluate_mock = Mock(return_value=attempt)
+
     monkeypatch.setattr(
         evaluation, "_save_response_evaluation", save_mock
     )
     monkeypatch.setattr(
-        evaluation, "_evaluate_attempt", lambda attempt_id: attempt
+        evaluation.storage, "create_response", create_response_mock
+    )
+    monkeypatch.setattr(
+        evaluation, "_evaluate_attempt", evaluate_mock
     )
     monkeypatch.setattr(evaluation.storage, "update_attempt", Mock())
     monkeypatch.setattr(evaluation, "_update_question_history", Mock())
@@ -95,6 +102,8 @@ def route_setup(monkeypatch):
     return SimpleNamespace(
         client=client,
         save_mock=save_mock,
+        create_response_mock=create_response_mock,
+        evaluate_mock=evaluate_mock,
         attempt=attempt,
         questions=[question1, question2],
         responses=[response1, response2],
@@ -156,3 +165,108 @@ def test_invalid_csrf_token_prevents_evaluation(route_setup):
 
     assert response.status_code == 400
     route_setup.save_mock.assert_not_called()
+def test_missing_mcq_response_is_created_and_awarded_zero(
+    route_setup, monkeypatch
+):
+    question = SimpleNamespace(
+        question_id="Q1",
+        question_type="mcq",
+        marks=2,
+        correct_answer=None,
+        handwritten_upload_mode=False,
+    )
+    monkeypatch.setattr(
+        evaluation.storage, "get_questions", lambda _ids: [question]
+    )
+    monkeypatch.setattr(
+        evaluation.storage, "get_attempt_responses", lambda _aid: []
+    )
+
+    response = route_setup.client.post(
+        "/teacher/evaluate/ATTEMPT-1",
+        data={"teacher_csrf_token": "test-csrf-token"},
+    )
+
+    assert response.status_code == 302
+    route_setup.create_response_mock.assert_called_once()
+
+    created = route_setup.create_response_mock.call_args.args[0]
+    assert isinstance(created, Response)
+    assert created.question_id == "Q1"
+    assert created.answer_status == AnswerStatus.UNANSWERED.value
+    assert created.selected_answer is None
+
+    route_setup.save_mock.assert_called_once()
+    assert route_setup.save_mock.call_args.args[2] == 0.0
+
+
+def test_missing_subjective_response_is_created_with_zero_marks(
+    route_setup, monkeypatch
+):
+    question = SimpleNamespace(
+        question_id="Q1",
+        question_type="short_answer",
+        marks=5,
+        correct_answer=None,
+        handwritten_upload_mode=False,
+    )
+    monkeypatch.setattr(
+        evaluation.storage, "get_questions", lambda _ids: [question]
+    )
+    monkeypatch.setattr(
+        evaluation.storage, "get_attempt_responses", lambda _aid: []
+    )
+
+    response = route_setup.client.post(
+        "/teacher/evaluate/ATTEMPT-1",
+        data={
+            "teacher_csrf_token": "test-csrf-token",
+            "marks_Q1": "0",
+        },
+    )
+
+    assert response.status_code == 302
+    route_setup.create_response_mock.assert_called_once()
+    route_setup.save_mock.assert_called_once()
+    assert route_setup.save_mock.call_args.args[2] == 0.0
+
+
+def test_invalid_marks_do_not_create_missing_response(
+    route_setup, monkeypatch
+):
+    existing_response = route_setup.responses[1]
+
+    monkeypatch.setattr(
+        evaluation.storage,
+        "get_attempt_responses",
+        lambda _aid: [existing_response],
+    )
+
+    response = _post_marks(
+        route_setup.client, "6", "2"
+    )
+
+    assert response.status_code == 302
+    route_setup.create_response_mock.assert_not_called()
+    route_setup.save_mock.assert_not_called()
+
+
+def test_evaluation_recalculates_after_all_questions_are_evaluated(
+    route_setup, monkeypatch
+):
+    existing_response = route_setup.responses[1]
+
+    monkeypatch.setattr(
+        evaluation.storage,
+        "get_attempt_responses",
+        lambda _aid: [existing_response],
+    )
+
+    response = _post_marks(
+        route_setup.client, "0", "2"
+    )
+
+    assert response.status_code == 302
+    route_setup.create_response_mock.assert_called_once()
+    assert route_setup.save_mock.call_count == 2
+    route_setup.evaluate_mock.assert_called_once_with("ATTEMPT-1")

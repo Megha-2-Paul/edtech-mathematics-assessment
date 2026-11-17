@@ -1,0 +1,360 @@
+import importlib.util
+import os
+from pathlib import Path
+
+import pytest
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
+
+MIGRATION_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "question_bank"
+    / "migrations"
+    / "007_student_access.py"
+)
+
+SPEC = importlib.util.spec_from_file_location(
+    "student_access_migration",
+    MIGRATION_PATH,
+)
+MIGRATION = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(MIGRATION)
+
+
+def _create_database(
+    tmp_path,
+    *,
+    parent_type="VARCHAR(32)",
+    password_hash_type="VARCHAR(255)",
+    credential_pk=True,
+    token_pk=True,
+    cascade=True,
+    include_indexes=True,
+    include_tokens=True,
+    omit_credential_column=None,
+    password_hash_nullable=False,
+    failed_login_default="0",
+    token_expires_nullable=False,
+):
+    database_path = tmp_path / "migration_audit.db"
+    database_url = f"sqlite:///{database_path.as_posix()}"
+    engine = create_engine(database_url)
+
+    try:
+        with engine.begin() as connection:
+            connection.execute(text(
+                f"CREATE TABLE students ("
+                f"student_id {parent_type} PRIMARY KEY)"
+            ))
+
+            credential_columns = [
+                f"student_id VARCHAR(32) NOT NULL {'PRIMARY KEY' if credential_pk else ''}",
+                f"password_hash {password_hash_type} {'NULL' if password_hash_nullable else 'NOT NULL'}",
+                (
+                    "failed_login_count INTEGER NOT NULL"
+                    + (f" DEFAULT {failed_login_default}" if failed_login_default is not None else "")
+                ),
+                "locked_until DATETIME NULL",
+                "last_login_at DATETIME NULL",
+                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+                "updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+            ]
+
+            if omit_credential_column:
+                credential_columns = [
+                    column for column in credential_columns
+                    if not column.startswith(omit_credential_column + " ")
+                ]
+
+            delete_rule = "CASCADE" if cascade else "RESTRICT"
+            credential_columns.append(
+                "FOREIGN KEY (student_id) REFERENCES "
+                f"students(student_id) ON DELETE {delete_rule}"
+            )
+
+            connection.execute(text(
+                "CREATE TABLE student_access_credentials ("
+                + ", ".join(credential_columns)
+                + ")"
+            ))
+
+            if include_tokens:
+                token_columns = [
+                    f"token_hash CHAR(64) NOT NULL {'PRIMARY KEY' if token_pk else ''}",
+                    "student_id VARCHAR(32) NOT NULL",
+                    f"expires_at DATETIME {'NULL' if token_expires_nullable else 'NOT NULL'}",
+                    "used_at DATETIME NULL",
+                    "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+                    "FOREIGN KEY (student_id) REFERENCES "
+                    f"students(student_id) ON DELETE {delete_rule}",
+                ]
+
+                connection.execute(text(
+                    "CREATE TABLE student_access_tokens ("
+                    + ", ".join(token_columns)
+                    + ")"
+                ))
+
+                if include_indexes:
+                    connection.execute(text(
+                        "CREATE INDEX idx_student_access_token_student "
+                        "ON student_access_tokens(student_id)"
+                    ))
+                    connection.execute(text(
+                        "CREATE INDEX idx_student_access_token_expiry "
+                        "ON student_access_tokens(expires_at)"
+                    ))
+    finally:
+        engine.dispose()
+
+    return database_url
+
+
+def test_normalise_default_excludes_mysql_on_update_clause():
+    assert (
+        MIGRATION._normalise_default(
+            "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+        )
+        == "current_timestamp"
+    )
+
+
+def test_audit_accepts_valid_schema(tmp_path):
+    database_url = _create_database(tmp_path)
+
+    report = MIGRATION.audit(database_url)
+
+    assert report["parent"]["student_id_valid"] is True
+    assert report["tables"]["student_access_credentials"]["issues"] == []
+    assert report["tables"]["student_access_tokens"]["issues"] == []
+
+
+def test_audit_detects_missing_table(tmp_path):
+    database_url = _create_database(tmp_path, include_tokens=False)
+
+    report = MIGRATION.audit(database_url)
+
+    token_report = report["tables"]["student_access_tokens"]
+    assert token_report["exists"] is False
+    assert "table_missing" in token_report["issues"]
+
+
+def test_audit_detects_missing_column(tmp_path):
+    database_url = _create_database(
+        tmp_path,
+        omit_credential_column="last_login_at",
+    )
+
+    report = MIGRATION.audit(database_url)
+
+    credential_report = report["tables"]["student_access_credentials"]
+    assert "last_login_at" in credential_report["missing_columns"]
+    assert "missing_columns" in credential_report["issues"]
+
+
+def test_audit_detects_nullable_password_hash(tmp_path):
+    database_url = _create_database(tmp_path, password_hash_nullable=True)
+    report = MIGRATION.audit(database_url)
+    details = report["tables"]["student_access_credentials"]
+    assert "password_hash" in details["invalid_attributes"]
+    assert "invalid_column_attributes" in details["issues"]
+
+
+def test_audit_detects_incorrect_failed_login_default(tmp_path):
+    database_url = _create_database(tmp_path, failed_login_default="1")
+    report = MIGRATION.audit(database_url)
+    details = report["tables"]["student_access_credentials"]
+    assert "failed_login_count" in details["invalid_attributes"]
+    assert "invalid_column_attributes" in details["issues"]
+
+
+def test_audit_detects_nullable_token_expiry(tmp_path):
+    database_url = _create_database(tmp_path, token_expires_nullable=True)
+    report = MIGRATION.audit(database_url)
+    details = report["tables"]["student_access_tokens"]
+    assert "expires_at" in details["invalid_attributes"]
+    assert "invalid_column_attributes" in details["issues"]
+
+
+def test_audit_detects_incorrect_column_length(tmp_path):
+    database_url = _create_database(
+        tmp_path,
+        password_hash_type="VARCHAR(100)",
+    )
+
+    report = MIGRATION.audit(database_url)
+
+    credential_report = report["tables"]["student_access_credentials"]
+    assert "password_hash" in credential_report["invalid_columns"]
+    assert "invalid_column_types" in credential_report["issues"]
+
+
+def test_audit_detects_incorrect_primary_key(tmp_path):
+    database_url = _create_database(tmp_path, credential_pk=False)
+
+    report = MIGRATION.audit(database_url)
+
+    credential_report = report["tables"]["student_access_credentials"]
+    assert credential_report["primary_key_valid"] is False
+    assert "primary_key_mismatch" in credential_report["issues"]
+
+
+def test_audit_detects_missing_cascade_foreign_key(tmp_path):
+    database_url = _create_database(tmp_path, cascade=False)
+
+    report = MIGRATION.audit(database_url)
+
+    credential_report = report["tables"]["student_access_credentials"]
+    assert credential_report["foreign_key_valid"] is False
+    assert "foreign_key_missing_or_incompatible" in credential_report["issues"]
+
+
+def test_audit_detects_missing_required_index(tmp_path):
+    database_url = _create_database(tmp_path, include_indexes=False)
+
+    report = MIGRATION.audit(database_url)
+
+    token_report = report["tables"]["student_access_tokens"]
+    assert set(token_report["missing_indexes"]) == {
+        "idx_student_access_token_student",
+        "idx_student_access_token_expiry",
+    }
+    assert "missing_indexes" in token_report["issues"]
+
+
+def test_audit_detects_incompatible_parent_student_id_type(tmp_path):
+    database_url = _create_database(tmp_path, parent_type="TEXT")
+
+    report = MIGRATION.audit(database_url)
+
+    assert report["parent"]["student_id_valid"] is False
+    assert "parent_student_id_type_incompatible" in (
+        report["tables"]["student_access_credentials"]["issues"]
+    )
+
+
+def test_audit_detects_incorrect_token_primary_key(tmp_path):
+    database_url = _create_database(tmp_path, token_pk=False)
+
+    report = MIGRATION.audit(database_url)
+
+    token_report = report["tables"]["student_access_tokens"]
+    assert token_report["primary_key_valid"] is False
+    assert "primary_key_mismatch" in token_report["issues"]
+
+@pytest.mark.parametrize(
+    ("extra", "expected"),
+    [
+        ("on update CURRENT_TIMESTAMP", True),
+        ("DEFAULT_GENERATED on update CURRENT_TIMESTAMP", True),
+        ("DEFAULT_GENERATED on update CURRENT_TIMESTAMP()", True),
+        ("DEFAULT_GENERATED", False),
+        ("", False),
+        (None, False),
+    ],
+)
+def test_mysql_on_update_attribute_detection(extra, expected):
+    assert MIGRATION._has_mysql_on_update_current_timestamp(extra) is expected
+
+
+@pytest.mark.skipif(
+    os.getenv("CI", "").lower() != "true"
+    or not os.getenv("MYSQL_TEST_ADMIN_URL"),
+    reason="Requires the dedicated CI MySQL service.",
+)
+def test_mysql_apply_creates_schema_and_is_idempotent():
+    database_url = make_url(os.environ["MYSQL_TEST_ADMIN_URL"])
+
+    # Use only the dedicated, pre-created CI database. No database-level
+    # administration or access to any other schema is required.
+    if (
+        database_url.drivername != "mysql+pymysql"
+        or database_url.host not in {"127.0.0.1", "localhost", "::1"}
+        or database_url.database != "improvia_migration_test"
+        or database_url.username != "improvia_test"
+    ):
+        pytest.fail(
+            "MYSQL_TEST_ADMIN_URL must target the loopback improvia_migration_test "
+            "database using the dedicated improvia_test account."
+        )
+
+    database_url_string = database_url.render_as_string(hide_password=False)
+    engine = create_engine(database_url, pool_pre_ping=True, future=True)
+    created_students_table = False
+
+    try:
+        with engine.begin() as connection:
+            existing_tables = connection.exec_driver_sql("SHOW TABLES").all()
+            if existing_tables:
+                pytest.fail(
+                    "The dedicated CI migration database must start empty; "
+                    f"found tables: {existing_tables!r}"
+                )
+            connection.exec_driver_sql(
+                "CREATE TABLE students ("
+                "student_id VARCHAR(32) PRIMARY KEY"
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+            )
+            created_students_table = True
+
+        def assert_schema_is_valid():
+            report = MIGRATION.audit(database_url_string)
+
+            assert report["parent"]["student_id_valid"] is True
+            assert (
+                report["tables"]["student_access_credentials"]["issues"]
+                == []
+            )
+            assert (
+                report["tables"]["student_access_tokens"]["issues"]
+                == []
+            )
+
+        # First application must create both access tables.
+        MIGRATION.apply(database_url_string)
+        assert_schema_is_valid()
+
+        # Removing ON UPDATE must make the MySQL schema audit fail.
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                "ALTER TABLE student_access_credentials "
+                "MODIFY COLUMN updated_at DATETIME NOT NULL "
+                "DEFAULT CURRENT_TIMESTAMP"
+            )
+
+        invalid_report = MIGRATION.audit(database_url_string)
+        credential_report = invalid_report["tables"][
+            "student_access_credentials"
+        ]
+        assert "updated_at" in credential_report["invalid_attributes"]
+        assert "invalid_column_attributes" in credential_report["issues"]
+
+        # Restore the expected attribute before checking idempotency.
+        with engine.begin() as connection:
+            connection.exec_driver_sql(
+                "ALTER TABLE student_access_credentials "
+                "MODIFY COLUMN updated_at DATETIME NOT NULL "
+                "DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+            )
+
+        assert_schema_is_valid()
+
+        # Second application must remain safe and preserve a valid schema.
+        MIGRATION.apply(database_url_string)
+        assert_schema_is_valid()
+
+    finally:
+        # Only clean up after this test has confirmed an empty database and
+        # created its own parent table. Never drop tables from an unexpected DB.
+        try:
+            if created_students_table:
+                with engine.begin() as connection:
+                    connection.exec_driver_sql(
+                        "DROP TABLE IF EXISTS student_access_tokens"
+                    )
+                    connection.exec_driver_sql(
+                        "DROP TABLE IF EXISTS student_access_credentials"
+                    )
+                    connection.exec_driver_sql("DROP TABLE IF EXISTS students")
+        finally:
+            engine.dispose()

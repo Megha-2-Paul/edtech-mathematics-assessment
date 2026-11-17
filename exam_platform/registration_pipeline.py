@@ -15,11 +15,10 @@ import uuid
 from dataclasses import dataclass
 from datetime import date
 from typing import Iterable, Mapping
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen
 
 from .models import Student
-
 
 ALLOWED_SUBJECTS = {
     "Mathematics", "Applied Mathematics", "Information Technology",
@@ -203,6 +202,7 @@ def extract_registration(row: Mapping[str, str], row_number: int) -> tuple[Stude
 
 def _existing_student_ids(email: str, phone: str) -> set[str]:
     from sqlalchemy import text
+
     from database import engine
 
     ids: set[str] = set()
@@ -258,30 +258,58 @@ def read_csv_rows(csv_text: str) -> list[dict[str, str]]:
 
 
 def fetch_google_sheet_csv(sheet_url: str) -> str:
-    """Fetch a Google Sheet CSV export.
+    """Fetch a CSV export from a validated Google Sheets URL.
 
     The source sheet must be accessible to the credentials/network making this
     request. This MVP intentionally does not embed Google OAuth credentials.
     For a private sheet, export/download the reviewed sheet CSV and pass it to
     the importer instead of making student data public.
     """
-    parsed = urlparse(sheet_url)
-    match = re.search(r"/spreadsheets/d/([a-zA-Z0-9_-]+)", parsed.path)
+    try:
+        parsed = urlparse(sheet_url)
+        hostname = parsed.hostname
+        port = parsed.port
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise ValueError("Invalid Google Sheets URL.") from exc
+
+    if (
+        parsed.scheme.lower() != "https"
+        or hostname is None
+        or hostname.lower() != "docs.google.com"
+        or parsed.username is not None
+        or parsed.password is not None
+        or port not in (None, 443)
+    ):
+        raise ValueError(
+            "Only valid HTTPS Google Sheets URLs are supported."
+        )
+
+    match = re.fullmatch(
+        r"/spreadsheets/d/([a-zA-Z0-9_-]+)(?:/.*)?",
+        parsed.path,
+    )
     if not match:
-        raise ValueError("Could not find a Google Spreadsheet ID in the URL.")
+        raise ValueError("Could not find a valid Google Spreadsheet ID in the URL.")
 
     sheet_id = match.group(1)
     query = parse_qs(parsed.query)
     fragment = parse_qs(parsed.fragment)
     gid = (query.get("gid") or fragment.get("gid") or ["0"])[0]
+
+    if not re.fullmatch(r"[0-9]+", gid):
+        raise ValueError("Invalid Google Sheets worksheet ID.")
+
     export_url = (
-        f"https://docs.google.com/spreadsheets/d/{sheet_id}/export"
-        f"?format=csv&gid={gid}"
+        f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?"
+        f"{urlencode({'format': 'csv', 'gid': gid})}"
     )
-    request = Request(export_url, headers={"User-Agent": "Improvia-registration-import/1.0"})
+    request = Request(
+        export_url,
+        headers={"User-Agent": "Improvia-registration-import/1.0"},
+    )
+
     with urlopen(request, timeout=30) as response:
         return response.read().decode("utf-8-sig")
-
 
 def import_enrolled_rows(
     rows: Iterable[Mapping[str, str]],

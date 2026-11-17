@@ -1,3 +1,6 @@
+import pytest
+
+import exam_platform.registration_pipeline as pipeline
 from exam_platform.registration_pipeline import (
     extract_registration,
     import_enrolled_rows,
@@ -59,3 +62,111 @@ def test_missing_enrollment_status_never_writes():
     del row["Enrollment Status"]
     results = import_enrolled_rows([row], dry_run=False)
     assert results[0].status == "PENDING"
+
+
+def test_fetch_google_sheet_csv_accepts_valid_google_url(monkeypatch):
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b"name,email\nAditi,aditi@example.com\n"
+
+    captured = {}
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(pipeline, "urlopen", fake_urlopen)
+
+    result = pipeline.fetch_google_sheet_csv(
+        "https://docs.google.com/spreadsheets/d/abc_123/edit?gid=456"
+    )
+
+    assert result == "name,email\nAditi,aditi@example.com\n"
+    assert captured["url"] == (
+        "https://docs.google.com/spreadsheets/d/abc_123/export?"
+        "format=csv&gid=456"
+    )
+    assert captured["timeout"] == 30
+
+
+def test_fetch_google_sheet_csv_accepts_fragment_gid(monkeypatch):
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b"data"
+
+    captured = {}
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        return FakeResponse()
+
+    monkeypatch.setattr(pipeline, "urlopen", fake_urlopen)
+
+    pipeline.fetch_google_sheet_csv(
+        "https://docs.google.com/spreadsheets/d/abc123/edit#gid=789"
+    )
+
+    assert captured["url"].endswith("format=csv&gid=789")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://docs.google.com/spreadsheets/d/abc123/edit",
+        "https://evil.example/spreadsheets/d/abc123/edit",
+        "https://docs.google.com.evil.example/spreadsheets/d/abc123/edit",
+        "https://user:password@docs.google.com/spreadsheets/d/abc123/edit",
+        "https://docs.google.com:8443/spreadsheets/d/abc123/edit",
+        "https://docs.google.com/spreadsheets/d/abc123/edit?gid=abc",
+        "https://docs.google.com/spreadsheets/d/invalid.id/edit",
+        "https://docs.google.com/other/path",
+        "https://[invalid-host/spreadsheets/d/abc123/edit",
+    ],
+)
+def test_fetch_google_sheet_csv_rejects_invalid_urls(monkeypatch, url):
+    def unexpected_request(*args, **kwargs):
+        pytest.fail("HTTP request must not occur for an invalid URL.")
+
+    monkeypatch.setattr(pipeline, "urlopen", unexpected_request)
+
+    with pytest.raises(ValueError):
+        pipeline.fetch_google_sheet_csv(url)
+
+
+def test_fetch_google_sheet_csv_defaults_to_first_worksheet(monkeypatch):
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def read(self):
+            return b"data"
+
+    captured = {}
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        return FakeResponse()
+
+    monkeypatch.setattr(pipeline, "urlopen", fake_urlopen)
+
+    pipeline.fetch_google_sheet_csv(
+        "https://docs.google.com/spreadsheets/d/abc123/edit"
+    )
+
+    assert captured["url"].endswith("format=csv&gid=0")
