@@ -231,4 +231,4 @@ This keeps the current database schema and application architecture stable while
 
 The existing Render/Flask + Aiven MySQL arrangement below is retained as historical deployment context. Do not treat it as the selected future hosting architecture. The next development stage is to complete and verify the application locally. After that, compare suitable hosting/database options using measured requirements: expected concurrent students, request and report latency, database connection limits, file storage, backups, scaling model, cost and operational complexity.
 
-No deployment, database migration, production connection, or infrastructure provisioning is part of the current development phase. See [PLATFORM_VERIFICATION.md](PLATFORM_VERIFICATION.md) for the local verification gates.
+No deployment, database migration, production connection, or infrastructure provisioning is part of the current development phase. See [PLATFORM_VERIFICATION.md](../engineering/PLATFORM_VERIFICATION.md) for the local verification gates.

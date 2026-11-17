@@ -95,13 +95,13 @@ Use synthetic accounts and records. Do not use real student information during d
 
 ## 8. Related documentation
 
-- [README.md](README.md) — product scope and repository overview.
-- [PLATFORM_VERIFICATION.md](PLATFORM_VERIFICATION.md) — implementation, CI evidence and local verification backlog.
-- [PRODUCT_WORKFLOW.md](PRODUCT_WORKFLOW.md) — canonical product workflow and roadmap distinction.
-- [PRODUCTION_ARCHITECTURE.md](PRODUCTION_ARCHITECTURE.md) — historical production topology and registration architecture.
-- [docs/architecture/DATABASE_SCHEMA_AND_ARCHITECTURE.md](docs/architecture/DATABASE_SCHEMA_AND_ARCHITECTURE.md) — schema reference and design proposals.
-- [docs/architecture/MIGRATION_INVENTORY.md](docs/architecture/MIGRATION_INVENTORY.md) — migration inventory and safe execution boundaries.
-- [docs/IMPROVIA_DEVELOPMENT_AUDIT.md](docs/IMPROVIA_DEVELOPMENT_AUDIT.md) — audit scope, evidence and outstanding risks.
+- [README.md](../../README.md) — product scope and repository overview.
+- [PLATFORM_VERIFICATION.md](../engineering/PLATFORM_VERIFICATION.md) — implementation, CI evidence and local verification backlog.
+- [PRODUCT_WORKFLOW.md](../product/PRODUCT_WORKFLOW.md) — canonical product workflow and roadmap distinction.
+- [PRODUCTION_ARCHITECTURE.md](../architecture/PRODUCTION_ARCHITECTURE.md) — historical production topology and registration architecture.
+- [docs/architecture/DATABASE_SCHEMA_AND_ARCHITECTURE.md](../architecture/DATABASE_SCHEMA_AND_ARCHITECTURE.md) — schema reference and design proposals.
+- [docs/architecture/MIGRATION_INVENTORY.md](../database/MIGRATION_INVENTORY.md) — migration inventory and safe execution boundaries.
+- [docs/IMPROVIA_DEVELOPMENT_AUDIT.md](../engineering/DEVELOPMENT_AUDIT.md) — audit scope, evidence and outstanding risks.
 
 ## Current development policy
 

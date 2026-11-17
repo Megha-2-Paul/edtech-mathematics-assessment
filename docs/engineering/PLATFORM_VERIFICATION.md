@@ -111,10 +111,10 @@ No deployment, hosting migration or production database change is authorised by 
 
 ## 8. Related references
 
-- [README.md](README.md)
-- [QUICK_START.md](QUICK_START.md)
-- [PRODUCT_WORKFLOW.md](PRODUCT_WORKFLOW.md)
-- [PRODUCTION_ARCHITECTURE.md](PRODUCTION_ARCHITECTURE.md)
-- [Database schema and architecture](docs/architecture/DATABASE_SCHEMA_AND_ARCHITECTURE.md)
-- [Migration inventory](docs/architecture/MIGRATION_INVENTORY.md)
-- [Consolidated development audit](docs/IMPROVIA_DEVELOPMENT_AUDIT.md)
+- [README.md](../../README.md)
+- [QUICK_START.md](../operations/QUICK_START.md)
+- [PRODUCT_WORKFLOW.md](../product/PRODUCT_WORKFLOW.md)
+- [PRODUCTION_ARCHITECTURE.md](../architecture/PRODUCTION_ARCHITECTURE.md)
+- [Database schema and architecture](../architecture/DATABASE_SCHEMA_AND_ARCHITECTURE.md)
+- [Migration inventory](../database/MIGRATION_INVENTORY.md)
+- [Consolidated development audit](DEVELOPMENT_AUDIT.md)
