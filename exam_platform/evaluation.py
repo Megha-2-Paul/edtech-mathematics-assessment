@@ -1,17 +1,31 @@
-﻿"""Teacher evaluation workflow, diagnosis, and student result calculations."""
+"""Teacher evaluation workflow, diagnosis, and student result calculations."""
 
-import os
+import uuid
 from decimal import Decimal, InvalidOperation
+from io import BytesIO
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, session, send_from_directory, url_for
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    send_file,
+    session,
+    url_for,
+)
 from sqlalchemy import text
 
 from database import engine
+
+from . import media
 from .db_source import storage
 from .diagnosis import diagnose_attempt
 from .diagnostic_rules_adapter import add_diagnostic_interpretation
+from .models import AnswerStatus, Response
 from .reporting import build_report
-
 
 evaluation_bp = Blueprint("evaluation", __name__)
 
@@ -263,22 +277,32 @@ def evaluate(attempt_id):
         pending_evaluations = []
 
         try:
-            # Validate every response before making any evaluation writes.
+            # Validate every question before making any evaluation writes.
             for q in questions:
                 r = responses.get(q.question_id)
-                if not r:
-                    continue
+                is_new_response = r is None
+
+                if is_new_response:
+                    r = Response(
+                        response_id=str(uuid.uuid4()),
+                        attempt_id=attempt_id,
+                        question_id=q.question_id,
+                        selected_answer=None,
+                        answer_status=AnswerStatus.UNANSWERED.value,
+                    )
 
                 if q.question_type == "mcq":
                     marks = (
                         float(q.marks)
-                        if r.selected_answer == q.correct_answer
+                        if r.selected_answer
+                        and r.selected_answer == q.correct_answer
                         else 0.0
                     )
                     codes = []
                 else:
                     raw_marks = request.form.get(
-                        f"marks_{q.question_id}", ""
+                        f"marks_{q.question_id}",
+                        "0" if is_new_response else "",
                     )
                     marks = _validate_marks(raw_marks, q.marks)
                     codes = [
@@ -297,7 +321,7 @@ def evaluate(attempt_id):
                 ).strip()
 
                 pending_evaluations.append(
-                    (r, q, marks, codes, comment)
+                    (r, q, marks, codes, comment, is_new_response)
                 )
 
         except ValueError as exc:
@@ -309,8 +333,11 @@ def evaluate(attempt_id):
                 url_for("evaluation.evaluate", attempt_id=attempt_id)
             )
 
-        # Save only after every submitted mark has passed validation.
-        for r, q, marks, codes, comment in pending_evaluations:
+        # Persist only after every submitted mark has passed validation.
+        for r, q, marks, codes, comment, is_new_response in pending_evaluations:
+            if is_new_response:
+                storage.create_response(r)
+
             _save_response_evaluation(r, q, marks, codes, comment)
 
         attempt = _evaluate_attempt(attempt_id)
@@ -333,8 +360,9 @@ def evaluate(attempt_id):
                 "images": [
                     {
                         "url": url_for(
-                            "uploaded_file",
-                            filename=os.path.basename(image.file_path),
+                            "evaluation.teacher_answer_image",
+                                attempt_id=attempt_id,
+                                image_id=image.image_id,
                         ),
                         "page_number": image.page_number,
                         "name": image.original_filename,
@@ -428,13 +456,46 @@ def student_report(attempt_id):
     return render_template("student_report.html", report=report, awaiting=False)
 
 
+@evaluation_bp.route(
+    "/teacher/attempt/<attempt_id>/images/<image_id>/content"
+)
+def teacher_answer_image(attempt_id, image_id):
+    """Serve an answer image only after verifying its attempt ownership."""
+    attempt = _attempt_or_404(attempt_id)
+    test = storage.get_test(attempt.test_id)
+
+    image = None
+    for question in storage.get_questions(test.questions):
+        for candidate in storage.get_attempt_images(
+            attempt_id, question.question_id
+        ):
+            if (
+                candidate.image_id == image_id
+                and candidate.attempt_id == attempt_id
+            ):
+                image = candidate
+                break
+        if image:
+            break
+
+    if not image:
+        abort(404)
+
+    data, content_type = media.read_stored_image(
+        image.file_path,
+        upload_folder=current_app.config["UPLOAD_FOLDER"],
+    )
+
+    response = send_file(
+        BytesIO(data),
+        mimetype=content_type,
+        as_attachment=False,
+        max_age=0,
+    )
+    response.headers["Cache-Control"] = "private, no-store"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
 def register_evaluation(app):
     app.register_blueprint(evaluation_bp)
-    existing_uploaded_file = app.view_functions.get("uploaded_file")
-    if existing_uploaded_file:
-        upload_folder = app.config["UPLOAD_FOLDER"]
-
-        def serve_uploaded_file(filename):
-            return send_from_directory(upload_folder, filename)
-
-        app.view_functions["uploaded_file"] = serve_uploaded_file
