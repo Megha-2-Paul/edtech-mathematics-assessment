@@ -124,6 +124,10 @@ def _normalise_default(value):
     if value is None:
         return None
     value = str(value).strip().lower().strip("'\\\"")
+    value = " ".join(value.split())
+    # MySQL may include the ON UPDATE clause in SQLAlchemy's reflected
+    # default metadata. Validate that clause separately via information_schema.
+    value = value.split(" on update ", 1)[0]
     return value.replace("(", "").replace(")", "").replace(" ", "")
 
 

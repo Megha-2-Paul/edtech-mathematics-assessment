@@ -110,6 +110,15 @@ def _create_database(
     return database_url
 
 
+def test_normalise_default_excludes_mysql_on_update_clause():
+    assert (
+        MIGRATION._normalise_default(
+            "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+        )
+        == "current_timestamp"
+    )
+
+
 def test_audit_accepts_valid_schema(tmp_path):
     database_url = _create_database(tmp_path)
 
