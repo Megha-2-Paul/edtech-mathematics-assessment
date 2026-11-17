@@ -145,3 +145,20 @@ def test_successful_retry_clears_previous_error_summary():
     assert retried["status"] == "applied"
     assert retried["error_summary"] is None
     engine.dispose()
+
+
+def test_record_migration_rejects_partially_upgraded_ledger():
+    engine = create_engine("sqlite://")
+    with engine.begin() as connection:
+        connection.execute(text("""
+            CREATE TABLE schema_migrations (
+                migration_id VARCHAR(100) PRIMARY KEY,
+                applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                status VARCHAR(20) NOT NULL DEFAULT 'applied'
+            )
+        """))
+
+    with pytest.raises(RuntimeError, match="missing columns: checksum"):
+        record_migration(engine, "partial_upgrade", "applied")
+    assert read_ledger(engine) == []
+    engine.dispose()
