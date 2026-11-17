@@ -27,8 +27,8 @@ The review used GitHub repository content at the reviewed master commit and incl
 - `README.md`, `AGENTS.md`, `PROMPTS.md` and `docs/CHATGPT_INSTRUCTIONS.md`.
 - `exam_platform/app.py`, `storage.py`, `evaluation.py`, `student_profile.py` and `reporting.py`.
 - `question_bank/migrations/manifest.py`, `ledger.py`, `adoption.py` and migration 008.
-- `PLATFORM_VERIFICATION.md`, `PRODUCT_WORKFLOW.md`, `PRODUCTION_ARCHITECTURE.md`.
-- `docs/architecture/DATABASE_SCHEMA_AND_ARCHITECTURE.md` and `MIGRATION_INVENTORY.md`.
+- `docs/engineering/PLATFORM_VERIFICATION.md`, `docs/product/PRODUCT_WORKFLOW.md`, `docs/architecture/PRODUCTION_ARCHITECTURE.md`.
+- `docs/architecture/DATABASE_SCHEMA_AND_ARCHITECTURE.md` and `docs/database/MIGRATION_INVENTORY.md`.
 - Selected CI and PR history, including merged PR #35 and PR #38.
 
 This was a targeted source review, not an exhaustive line-by-line audit of every Python file, route, template, test, dependency or workflow. No claim is made that every possible defect has been found.
@@ -182,7 +182,7 @@ These findings are prioritised engineering risks or verification gaps. A verific
 
 ### AUD-09 — Documentation contained stale and conflicting operational guidance
 
-- **Location:** `QUICK_START.md`, `PLATFORM_VERIFICATION.md`, `PRODUCT_WORKFLOW.md`, `PRODUCTION_ARCHITECTURE.md` and migration/architecture references.
+- **Location:** `docs/operations/QUICK_START.md`, `docs/engineering/PLATFORM_VERIFICATION.md`, `docs/product/PRODUCT_WORKFLOW.md`, `docs/architecture/PRODUCTION_ARCHITECTURE.md` and migration/architecture references.
 - **Problem:** older quick-start instructions used a developer-specific path and prototype expectations; status documents did not consistently distinguish implementation, CI evidence and local verification; production topology could be misread as the immediate development plan.
 - **Why it matters:** developers may run unsafe commands or assume work is complete when it has not been verified.
 - **Severity:** Medium.
@@ -247,13 +247,13 @@ The previously documented Render/Aiven topology is retained as historical deploy
 The following documents are updated or added in this documentation branch:
 
 - `README.md` — local-first development decision and links to status/audit references.
-- `QUICK_START.md` — replaced obsolete prototype instructions with safe local setup and testing guidance.
-- `PLATFORM_VERIFICATION.md` — separates implementation, CI evidence, local verification and production gates.
-- `PRODUCT_WORKFLOW.md` — distinguishes target architecture/roadmap from implemented foundations.
-- `PRODUCTION_ARCHITECTURE.md` — labels the existing topology as historical context and records the current local-first boundary.
+- `docs/operations/QUICK_START.md` — replaced obsolete prototype instructions with safe local setup and testing guidance.
+- `docs/engineering/PLATFORM_VERIFICATION.md` — separates implementation, CI evidence, local verification and production gates.
+- `docs/product/PRODUCT_WORKFLOW.md` — distinguishes target architecture/roadmap from implemented foundations.
+- `docs/architecture/PRODUCTION_ARCHITECTURE.md` — labels the existing topology as historical context and records the current local-first boundary.
 - `docs/architecture/DATABASE_SCHEMA_AND_ARCHITECTURE.md` — refreshes review metadata and records the ledger/adoption implementation.
-- `docs/architecture/MIGRATION_INVENTORY.md` — adds the current manifest, ledger and adoption facts, explicitly superseding stale tracking statements.
-- `docs/IMPROVIA_DEVELOPMENT_AUDIT.md` — this consolidated audit and handoff.
+- `docs/database/MIGRATION_INVENTORY.md` — adds the current manifest, ledger and adoption facts, explicitly superseding stale tracking statements.
+- `docs/engineering/DEVELOPMENT_AUDIT.md` — this consolidated audit and handoff.
 
 No application code, tests, dependencies, environment files, migration scripts or database state were changed.
 

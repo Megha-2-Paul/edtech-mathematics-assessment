@@ -6,7 +6,7 @@ Status: Planning proposal (26 October 2026). Not an implemented feature specific
 
 Maintain separate brands: (1) a personal offline mathematics tuition website serving Behala, Kolkata; and (2) Improvia, an independently accessible assessment and improvement platform. Link the brands through a student portal and secure APIs, not duplicated assessment logic. Improvia should support independent users, not only enrolled tuition students. Keep the core Improvia promise: diagnose where marks are lost, explain why, recommend practice, and track progress.
 
-Existing repository documents `PRODUCT_STRATEGY.md` and `PRODUCT_SCOPE_AND_PILOT_WORKFLOW.md` remain authoritative for Improvia's broader curriculum scope and pilot principles. The tuition launch prioritizes Classes 9–10; it does not remove the existing broader Improvia scope.
+Existing repository documents `docs/product/PRODUCT_STRATEGY.md` and `docs/product/proposals/EXPANDED_PRODUCT_SCOPE_AND_PILOT_WORKFLOW.md` remain authoritative for Improvia's broader curriculum scope and pilot principles. The tuition launch prioritizes Classes 9–10; it does not remove the existing broader Improvia scope.
 
 ## 2. Offline tuition operating model
 

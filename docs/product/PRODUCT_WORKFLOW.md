@@ -2,7 +2,7 @@
 
 ## 1. Product principle
 
-> **Implementation status note (17 November 2026):** This document describes the intended end-to-end product and operating model. It is not a feature-completion checklist. Components such as n8n orchestration, WhatsApp/email delivery, payment gateway, automated enrolment and some dashboard/longitudinal experiences are roadmap items unless their implementation is independently confirmed in the current code. The present development strategy is local-first; complete and verify the core workflow locally before choosing hosting or expanding integrations. See [PLATFORM_VERIFICATION.md](PLATFORM_VERIFICATION.md) for the evidence-based status.
+> **Implementation status note (17 November 2026):** This document describes the intended end-to-end product and operating model. It is not a feature-completion checklist. Components such as n8n orchestration, WhatsApp/email delivery, payment gateway, automated enrolment and some dashboard/longitudinal experiences are roadmap items unless their implementation is independently confirmed in the current code. The present development strategy is local-first; complete and verify the core workflow locally before choosing hosting or expanding integrations. See [docs/engineering/PLATFORM_VERIFICATION.md](docs/engineering/PLATFORM_VERIFICATION.md) for the evidence-based status.
 
 
 This product is **not a mock-test platform**. Its core value is to answer:

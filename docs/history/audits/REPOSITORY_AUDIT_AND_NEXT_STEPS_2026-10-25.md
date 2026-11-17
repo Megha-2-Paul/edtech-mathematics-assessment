@@ -295,7 +295,7 @@ Before deleting any of these, verify the current branch heads and open PR/base-b
 
 - **`feature/markitdown-pdf-extraction`:** verify desired work is retained by merged PR #8, close PR #6 as superseded if confirmed, then delete.
 - **`stage-7-google-form-webhook`:** PR #16 was closed unmerged and an updated v2 exists in merged PR #20. Verify the v2 implementation retains required behavior, then delete.
-- **`docs/notebooklm-workflow`:** do **not** delete until useful documents are preserved. It was reported six commits ahead and 118 behind master. Its useful files include `NOTEBOOKLM_WORKFLOW.md`, `AUTOMATION_WORKFLOW.md`, and `PRODUCT_STRATEGY.md`. Port the relevant docs into a small PR or archive them first; do not merge the entire stale branch.
+- **`docs/notebooklm-workflow`:** do **not** delete until useful documents are preserved. It was reported six commits ahead and 118 behind master. Its useful files include `docs/operations/research/NOTEBOOKLM_WORKFLOW.md`, `docs/operations/research/AUTOMATION_WORKFLOW.md`, and `docs/product/PRODUCT_STRATEGY.md`. Port the relevant docs into a small PR or archive them first; do not merge the entire stale branch.
 
 ### 6C. Keep for now
 
