@@ -119,3 +119,72 @@ Package 1A adds only this inventory and static consistency tests. It does not:
 - change runtime behaviour.
 
 The next package can use this inventory to prepare a safe fresh-install and upgrade design for explicit review.
+
+
+---
+
+## 7. Current manifest, ledger and adoption status — reconciled 17 November 2026
+
+**This section supersedes older tracking statements above where they conflict.** The table in Section 1 remains a useful script-level inventory, but its tracking notes predate the migration-ledger adoption work merged through PR #38.
+
+### 7.1 Manifest at the reviewed master commit
+
+The current `question_bank/migrations/manifest.py` contains these entries:
+
+| Migration ID | File | Execution type | Declared dependency |
+|---|---|---|---|
+| `001_question_bank_foundation` | `001_question_bank_foundation.sql` | `mysql_client` | None |
+| `002_canonical_question_ingestion` | `002_canonical_question_ingestion.sql` | `mysql_client` | 001 |
+| `003_canonical_math_taxonomy` | `003_canonical_math_taxonomy.py` | `python` | None |
+| `004_student_registration_subject` | `004_student_registration_subject.sql` | `mysql` | None |
+| `005_curriculum_question_reuse` | `005_curriculum_question_reuse.py` | `python` | 004 |
+| `006_exam_monitoring_mode` | `006_exam_monitoring_mode.py` | `python` | None |
+| `008_migration_ledger_upgrade` | `008_migration_ledger_upgrade.py` | `python` | None |
+
+Migration 007 is **not present in this manifest** at the reviewed commit. The reason and intended future treatment are not established by the manifest itself. Do not add it, adopt it, or execute it as part of documentation work.
+
+### 7.2 Ledger support
+
+- `ledger.py:read_ledger(engine)` reads ledger rows and validates the minimum legacy ledger structure.
+- `ledger.py:record_migration(...)` writes or updates a ledger row and requires the extended ledger columns. It is not a read-only helper.
+- Valid ledger statuses in the helper are `pending`, `running`, `applied`, `failed` and `adopted`.
+- The ledger utility does not, by itself, prove that a migration's schema/data postconditions are correct.
+
+### 7.3 Read-only adoption verification
+
+`adoption.py:inspect_legacy_migrations(engine)` classifies each requested migration using schema/data postcondition checks and any available ledger metadata. Its possible states are:
+
+- `VERIFIED_APPLIED`
+- `VERIFIED_NOT_APPLIED`
+- `PARTIALLY_APPLIED`
+- `CONFLICTING`
+- `UNKNOWN`
+
+The verifier never writes to the database and deliberately reports `UNKNOWN` when schema inspection cannot prove data effects. A legacy ledger row without a checksum cannot establish source identity; a conflicting checksum or contradictory postconditions can change the classification to `CONFLICTING`.
+
+### 7.4 Migration 008
+
+`008_migration_ledger_upgrade.py`:
+
+- Preserves the legacy `migration_id` and `applied_at` ledger contract.
+- Validates the legacy ledger definition before adding metadata.
+- Adds `status`, `checksum`, `started_at`, `completed_at`, `error_summary` and `execution_version`.
+- Requires exactly one explicit CLI mode: `--dry-run` or `--apply`.
+- Does not record its own completion in the ledger.
+
+The dry-run path is intended to report the proposed ledger changes without modifying the database. The apply path changes the schema. Neither mode was run for this documentation update.
+
+### 7.5 Important limits
+
+The presence of a manifest, ledger helper and adoption verifier is not proof of a complete migration execution framework or a fresh-install path. Outstanding reconciliation includes:
+
+1. Bootstrap DDL versus migration overlap.
+2. MySQL-client scripts using stored procedures and `DELIMITER`.
+3. Historical data backfills and seed effects.
+4. Manifest coverage, including the separately existing migration 007.
+5. Production and local schema state, which must be inspected independently and only with explicit approval.
+6. A safe, tested ordering and rollback/recovery strategy.
+
+### 7.6 Operational boundary
+
+This is a static repository inventory only. No local, Aiven or production database was accessed. No migration, dry-run, adoption check, ledger write, schema bootstrap, seed or rollback was executed. Do not use this document as an instruction to run migrations.
