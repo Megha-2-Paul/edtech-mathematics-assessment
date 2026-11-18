@@ -91,7 +91,7 @@ Registration
 ### Product boundary
 
 - Mathematics remains the principal initial product focus.
-- The README describes Mathematics Classes 9–12 where board curriculum and question-bank content are validated; the commercial workflow documentation describes Classes 10–12. Confirm the exact approved pilot classes before public eligibility claims.
+- In the audited `master` snapshot at commit `acbf06f6fe9844a25331fe5b10185a1196db226b`, the README described Mathematics Classes 9–12 while the commercial workflow documentation described Classes 10–12. This records a historical discrepancy in that snapshot, not the current approved scope: the documentation branch's root README now states the approved initial focus is CBSE/ICSE Mathematics Classes 10–12. Public eligibility claims should follow the current approved scope.
 - CBSE Information Technology Code 402 and Computer Applications Code 165 are distinct subjects.
 - Subjective Mathematics answers remain human-supervised. Unsupervised AI grading is not part of the approved MVP.
 - Technical support for a subject or class does not automatically mean its content is validated or approved for launch.
