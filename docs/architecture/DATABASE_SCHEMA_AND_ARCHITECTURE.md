@@ -1,14 +1,17 @@
 # Improvia Database Schema and Architecture Reference
 
 > **Status:** Architecture reference and design proposal
-> **Reviewed branch:** `fix/student-auth-private-uploads`
-> **Reviewed commit:** `8d5495ab09339c80358757689ac0dd2af6dc316f`
-> **Last repository review:** 16 November 2026
+> **Reviewed branch:** `master` (documentation reconciliation source)
+> **Reviewed commit:** `acbf06f6fe9844a25331fe5b10185a1196db226b`
+> **Documentation reconciliation:** 17 November 2026
 > **Scope:** Existing schema, migration reconciliation, multi-subject design, assessment history, platform events, analytics, performance, privacy and future database initialization.
 
 This document is deliberately explicit about what exists today and what is only proposed. It is not a migration script and does not authorize database changes. Verify the repository at the target commit before using this document to operate a database.
 
 ## 1. Executive summary
+
+> **Current boundary:** This is a code-level architecture reference, not a live database inspection. The development strategy is local-first; hosting/database topology decisions are deferred until local end-to-end and performance verification. The migration ledger/adoption work described in PR #38 is present in the reviewed master snapshot. No database was connected to or changed for this documentation update.
+
 
 Improvia currently uses Python, Flask, SQLAlchemy and MySQL/InnoDB. Its schema has foundations for student registration, subject enrolment, curriculum mapping, question-bank provenance, assessments, attempts, responses, evaluation, payments and student performance summaries.
 
@@ -680,3 +683,30 @@ Each step requires its own implementation plan, approval, regression tests and r
 - `exam_platform/question_selection.py`
 - `AGENTS.md`
 - `docs/CHATGPT_INSTRUCTIONS.md`
+
+
+## 17. Migration ledger and legacy adoption update (17 November 2026)
+
+The migration-ledger work merged through PR #38 is present in the reviewed master snapshot:
+
+- `question_bank/migrations/manifest.py` defines the migration inventory and source checksums.
+- `question_bank/migrations/ledger.py` provides read-only ledger inspection and a parameterized record/update helper. Recording a migration is a database write and must not be confused with read-only inspection.
+- `question_bank/migrations/adoption.py` performs read-only postcondition checks for legacy migrations. It classifies evidence as `VERIFIED_APPLIED`, `VERIFIED_NOT_APPLIED`, `PARTIALLY_APPLIED`, `CONFLICTING` or `UNKNOWN`. It deliberately does not record adoption.
+- `question_bank/migrations/008_migration_ledger_upgrade.py` adds execution metadata columns to `schema_migrations`. It requires an explicit `--dry-run` or `--apply` mode and a database URL. The apply path changes schema.
+- The current manifest includes migration IDs 001–006 and 008. Migration 007 is not included in that manifest at the reviewed commit. This documentation records the observed manifest; it does not approve execution, adoption, omission changes or migration ordering changes.
+
+The adoption verifier can return `UNKNOWN` when schema inspection cannot prove data effects. A ledger row alone is not sufficient proof that every migration's data postconditions are satisfied. Do not manually insert ledger records or infer adoption from table presence.
+
+These modules improve migration auditability but do not by themselves establish a complete, automatically safe fresh-install/upgrade runner. Bootstrap and migration overlap, historical data effects, MySQL-specific scripts, manifest coverage and production state still require a separately approved reconciliation.
+
+## 18. Local-first environment decision
+
+For the current development phase:
+
+1. Use local MySQL and synthetic data.
+2. Confirm the effective database target before importing app/database modules or running tests.
+3. Do not assume local and Aiven schemas or data are synchronised.
+4. Do not execute migration dry-runs or apply operations as part of documentation work.
+5. Defer hosting/database provider selection until end-to-end workflows and representative local performance have been measured.
+
+No database operation, production connection, migration, seed, ledger write or schema change was performed for this documentation update.

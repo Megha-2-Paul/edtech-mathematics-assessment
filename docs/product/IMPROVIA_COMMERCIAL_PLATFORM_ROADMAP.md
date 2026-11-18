@@ -559,11 +559,11 @@ A checked box must link to evidence (test output, configuration review, restore 
 Use these documents together; this roadmap does not replace their detailed implementation guidance:
 
 - `docs/CHATGPT_INSTRUCTIONS.md` — mandatory repository workflow, security and testing rules.
-- `PRODUCT_WORKFLOW.md` — canonical assessment, evaluation, diagnosis and reporting workflow.
-- `PRODUCTION_ARCHITECTURE.md` — documented Render / Aiven topology and controlled registration approach.
-- `docs/IMPROVIA_REVIEW_AND_IMPROVEMENT_BACKLOG_V2.md` — risks, release blockers and staged assessment backlog.
-- `docs/STUDENT_REGISTRATION_ELIGIBILITY.md` — registration and eligibility design.
-- `docs/TEACHER_EVALUATION_CUSTOMER_VALUE_DESIGN_PLAN.md` — human evaluation and student value design.
+- `docs/product/PRODUCT_WORKFLOW.md` — canonical assessment, evaluation, diagnosis and reporting workflow.
+- `docs/architecture/PRODUCTION_ARCHITECTURE.md` — documented Render / Aiven topology and controlled registration approach.
+- `docs/history/IMPROVIA_REVIEW_AND_IMPROVEMENT_BACKLOG_V2.md` — risks, release blockers and staged assessment backlog.
+- `docs/operations/STUDENT_REGISTRATION_ELIGIBILITY.md` — registration and eligibility design.
+- `docs/product/TEACHER_EVALUATION_CUSTOMER_VALUE_DESIGN_PLAN.md` — human evaluation and student value design.
 
 ### Status statement
 

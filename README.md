@@ -2,53 +2,44 @@
 
 Improvia helps students understand **where they lose marks, why they lose them, what to practise next, and whether they improve**.
 
-It is designed as a diagnostic assessment system, not simply a collection of mock tests.
+It is a diagnostic assessment and improvement system, not simply a mock-test website.
 
-**Core loop:** Register → Assess → Submit → Evaluate → Diagnose → Report → Recommend practice → Reassess → Measure improvement.
+**Core loop:** Registration → Eligibility → Assessment → Submission → Human evaluation → Diagnosis → Report → Practice → Reassessment → Progress comparison.
 
-## Current pilot scope
+## Approved initial product focus
 
-### Mathematics
-- Classes 9–12.
-- CBSE and ICSE where the relevant curriculum and question bank have been validated.
+- CBSE and ICSE Mathematics.
+- Classes 10–12.
+- Controlled, founder-operated validation before broader commercial launch.
 
-### Computer-related subjects
-- Class 10 CBSE Information Technology (Code 402).
-- Class 10 CBSE Computer Applications (Code 165).
-- Additional subjects or classes should be added only after curriculum validation.
-
-Keep Information Technology (402) and Computer Applications (165) as distinct subjects. Do not represent them as one ambiguous “Computer” subject.
-
-The intended pilot is controlled and founder-operated. Technical support for a subject does not by itself mean that subject is approved for launch.
+Curriculum structures or question-bank data for other classes, boards or subjects are technical capabilities, not approval to include them in the launch. Any expansion needs a separate product-scope decision.
 
 ## Product principles
 
-A useful report should go beyond a score such as **62 / 80** and help answer:
+- Handwritten Mathematics answers are marked by a human.
+- Do not use unsupervised AI grading.
+- Explain marks lost with evidence and plain-language feedback.
+- Preserve the C01–C09 Mathematics error taxonomy unless a reviewed change is approved.
+- An unanswered question alone does not prove a conceptual weakness.
+- Measure improvement across distinct assessments rather than relying on one score.
 
-- Where were marks lost?
-- Why were they lost?
-- Which mistakes appear repeatedly?
-- Which chapters or skills need attention?
-- What should the student practise next?
-- Did performance change on the next assessment?
+## Current development approach
 
-Handwritten Mathematics work is important to this workflow. Subjective answers should initially be marked by a human. AI grading is not part of the approved MVP; any future AI suggestions must remain human-reviewed and be validated against reference marking.
+Development and end-to-end verification are local-first. Continue using an isolated local MySQL database and synthetic data. Hosting, production database and scale-out decisions are deferred until the core workflow is complete, measured and verified.
 
-## Assessment workflow
+A feature existing in code, a passing CI run, local end-to-end verification and production readiness are different evidence levels. Do not treat them as interchangeable.
 
-1. **Registration and eligibility** — review registration information and grant access to the appropriate assessment.
-2. **Assessment** — the student opens the website, answers questions, and works within the assessment's time and attempt rules.
-3. **Submission** — preserve submitted answers and attempt state.
-4. **Evaluation** — automatically score supported objective questions and have a teacher manually evaluate subjective work.
-5. **Diagnosis** — record marks, relevant error categories, and clear comments.
-6. **Report and history** — show results and useful performance history.
-7. **Next practice** — recommend a focused next step and compare results after reassessment.
+## Start here
 
-The complete workflow must be verified end to end before a public launch. A feature being present in code or documentation is not, by itself, proof that the whole workflow is production-ready.
+- [Documentation index](docs/README.md) — authoritative document map and status.
+- [Canonical product workflow](docs/product/PRODUCT_WORKFLOW.md).
+- [Platform verification and release readiness](docs/engineering/PLATFORM_VERIFICATION.md).
+- [Current repository development audit](docs/engineering/DEVELOPMENT_AUDIT.md).
+- [Local development quick start](docs/operations/QUICK_START.md).
+- [Architecture reference](docs/architecture/PRODUCTION_ARCHITECTURE.md).
+- [Repository instructions](docs/CHATGPT_INSTRUCTIONS.md).
 
 ## Mathematics error taxonomy
-
-The initial Mathematics diagnostic categories are:
 
 | Code | Category |
 |---|---|
@@ -62,124 +53,16 @@ The initial Mathematics diagnostic categories are:
 | C08 | Misunderstood question |
 | C09 | Time/attempt |
 
-Use these codes consistently when supported by the marking evidence. An unanswered question alone does not prove a conceptual weakness. Other subjects need suitable subject-specific diagnosis rather than automatically inheriting the Mathematics taxonomy.
+Use codes only when supported by marking evidence. Other subjects, if separately approved later, need appropriate subject-specific diagnosis.
 
-## Current application and architecture
+## Technology
 
-The application uses Python, Flask, Jinja2, SQLAlchemy, and MySQL. The repository includes student exam routes, teacher/admin workflows, question-bank and curriculum components, evaluation and diagnosis code, and reporting functionality.
+Python, Flask, Jinja2, SQLAlchemy and MySQL. Inspect the documentation index for architecture, database, security, deployment, question-bank, testing and operating references.
 
-### Production and development databases
+## Safety and privacy
 
-The documented production topology is:
+Students may be minors. Treat names, contacts, handwritten work, submissions, marks, reports and performance history as private. Use synthetic data for development and testing. Never commit secrets, student records, uploads or database dumps. Never run unapproved production migrations or destructive operations.
 
-```text
-Production
-Student browser
-    ↓
-Render / Flask application
-    ↓
-DATABASE_URL
-    ↓
-Aiven MySQL
+## Development workflow
 
-Local development
-Developer machine
-    ↓
-Local MySQL
-    ↓
-Local testing and development
-```
-
-- `DATABASE_URL` selects the application's configured database connection.
-- `QUESTION_BANK_SYNC_DATABASE_URL` is an optional question-bank synchronization connection; it is not general-purpose student-data replication.
-- Do not assume local MySQL and Aiven are continuously synchronized.
-- Never run unapproved production migrations or destructive database operations.
-
-See [PRODUCTION_ARCHITECTURE.md](PRODUCTION_ARCHITECTURE.md) for registration and environment details, and [PRODUCT_WORKFLOW.md](PRODUCT_WORKFLOW.md) for the fuller product workflow.
-
-## Registration during the controlled launch
-
-The documented founder-operated process is:
-
-```text
-Google Form
-    ↓
-Google Sheets
-    ↓
-Manual review and confirmation
-    ↓
-Create or reuse permanent Student_ID
-    ↓
-Production database
-    ↓
-Assessment access
-```
-
-Google Sheets can hold raw registration responses during the pilot. The production database remains the source of truth for enrolled students and assessment data. Review the registration and enrollment flow before using it with real students.
-
-## Local development
-
-Use Python 3.12 or another version supported by the project's configuration.
-
-From the repository root, on Windows PowerShell:
-
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-Configure local environment variables using the repository's `.env.example` and your local MySQL setup. Use local, synthetic test data; do not place production credentials in source control. Do not copy production secrets into logs, screenshots, tests, or documentation.
-
-Run the focused tests relevant to a change, for example:
-
-```powershell
-python -m pytest -q tests/test_question_model.py
-```
-
-To run the full test suite, first inspect the test configuration and confirm the database settings are isolated from production. Some application/database modules perform schema initialization when imported; **do not run tests against production credentials or a production database**.
-
-The exact commands needed to run the web application depend on local environment configuration. Verify configuration and database safety before starting it.
-
-## Security, privacy, and data integrity
-
-Students may be minors. Treat names, contact information, handwritten work, submissions, marks, reports, and performance history as private student data.
-
-Before public launch, verify at minimum:
-
-- Authentication and authorization for student and teacher actions.
-- Per-student ownership checks for attempts, uploads, responses, reports, and results.
-- Private answer-image storage and access-controlled retrieval.
-- CSRF protection on state-changing routes.
-- Server-side deadlines, attempt-state transitions, and duplicate-submission handling.
-- Upload type and size validation.
-- Production secrets and environment configuration.
-- Database schema/migration history, backups, and restore procedures.
-- Registration-to-report workflow and report figures against hand-checked examples.
-
-This checklist identifies areas to verify; it does not claim every item is currently defective or that every item has been production-verified.
-
-## Current development stage
-
-Improvia is in controlled functional testing and pre-public-launch preparation. The immediate priority is to establish a reliable assessment-to-report loop and validate the quality and usefulness of feedback with a small supervised cohort.
-
-Recommended sequence:
-
-1. Reconcile and verify security and release-readiness work.
-2. Prove registration, eligibility, assessment, answer persistence, submission, evaluation, diagnosis, report delivery, and performance history end to end.
-3. Hand-check reports and record marking workload and student/guardian feedback.
-4. Run a small supervised pilot before expanding the cohort.
-5. Add automation or more subjects only when evidence supports it.
-
-## Intentionally deferred
-
-Unsupervised AI grading, handwriting OCR, fully adaptive testing, parent/tutor dashboards, mobile apps, and large-scale subscription features are not prerequisites for the initial MVP. Prioritize reliable evaluation, actionable diagnosis, privacy, and measured student improvement over adding technology for its own sake.
-
-## Repository guidance
-
-- Read [docs/CHATGPT_INSTRUCTIONS.md](docs/CHATGPT_INSTRUCTIONS.md) before making repository changes.
-- Keep changes small, focused, and testable.
-- Inspect existing code, tests, migrations, and branch/PR dependencies before implementation.
-- Do not commit secrets, real student data, local database dumps, or temporary artifacts.
-- Report the exact tests run and their results; targeted test success is not proof of production readiness.
+Read [docs/CHATGPT_INSTRUCTIONS.md](docs/CHATGPT_INSTRUCTIONS.md) and [AGENTS.md](AGENTS.md) before repository work. Inspect code, tests, migrations, branches and PR dependencies; prepare a plan and wait for approval before changes. The owner reviews and tests locally.

@@ -1,6 +1,9 @@
 # Production Architecture and Registration Plan
 
-## Verified production topology
+## Historical production topology (documented configuration)
+
+> **Development decision, 17 November 2026:** The current development strategy is local-first. Continue development and end-to-end testing on the laptop with an isolated local MySQL database. Hosting provider, database hosting, deployment topology and scale-out architecture are deferred until local workflows and representative performance have been validated. The topology below records the previously documented production arrangement; it is not an instruction to deploy, connect to Aiven, or change infrastructure now.
+
 
 As of the current deployment audit, the Render service uses:
 
@@ -222,3 +225,10 @@ The next implementation should be the smallest reliable bridge from a reviewed r
 9. Only then automate the Sheet → Aiven step through n8n or another controlled integration.
 
 This keeps the current database schema and application architecture stable while moving from prototype registration to real student enrollment.
+
+
+## Current development and deployment boundary
+
+The existing Render/Flask + Aiven MySQL arrangement below is retained as historical deployment context. Do not treat it as the selected future hosting architecture. The next development stage is to complete and verify the application locally. After that, compare suitable hosting/database options using measured requirements: expected concurrent students, request and report latency, database connection limits, file storage, backups, scaling model, cost and operational complexity.
+
+No deployment, database migration, production connection, or infrastructure provisioning is part of the current development phase. See [PLATFORM_VERIFICATION.md](../engineering/PLATFORM_VERIFICATION.md) for the local verification gates.

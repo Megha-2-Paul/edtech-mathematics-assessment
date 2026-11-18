@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-INVENTORY = ROOT / "docs" / "architecture" / "MIGRATION_INVENTORY.md"
+INVENTORY = ROOT / "docs" / "database" / "MIGRATION_INVENTORY.md"
 MIGRATIONS = ROOT / "question_bank" / "migrations"
 
 EXPECTED_SCRIPTS = {

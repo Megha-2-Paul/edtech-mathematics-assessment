@@ -1,3 +1,5 @@
+> **Status clarification (17 November 2026):** This is an expanded curriculum/pilot proposal retained for historical context. It is not the approved Improvia launch scope. The current launch focus remains CBSE/ICSE Mathematics Classes 10–12. Technical taxonomy or question-bank support for additional classes, boards or subjects does not authorise their launch. Confirm any scope expansion separately before publishing eligibility or marketing claims.
+
 # Expanded Product Scope and Controlled Pilot Workflow
 
 ## 1. Scope decision
